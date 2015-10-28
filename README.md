@@ -1,4 +1,6 @@
-# splonebox
+<img src="https://splone.com/static/splone/images/splone.svg" width=200>
+
+#splonebox
 
 [Website](https://splone.com/splonebox) | 
 [wiki] (https://github.com/splone/splonebox-core/wiki) |
@@ -10,7 +12,7 @@ splonebox is an open source network assessment tool with focus on modularity. It
 
 ## Motivation
 
-Supervisory Control And Data Acquisition (SCADA) is the buzzword that summarises devices of Industry Control Systems (ICS). These devices are highly specialised on controlling industry processes like production lines or even hole plants. Typically an ICS consists of Programmable Logic Controllers (PLCs), actuators and sensors. It is common, that industry networks also consist of additional devices like Human-Machine-Interfaces (HMI) or gateways
+Supervisory Control And Data Acquisition (SCADA) is the buzzword that summarizes devices of Industry Control Systems (ICS). These devices are highly specialized on controlling industry processes like production lines or even hole plants. Typically an ICS consists of Programmable Logic Controllers (PLCs), actuators and sensors. It is common, that industry networks also consist of additional devices like Human-Machine-Interfaces (HMI) or gateways
 
 ## Architecture
 
