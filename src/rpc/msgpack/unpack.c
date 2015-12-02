@@ -87,7 +87,8 @@ int unpack_params(msgpack_object *obj, struct message_params_object *params)
   }
 
   params->obj = CALLOC(obj->via.array.size, struct message_object);
-
+  params->size = obj->via.array.size;
+  
   if (!params->obj)
     return (-1);
 
