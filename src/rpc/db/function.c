@@ -281,7 +281,12 @@ static int db_function_typecheck(string apikey, string name,
         return (-1);
       }
 
-      if (val != args->obj[k].type) {
+      if (val != args->obj[k].type &&
+          /* Any positive integer will be treated as and unsigned int
+           * (see unpack/pack.c)  and is therefore a valid signed integer */
+          !(val == OBJECT_TYPE_INT && args->obj[k].type != OBJECT_TYPE_INT &&
+            args->obj[k].type != OBJECT_TYPE_UINT)) {
+
         LOG_WARNING("run() function argument has wrong type.");
         freeReplyObject(reply);
         return (-1);

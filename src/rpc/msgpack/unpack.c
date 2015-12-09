@@ -98,11 +98,11 @@ int unpack_params(msgpack_object *obj, struct message_params_object *params)
 
     switch (tmp->type) {
     case MSGPACK_OBJECT_POSITIVE_INTEGER:
-      elem->type = OBJECT_TYPE_INT;
+      elem->type = OBJECT_TYPE_UINT;
       elem->data.uinteger = unpack_uint(tmp);
       continue;
     case MSGPACK_OBJECT_NEGATIVE_INTEGER:
-      elem->type = OBJECT_TYPE_UINT;
+      elem->type = OBJECT_TYPE_INT;
       elem->data.integer = unpack_int(tmp);
       continue;
     case MSGPACK_OBJECT_STR:
