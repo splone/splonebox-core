@@ -1,0 +1,57 @@
+.Dd 2015-09-07
+.Dt splonebox 1
+.Os
+.\" ------------ NAME ------------
+.Sh NAME
+.Nm splonebox
+- the server aka 'the core' application of the splonebox reconnaissance
+tool.
+
+.\" ------------ SYNOBSIS ------------
+.Sh SYNOBSIS
+.Nm
+.Op OPTIONS
+
+.\" ------------ DESCRIPTION ------------
+.Sh DESCRIPTION
+The
+.Nm
+is the core application of the splonebox reconnaissance tool chain. It
+orchestrates multiple
+.Nm
+plugins.
+
+.\" ------------ OPTIONS ------------
+.Sh OPTIONS
+.Bl -tag -width indent
+.It Fl "v, --verbose"
+Runs the
+.Nm
+with verbosity. Increment verbosity with
+.Nm -vv
+or
+.Nm -vvv .
+
+.It Fl "h, --help"
+prints help
+.It Fl "-version"
+returns version
+
+.\" ------------ ENVIRONMENT ------------
+.Sh ENVIRONMENT
+
+.Bl -tag -width indent
+.It Ev SPLONEBOX_LISTEN_ADDRES
+The address
+.Nm
+listens to. This can be either a TCP address or a named pipe. If no
+valid address pattern found (
+.Ar IP:PORT
+), a pipe of the corresponding name is assumed.
+
+
+.\" ------------ AUTHOR ------------
+.Sh AUTHOR
+.An "splone" Aq mail@splone.com
+
+
