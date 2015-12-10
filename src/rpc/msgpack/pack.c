@@ -177,10 +177,10 @@ int pack_params(msgpack_packer *pk, struct message_params_object params)
 
     switch (type) {
     case (OBJECT_TYPE_INT):
-      pack_uint64(pk, object->data.uinteger);
+      pack_int64(pk, object->data.integer);
       continue;
     case (OBJECT_TYPE_UINT):
-      pack_int64(pk, object->data.integer);
+      pack_uint64(pk, object->data.uinteger);
       continue;
     case (OBJECT_TYPE_BOOL):
       pack_bool(pk, object->data.boolean);
