@@ -20,12 +20,16 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
+static msgpack_sbuffer sbuf;
+static struct hashmap *connections = NULL;
 static struct hashmap *dispatch_table = NULL;
 
-int handle_error(struct message_request *request, msgpack_packer *pk,
-    struct api_error *api_error)
+int handle_error(connection_request_event_info *info)
 {
-  if (!request || !pk || !api_error )
+  struct message_request *request = info->request;
+  struct api_error *api_error = &info->api_error;
+
+  if (!request || !api_error )
     return (-1);
 
   return (0);
@@ -38,12 +42,18 @@ int handle_error(struct message_request *request, msgpack_packer *pk,
  * @param api_error `struct api_error` error object-instance
  * @return 0 if success, -1 otherwise
  */
-int handle_register(struct message_request *request,
-    UNUSED(msgpack_packer *pk), struct api_error *api_error)
+int handle_register(connection_request_event_info *info)
 {
   struct message_params_object *meta;
   struct message_params_object functions;
-  string apikey, name, description, author, license;
+  string pluginlongtermpk, name, description, author, license;
+
+  struct connection *con;
+  char *data;
+  msgpack_packer packer;
+
+  struct message_request *request = info->request;
+  struct api_error *api_error = &info->api_error;
 
   if (!api_error)
     return (-1);
@@ -65,7 +75,7 @@ int handle_register(struct message_request *request,
 
   /*
    * meta params:
-   * [apikey, name, description, author, license]
+   * [pluginlongtermpk, name, description, author, license]
    */
 
   if (!meta) {
@@ -99,7 +109,7 @@ int handle_register(struct message_request *request,
     return (-1);
   }
 
-  apikey = meta->obj[0].data.string;
+  pluginlongtermpk = meta->obj[0].data.string;
   name = meta->obj[1].data.string;
   description = meta->obj[2].data.string;
   author = meta->obj[3].data.string;
@@ -113,23 +123,50 @@ int handle_register(struct message_request *request,
 
   functions = request->params.obj[1].data.params;
 
-  api_register(apikey, name, description, author, license, functions,
-      api_error);
+  if (api_register(pluginlongtermpk, name, description, author, license, functions,
+      api_error)) {
+    return (-1);
+  }
 
   /* TODO: pack status response */
+
+  /*
+   * add connection with the client long term public key as key to the
+   * connection hashmap
+   */
+
+  hashmap_put(connections, pluginlongtermpk, info->con);
+
+  if (api_error->isset)
+    message_serialize_error_response(&packer, api_error, request->msgid);
+
+  data = MALLOC_ARRAY(sbuf.size, char);
+
+  if (data == NULL)
+    return (-1);
+
+  outputstream_write(info->con->streams.write, memcpy(data, sbuf.data,
+      sbuf.size), sbuf.size);
+
+  msgpack_sbuffer_clear(&sbuf);
 
   return (0);
 }
 
 
-int handle_run(struct message_request *request, msgpack_packer *pk,
-    struct api_error *api_error)
+int handle_run(connection_request_event_info *info)
 {
   struct message_params_object *meta;
   struct message_params_object args;
-  string apikey, function_name;
+  string pluginlongtermpk, function_name;
+  struct connection *con;
+  char *data;
+  msgpack_packer packer;
 
-  if (!api_error || !pk)
+  struct message_request *request = info->request;
+  struct api_error *api_error = &info->api_error;
+
+  if (!api_error )
     return (-1);
 
   /* check params size */
@@ -172,7 +209,7 @@ int handle_run(struct message_request *request, msgpack_packer *pk,
     return (-1);
   }
 
-  apikey = meta->obj[0].data.string;
+  pluginlongtermpk = meta->obj[0].data.string;
 
   if (request->params.obj[1].type != OBJECT_TYPE_STR) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -196,7 +233,24 @@ int handle_run(struct message_request *request, msgpack_packer *pk,
 
   args = request->params.obj[2].data.params;
 
-  api_run(apikey, function_name, args, pk, api_error);
+  msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
+
+  api_run(pluginlongtermpk, function_name, args, &packer, api_error);
+
+  con = hashmap_get(connections, pluginlongtermpk);
+
+  if (api_error->isset)
+    message_serialize_error_response(&packer, api_error, request->msgid);
+
+  data = MALLOC_ARRAY(sbuf.size, char);
+
+  if (data == NULL)
+    return (-1);
+
+  outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
+      sbuf.size);
+
+  msgpack_sbuffer_clear(&sbuf);
 
   return (0);
 }
@@ -237,9 +291,19 @@ int dispatch_table_free(void)
 
 int dispatch_table_init(void)
 {
+
   struct dispatch_info *register_info, *run_info;
 
+  msgpack_sbuffer_init(&sbuf);
+
+  connections = hashmap_new();
   dispatch_table = hashmap_new();
+
+  if (!connections)
+    return (-1);
+
+  if (!dispatch_table)
+    return (-1);
 
   /* register */
   register_info = MALLOC(struct dispatch_info);

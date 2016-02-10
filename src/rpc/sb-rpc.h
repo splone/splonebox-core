@@ -114,9 +114,7 @@ struct connection {
 
 struct dispatch_info {
   int (*func)(
-    struct message_request *request,
-    msgpack_packer *pk,
-    struct api_error *error
+    connection_request_event_info *info
     );
   bool async;
   string name;
@@ -377,12 +375,9 @@ int dispatch_table_init(void);
 int dispatch_table_free(void);
 struct dispatch_info *dispatch_table_get(string method);
 void dispatch_table_put(string method, struct dispatch_info *info);
-int handle_register(struct message_request *request, msgpack_packer *pk,
-    struct api_error *err);
-int handle_run(struct message_request *request, msgpack_packer *pk,
-    struct api_error *err);
-int handle_error(struct message_request *request, msgpack_packer *pk,
-    struct api_error *err);
+int handle_run(connection_request_event_info *info);
+int handle_register(connection_request_event_info *info);
+int handle_error(connection_request_event_info *info);
 
 
 /* Message Functions */

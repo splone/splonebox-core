@@ -201,25 +201,7 @@ static int connection_handle_request(struct connection *con,
 
 static void connection_request_event(connection_request_event_info *eventinfo)
 {
-  char *data;
-  msgpack_packer response;
-
-  msgpack_packer_init(&response, &sbuf, msgpack_sbuffer_write);
-  eventinfo->dispatcher->func(eventinfo->request, &response,
-      &eventinfo->api_error);
-
-  if (eventinfo->api_error.isset)
-    message_serialize_error_response(&response, &eventinfo->api_error,
-        eventinfo->request->msgid);
-
-  data = MALLOC_ARRAY(sbuf.size, char);
-
-  if (data == NULL)
-    return;
-
-  outputstream_write(eventinfo->con->streams.write, memcpy(data, sbuf.data,
-      sbuf.size), sbuf.size);
-  msgpack_sbuffer_clear(&sbuf);
+  eventinfo->dispatcher->func(eventinfo);
 
   FREE(eventinfo->request);
 }
