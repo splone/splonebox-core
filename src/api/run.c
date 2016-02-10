@@ -21,23 +21,25 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-int api_run(string api_key, string function_name,
+int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
     struct message_params_object args, msgpack_packer *pk,
     struct api_error *api_error)
 {
   struct message_object *data;
+  struct message_object *meta;
   struct message_request *request;
   struct message_params_object run_params;
 
   if (!api_error || !pk)
     return (-1);
 
-  if (db_apikey_verify(api_key) == -1) {
+  /* check if id is in database */
+  if (db_apikey_verify(pluginlongtermpk) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
     return (-1);
   }
 
-  if (db_function_verify(api_key, function_name, &args) == -1) {
+  if (db_function_verify(pluginlongtermpk, function_name, &args) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "run() verification failed.");
     return (-1);
@@ -55,21 +57,25 @@ int api_run(string api_key, string function_name,
     return (-1);
 
   /* data refs to first run_params parameter */
-  data = &run_params.obj[0];
+  meta = &run_params.obj[0];
 
-  data->type = OBJECT_TYPE_ARRAY;
+  meta->type = OBJECT_TYPE_ARRAY;
 
-  /* only contains apikey for now */
-  data->data.params.size = 1;
-  data->data.params.obj = CALLOC(1, struct message_object);
+  /* meta = [nil, callid] */
+  meta->data.params.size = 2;
+  meta->data.params.obj = CALLOC(2, struct message_object);
 
-  if (!data->data.params.obj)
+  if (!meta->data.params.obj)
     return (-1);
 
-  /* add apikey */
-  data = &data->data.params.obj[0];
-  data->type = OBJECT_TYPE_STR;
-  data->data.string = api_key;
+  /* add nil */
+  data = &meta->data.params.obj[0];
+  data->type = OBJECT_TYPE_NIL;
+
+  /* add callid */
+  data = &meta->data.params.obj[1];
+  data->type = OBJECT_TYPE_UINT;
+  data->data.uinteger = callid;
 
   /* add function name, data refs to second run_params parameter */
   data = &run_params.obj[1];

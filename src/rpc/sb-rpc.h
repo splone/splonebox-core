@@ -56,6 +56,7 @@ typedef struct connection_request_event_info connection_request_event_info;
 /* Enums */
 
 typedef enum {
+  OBJECT_TYPE_NIL,
   OBJECT_TYPE_INT,
   OBJECT_TYPE_UINT,
   OBJECT_TYPE_BOOL,

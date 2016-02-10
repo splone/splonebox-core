@@ -45,7 +45,7 @@ int handle_error(connection_request_event_info *info)
  */
 int handle_register(connection_request_event_info *info)
 {
-  struct message_params_object *meta;
+  struct message_params_object *meta = NULL;
   struct message_params_object functions;
   string pluginlongtermpk, name, description, author, license;
 
@@ -60,18 +60,16 @@ int handle_register(connection_request_event_info *info)
     return (-1);
 
   /* check params size */
-  if (request->params.size != 2) {
+  if (request->params.size != 2 && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid params params size");
-    return (-1);
   }
 
-  if (request->params.obj[0].type == OBJECT_TYPE_ARRAY)
+  if (request->params.obj[0].type == OBJECT_TYPE_ARRAY && !api_error->isset)
     meta = &request->params.obj[0].data.params;
   else {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. meta params has wrong type");
-    return (-1);
   }
 
   /*
@@ -79,35 +77,31 @@ int handle_register(connection_request_event_info *info)
    * [pluginlongtermpk, name, description, author, license]
    */
 
-  if (!meta) {
+  if (!meta && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. meta params is NULL");
-    return (-1);
   }
 
-  if (meta->size != 5) {
+  if (meta->size != 5 && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid meta params size");
-    return (-1);
   }
 
   /* extract meta information */
-  if ((meta->obj[0].type != OBJECT_TYPE_STR) ||
+  if (((meta->obj[0].type != OBJECT_TYPE_STR) ||
       (meta->obj[1].type != OBJECT_TYPE_STR) ||
       (meta->obj[2].type != OBJECT_TYPE_STR) ||
       (meta->obj[3].type != OBJECT_TYPE_STR) ||
-      (meta->obj[4].type != OBJECT_TYPE_STR)) {
+      (meta->obj[4].type != OBJECT_TYPE_STR)) && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. meta element has wrong type");
-    return (-1);
   }
 
-  if (!meta->obj[0].data.string.str || !meta->obj[1].data.string.str ||
+  if ((!meta->obj[0].data.string.str || !meta->obj[1].data.string.str ||
       !meta->obj[2].data.string.str || !meta->obj[3].data.string.str ||
-      !meta->obj[4].data.string.str) {
+      !meta->obj[4].data.string.str) && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid meta params size");
-    return (-1);
   }
 
   pluginlongtermpk = meta->obj[0].data.string;
@@ -116,10 +110,9 @@ int handle_register(connection_request_event_info *info)
   author = meta->obj[3].data.string;
   license = meta->obj[4].data.string;
 
-  if (request->params.obj[1].type != OBJECT_TYPE_ARRAY) {
+  if (request->params.obj[1].type != OBJECT_TYPE_ARRAY && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. functions has wrong type");
-    return (-1);
   }
 
   functions = request->params.obj[1].data.params;
@@ -140,7 +133,7 @@ int handle_register(connection_request_event_info *info)
 
   if (api_error->isset)
     message_serialize_error_response(&packer, api_error, request->msgid);
-
+    /*
   data = MALLOC_ARRAY(sbuf.size, char);
 
   if (data == NULL)
@@ -150,14 +143,14 @@ int handle_register(connection_request_event_info *info)
       sbuf.size), sbuf.size);
 
   msgpack_sbuffer_clear(&sbuf);
-
+*/
   return (0);
 }
 
 
 int handle_run(connection_request_event_info *info)
 {
-  struct message_params_object *meta;
+  struct message_params_object *meta = NULL;
   struct message_params_object args;
   string pluginlongtermpk, function_name;
   struct connection *con;
@@ -171,75 +164,90 @@ int handle_run(connection_request_event_info *info)
     return (-1);
 
   /* check params size */
-  if (request->params.size != 3) {
+  if (request->params.size != 3 && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid params params size");
-    return (-1);
   }
 
-  if (request->params.obj[0].type == OBJECT_TYPE_ARRAY)
+  if (request->params.obj[0].type == OBJECT_TYPE_ARRAY && !api_error->isset)
     meta = &request->params.obj[0].data.params;
   else {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. meta params has wrong type");
-    return (-1);
   }
 
-  if (!meta) {
+  if (!meta && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. meta params is NULL");
-    return (-1);
   }
 
-  if (meta->size != 1) {
+  /* meta = [pluginlongtermpk, nil]*/
+  if (meta->size != 2 && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid meta params size");
-    return (-1);
   }
 
   /* extract meta information */
-  if (meta->obj[0].type != OBJECT_TYPE_STR) {
+  if (meta->obj[0].type != OBJECT_TYPE_STR && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. meta elements have wrong type");
-    return (-1);
   }
 
-  if (!meta->obj[0].data.string.str) {
+  if (!meta->obj[0].data.string.str && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid meta params size");
-    return (-1);
   }
 
   pluginlongtermpk = meta->obj[0].data.string;
 
-  if (request->params.obj[1].type != OBJECT_TYPE_STR) {
+  if (meta->obj[1].type != OBJECT_TYPE_NIL && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API request. function string has wrong type");
-    return (-1);
+        "Error dispatching run API request. meta elements have wrong type");
   }
 
-  if (!request->params.obj[1].data.string.str) {
+  if (request->params.obj[1].type != OBJECT_TYPE_STR && !api_error->isset) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API request. function string has wrong type");
+  }
+
+  if (!request->params.obj[1].data.string.str && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid meta params size");
-    return (-1);
   }
 
   function_name = request->params.obj[1].data.string;
 
-  if (request->params.obj[2].type != OBJECT_TYPE_ARRAY) {
+  if (request->params.obj[2].type != OBJECT_TYPE_ARRAY && !api_error->isset) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. function string has wrong type");
-    return (-1);
   }
 
   args = request->params.obj[2].data.params;
 
   msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
 
-  api_run(pluginlongtermpk, function_name, args, &packer, api_error);
+  con = hashmap_string_get(connections, pluginlongtermpk);
 
-  con = hashmap_get(connections, pluginlongtermpk);
+  /*
+   * if no connection is available for the key, set the connection to the
+   * the initial connection from the sender.
+   */
+  if (!con && !api_error->isset) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
+    con = info->con;
+  }
 
+  /*
+   * if a connection is available, generate a callid and save the connection in
+   * the callids hashmap with key callid.
+   */
+  if (!api_error->isset){
+    uint64_t callid = (uint64_t) randommod(281474976710656LL);
+    hashmap_uint64_put(callids, callid, con);
+    api_run(pluginlongtermpk, function_name, callid, args, &packer, api_error);
+  }
+
+  /* if error is set, generate an error response message */
   if (api_error->isset)
     message_serialize_error_response(&packer, api_error, request->msgid);
 

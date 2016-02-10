@@ -46,7 +46,7 @@ int api_register(string api_key, string name, string desc, string author,
  * @param[in] api_error   api_error instance
  * @return 0 in case of success otherwise -1
  */
-int api_run(string api_key, string function_name,
+int api_run(string api_key, string function_name, uint64_t callid,
     struct message_params_object args, msgpack_packer *pk,
     struct api_error *api_error);
 
