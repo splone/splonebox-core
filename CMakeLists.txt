@@ -150,6 +150,7 @@ set(TEST-SOURCES
   src/reallocarray.c
   src/hashmap-string.c
   src/hashmap-uint64.c
+  src/random.c
   src/optparser.c
   src/api/sb-api.h
   src/api/apikey.c

@@ -201,7 +201,24 @@ static int connection_handle_request(struct connection *con,
 
 static void connection_request_event(connection_request_event_info *eventinfo)
 {
+  char *data;
+  msgpack_packer packer;
+
   eventinfo->dispatcher->func(eventinfo);
+
+  if (eventinfo->api_error.isset) {
+    msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
+    message_serialize_error_response(&packer, &eventinfo->api_error, eventinfo->request->msgid);
+    data = MALLOC_ARRAY(sbuf.size, char);
+
+    if (data == NULL)
+      return;
+
+    outputstream_write(eventinfo->con->streams.write, memcpy(data, sbuf.data,
+        sbuf.size), sbuf.size);
+
+    msgpack_sbuffer_clear(&sbuf);
+  }
 
   FREE(eventinfo->request);
 }

@@ -19,12 +19,13 @@
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
+#include "helper-all.h"
 
 void unit_dispatch_handle_register(UNUSED(void **state))
 {
+  connection_request_event_info info;
   struct message_request *request;
-  struct message_params_object *meta;
-  struct api_error *err = MALLOC(struct api_error);
+  struct message_params_object *meta, *functions;
 
   string apikey = cstring_copy_string(
       "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2");
@@ -33,8 +34,13 @@ void unit_dispatch_handle_register(UNUSED(void **state))
   string author = cstring_copy_string("test");
   string license = cstring_copy_string("none");
 
-  request = MALLOC(struct message_request);
+  /* check NULL pointer error */
+  assert_int_not_equal(0, handle_register(&info));
 
+  info.request = MALLOC(struct message_request);
+  request = info.request;
+
+  connect_and_create(apikey);
 
   /* first level arrays:
    *
@@ -67,33 +73,34 @@ void unit_dispatch_handle_register(UNUSED(void **state))
   meta->obj[4].type = OBJECT_TYPE_STR;
   meta->obj[4].data.string = license;
 
-  /* check NULL pointer error */
-  assert_int_not_equal(0, handle_register(request, NULL, NULL));
+  functions = &request->params.obj[1].data.params;
+  functions->size = 1;
+  functions->obj = CALLOC(1, struct message_object);
+  functions->obj[0].type = OBJECT_TYPE_ARRAY;
 
   /* object is correct */
-  assert_int_equal(0, handle_register(request, NULL, err));
+  assert_int_equal(0, handle_register(&info));
 
   /* object has wrong type */
   request->params.obj[0].type = OBJECT_TYPE_STR;
-  assert_int_not_equal(0, handle_register(request, NULL, err));
+  assert_int_not_equal(0, handle_register(&info));
 
   /* reset */
   request->params.obj[0].type = OBJECT_TYPE_ARRAY;
 
   /* meta has wrong size */
   meta->size = 3;
-  assert_int_not_equal(0, handle_register(request, NULL, err));
+  assert_int_not_equal(0, handle_register(&info));
 
   /* reset */
   meta->size = 4;
 
   /* meta[0] has wrong type */
   meta->obj[0].type = OBJECT_TYPE_BIN;
-  assert_int_not_equal(0, handle_register(request, NULL, err));
+  assert_int_not_equal(0, handle_register(&info));
 
   meta->size = 5;
 
   free_params(request->params);
   FREE(request);
-  FREE(err);
 }

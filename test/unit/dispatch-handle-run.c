@@ -23,15 +23,22 @@
 
 void unit_dispatch_handle_run(UNUSED(void **state))
 {
+  connection_request_event_info info;
+
   struct message_params_object *meta, *arguments;
   struct api_error *err = MALLOC(struct api_error);
-  struct message_request *request = MALLOC(struct message_request);
+  struct message_request *request;
 
   string apikey = cstring_copy_string(
       "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2");
   string function_name = cstring_copy_string("test_function");
   string arg1 = cstring_copy_string("test arg1");
   string arg2 = cstring_copy_string("test arg2");
+
+  info.request = MALLOC(struct message_request);
+  info.api_error = *err;
+
+  request = info.request;
 
   /* first level arrays:
    *
@@ -64,11 +71,11 @@ void unit_dispatch_handle_run(UNUSED(void **state))
   arguments->obj[1].data.string = arg2;
 
   /* check NULL pointer error */
-  assert_int_not_equal(0, handle_run(request, NULL, NULL));
+  assert_int_not_equal(0, handle_run(&info));
 
   /* object has wrong type */
   request->params.obj[0].type = OBJECT_TYPE_STR;
-  assert_int_not_equal(0, handle_run(request, NULL, err));
+  assert_int_not_equal(0, handle_run(&info));
 
   /* reset */
   request->params.obj[0].type = OBJECT_TYPE_ARRAY;
@@ -76,14 +83,14 @@ void unit_dispatch_handle_run(UNUSED(void **state))
   /* meta has wrong size */
   meta->size = 3;
 
-  assert_int_not_equal(0, handle_run(request, NULL, err));
+  assert_int_not_equal(0, handle_run(&info));
 
   /* reset */
   meta->size = 1;
 
   /* meta[0] has wrong type */
   meta->obj[0].type = OBJECT_TYPE_BIN;
-  assert_int_not_equal(0, handle_run(request, NULL, err));
+  assert_int_not_equal(0, handle_run(&info));
 
   free_params(request->params);
   FREE(request);
