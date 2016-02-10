@@ -75,6 +75,7 @@ void functional_db_function_verify(UNUSED(void **state))
   /* verifying an existing function with wrong arguments' type */
   args->size = 1;
   args->obj[0].type = OBJECT_TYPE_UINT;
+  args->obj[0].data.integer = -1;
   assert_int_not_equal(0, db_function_verify(apikey, name, args));
 
   free_params(params);
