@@ -51,7 +51,7 @@ struct server {
 
 static server_type type = SERVER_TYPE_TCP;
 
-static struct hashmap *servers = NULL;
+static struct hashmap_string *servers = NULL;
 
 static server_type server_get_endpoint_type(string endpoint,
     struct server *server);
@@ -61,7 +61,7 @@ static void server_free_cb(uv_handle_t *handle);
 
 int server_init(void)
 {
-  servers = hashmap_new();
+  servers = hashmap_string_new();
 
   if (!servers)
     return (-1);
@@ -80,7 +80,7 @@ int server_start(string endpoint)
     return (-1);
   }
 
-  if (hashmap_contains_key(servers, endpoint)) {
+  if (hashmap_string_contains_key(servers, endpoint)) {
     LOG("Already listening on %s", endpoint.str);
     return (-1);
   }
@@ -133,7 +133,7 @@ int server_start(string endpoint)
   server->type = type;
   stream->data = server;
 
-  hashmap_put(servers, endpoint, server);
+  hashmap_string_put(servers, endpoint, server);
 
   return (0);
 }
@@ -150,7 +150,7 @@ int server_close(void)
       uv_close((uv_handle_t *)&server->socket.pipe.handle, server_free_cb);
   });
 
-  hashmap_free(servers);
+  hashmap_string_free(servers);
 
   return (0);
 }
@@ -159,14 +159,14 @@ int server_stop(string endpoint)
 {
   struct server *server;
 
-  server = hashmap_get(servers, endpoint);
+  server = hashmap_string_get(servers, endpoint);
 
   if (server->type == SERVER_TYPE_TCP)
     uv_close((uv_handle_t *)&server->socket.tcp.handle, server_free_cb);
   else
     uv_close((uv_handle_t *)&server->socket.pipe.handle, server_free_cb);
 
-  hashmap_remove(servers, endpoint);
+  hashmap_string_remove(servers, endpoint);
 
   return (0);
 }

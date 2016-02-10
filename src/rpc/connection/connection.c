@@ -29,7 +29,7 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-static struct hashmap *connections = NULL;
+static struct hashmap_string *connections = NULL;
 static uint64_t id_cnt = 1;
 static void parse_cb(inputstream *istream, void *data, bool eof);
 static void close_cb(uv_handle_t *handle);
@@ -44,7 +44,7 @@ equeue *equeue_root;
 
 int connection_init(void)
 {
-  connections = hashmap_new();
+  connections = hashmap_string_new();
 
   if (dispatch_table_init() == -1)
     return (-1);

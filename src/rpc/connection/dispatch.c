@@ -21,8 +21,9 @@
 #include "sb-common.h"
 
 static msgpack_sbuffer sbuf;
-static struct hashmap *connections = NULL;
-static struct hashmap *dispatch_table = NULL;
+static struct hashmap_string *connections = NULL;
+static struct hashmap_string *dispatch_table = NULL;
+static struct hashmap_uint64 *callids = NULL;
 
 int handle_error(connection_request_event_info *info)
 {
@@ -135,7 +136,7 @@ int handle_register(connection_request_event_info *info)
    * connection hashmap
    */
 
-  hashmap_put(connections, pluginlongtermpk, info->con);
+  hashmap_string_put(connections, pluginlongtermpk, info->con);
 
   if (api_error->isset)
     message_serialize_error_response(&packer, api_error, request->msgid);
@@ -258,7 +259,7 @@ int handle_run(connection_request_event_info *info)
 
 void dispatch_table_put(string method, struct dispatch_info *info)
 {
-  hashmap_put(dispatch_table, method, info);
+  hashmap_string_put(dispatch_table, method, info);
 }
 
 
@@ -266,7 +267,7 @@ struct dispatch_info *dispatch_table_get(string method)
 {
   struct dispatch_info *info;
 
-  info = (struct dispatch_info *)hashmap_get(dispatch_table, method);
+  info = (struct dispatch_info *)hashmap_string_get(dispatch_table, method);
 
   if (!info)
     return (NULL);
@@ -283,7 +284,7 @@ int dispatch_table_free(void)
     FREE(info);
   });
 
-  hashmap_free(dispatch_table);
+  hashmap_string_free(dispatch_table);
 
   return (0);
 }
@@ -296,8 +297,9 @@ int dispatch_table_init(void)
 
   msgpack_sbuffer_init(&sbuf);
 
-  connections = hashmap_new();
-  dispatch_table = hashmap_new();
+  connections = hashmap_string_new();
+  dispatch_table = hashmap_string_new();
+  callids = hashmap_uint64_new();
 
   if (!connections)
     return (-1);

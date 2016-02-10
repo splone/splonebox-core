@@ -102,7 +102,9 @@ set(SPLONEBOX-SOURCES
   src/queue.h
   src/string.c
   src/reallocarray.c
-  src/hashmap.c
+  src/hashmap-string.c
+  src/hashmap-uint64.c
+  src/random.c
   src/optparser.c
   src/api/sb-api.h
   src/api/apikey.c
@@ -146,7 +148,8 @@ set(TEST-SOURCES
   src/queue.h
   src/string.c
   src/reallocarray.c
-  src/hashmap.c
+  src/hashmap-string.c
+  src/hashmap-uint64.c
   src/optparser.c
   src/api/sb-api.h
   src/api/apikey.c

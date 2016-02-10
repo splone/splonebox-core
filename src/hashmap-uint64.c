@@ -16,41 +16,41 @@
 
 #include "sb-common.h"
 
-struct hashmap *hashmap_new()
+struct hashmap_uint64 *hashmap_uint64_new()
 {
-  struct hashmap *hmap = MALLOC(struct hashmap);
+  struct hashmap_uint64 *hmap = MALLOC(struct hashmap_uint64);
 
   if (hmap == NULL)
     return (NULL);
 
-  hmap->table = kh_init(HASHMAP);
+  hmap->table = kh_init(HASHMAP_UINT64);
 
   return (hmap);
 }
 
 
-void *hashmap_get(struct hashmap *hmap, string key)
+void *hashmap_uint64_get(struct hashmap_uint64 *hmap, uint64_t key)
 {
   khiter_t i;
 
-  if ((i = kh_get(HASHMAP, hmap->table, key)) == kh_end(hmap->table))
+  if ((i = kh_get(HASHMAP_UINT64, hmap->table, key)) == kh_end(hmap->table))
     return (NULL);
 
   return (kh_val(hmap->table, i));
 }
 
 
-bool hashmap_contains_key(struct hashmap *hmap, string key)
+bool hashmap_uint64_contains_key(struct hashmap_uint64 *hmap, uint64_t key)
 {
-  return (kh_get(HASHMAP, hmap->table, key) != kh_end(hmap->table));
+  return (kh_get(HASHMAP_UINT64, hmap->table, key) != kh_end(hmap->table));
 }
 
 
-void *hashmap_put(struct hashmap *hmap, string key, void *value)
+void *hashmap_uint64_put(struct hashmap_uint64 *hmap, uint64_t key, void *value)
 {
   int ret;
   void *retval = NULL;
-  khiter_t i = kh_put(HASHMAP, hmap->table, key, &ret);
+  khiter_t i = kh_put(HASHMAP_UINT64, hmap->table, key, &ret);
 
   if (!ret)
     retval = kh_val(hmap->table, i);
@@ -61,23 +61,23 @@ void *hashmap_put(struct hashmap *hmap, string key, void *value)
 }
 
 
-void *hashmap_remove(struct hashmap *hmap, string key)
+void *hashmap_uint64_remove(struct hashmap_uint64 *hmap, uint64_t key)
 {
   void *retval = NULL;
   khiter_t i;
 
-  if ((i = kh_get(HASHMAP, hmap->table, key)) != kh_end(hmap->table)) {
+  if ((i = kh_get(HASHMAP_UINT64, hmap->table, key)) != kh_end(hmap->table)) {
     retval = kh_val(hmap->table, i);
-    kh_del(HASHMAP, hmap->table, i);
+    kh_del(HASHMAP_UINT64, hmap->table, i);
   }
 
   return (retval);
 }
 
 
-void hashmap_free(struct hashmap *hmap)
+void hashmap_uint64_free(struct hashmap_uint64 *hmap)
 {
-  kh_clear(HASHMAP, hmap->table);
-  kh_destroy(HASHMAP, hmap->table);
+  kh_clear(HASHMAP_UINT64, hmap->table);
+  kh_destroy(HASHMAP_UINT64, hmap->table);
   FREE(hmap);
 }
