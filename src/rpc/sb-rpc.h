@@ -32,6 +32,7 @@ typedef struct api_event api_event;
 typedef struct equeue equeue;
 typedef struct queue_entry queue_entry;
 typedef struct message_object message_object;
+typedef struct connection_request_event_info connection_request_event_info;
 
 
 #define MESSAGE_REQUEST_ARRAY_SIZE 4
@@ -156,8 +157,8 @@ struct connection_request_event_info {
 /* this structure holds the request event information and a callback to a
    handler function */
 struct api_event {
-  struct connection_request_event_info info;
-  void (*handler)(struct connection_request_event_info *info);
+  connection_request_event_info info;
+  void (*handler)(connection_request_event_info *info);
 };
 
 TAILQ_HEAD(queue, queue_entry);

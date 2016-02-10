@@ -37,8 +37,7 @@ static int connection_handle_request(struct connection *con,
     msgpack_object *obj);
 static int connection_handle_response(struct connection *con,
     msgpack_object *obj);
-static void connection_request_event(
-    struct connection_request_event_info *info);
+static void connection_request_event(connection_request_event_info *info);
 
 static msgpack_sbuffer sbuf;
 equeue *equeue_root;
@@ -156,7 +155,7 @@ static int connection_handle_request(struct connection *con,
 {
   struct dispatch_info *dispatcher = NULL;
   struct api_error api_error = { .isset = false };
-  struct connection_request_event_info eventinfo;
+  connection_request_event_info eventinfo;
   api_event event;
 
   if (!obj || !con)
@@ -200,8 +199,7 @@ static int connection_handle_request(struct connection *con,
 }
 
 
-static void connection_request_event(
-    struct connection_request_event_info *eventinfo)
+static void connection_request_event(connection_request_event_info *eventinfo)
 {
   char *data;
   msgpack_packer response;
