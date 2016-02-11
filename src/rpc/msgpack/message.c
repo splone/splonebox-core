@@ -242,6 +242,8 @@ struct message_request *message_deserialize_request(msgpack_object *obj,
 static void free_message_object(message_object obj)
 {
   switch (obj.type) {
+  case OBJECT_TYPE_NIL:
+    break;
   case OBJECT_TYPE_INT:
     break;
   case OBJECT_TYPE_UINT:
