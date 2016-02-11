@@ -94,9 +94,8 @@ struct message_request {
 };
 
 struct message_response {
-  uint8_t type;
   uint32_t msgid;
-  uint32_t status;
+  struct message_params_object params;
 };
 
 struct connection {
@@ -386,7 +385,9 @@ void free_params(struct message_params_object params);
 bool message_is_request(msgpack_object *obj);
 bool message_is_response(msgpack_object *obj);
 int message_serialize_error_response(msgpack_packer *pk, struct api_error *err,
-                                     uint32_t msgid);
+    uint32_t msgid);
+int message_serialize_response(struct message_response *res,
+    msgpack_packer *pk);
 struct message_request *message_deserialize_request(msgpack_object *obj,
                                                     struct api_error *err);
 int message_serialize_request(struct message_request *req, msgpack_packer *pk);

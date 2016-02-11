@@ -57,3 +57,5 @@ int api_run(string api_key, string function_name, uint64_t callid,
  * @return 0 in case of success otherwise -1
  */
 int api_get_key(string key);
+
+int api_register_response(uint32_t msgid, msgpack_packer *pk);

@@ -61,3 +61,20 @@ int api_register(string api_key, string name, string desc, string author,
 
   return (0);
 }
+
+int api_register_response(uint32_t msgid, msgpack_packer *pk)
+{
+  struct message_response *response;
+
+  response = CALLOC(1, struct message_response);
+
+  if (!response)
+    return (-1);
+
+  response->msgid = msgid;
+  response->params.size = 0;
+
+  message_serialize_response(response, pk);
+
+  return (0);
+}

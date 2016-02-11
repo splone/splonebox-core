@@ -123,10 +123,8 @@ int handle_register(connection_request_event_info *info)
 
   functions = request->params.obj[1].data.params;
 
-  if (api_register(pluginlongtermpk, name, description, author, license, functions,
-      api_error)) {
-    return (-1);
-  }
+  api_register(pluginlongtermpk, name, description, author, license, functions,
+      api_error);
 
   /* TODO: pack status response */
 
@@ -135,11 +133,14 @@ int handle_register(connection_request_event_info *info)
    * connection hashmap
    */
 
+  if (api_error->isset)
+    return (-1);
+
   hashmap_string_put(connections, pluginlongtermpk, info->con);
 
-  //if (api_error->isset)
-    //message_serialize_error_response(&packer, api_error, request->msgid);
-    /*
+  msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
+  api_register_response(info->request->msgid, &packer);
+
   data = MALLOC_ARRAY(sbuf.size, char);
 
   if (data == NULL)
@@ -149,7 +150,7 @@ int handle_register(connection_request_event_info *info)
       sbuf.size), sbuf.size);
 
   msgpack_sbuffer_clear(&sbuf);
-*/
+
   return (0);
 }
 
@@ -166,7 +167,7 @@ int handle_run(connection_request_event_info *info)
   struct message_request *request = info->request;
   struct api_error *api_error = &info->api_error;
 
-  if (!api_error )
+  if (!api_error)
     return (-1);
 
   /* check params size */

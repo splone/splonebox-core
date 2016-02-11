@@ -100,6 +100,27 @@ int message_serialize_error_response(msgpack_packer *pk,
 }
 
 
+int message_serialize_response(struct message_response *res,
+    msgpack_packer *pk)
+{
+  msgpack_pack_array(pk, 4);
+
+  if (pack_uint8(pk, MESSAGE_TYPE_RESPONSE) == -1)
+    return (-1);
+
+  if (pack_uint32(pk, res->msgid) == -1)
+    return (-1);
+
+  if (pack_nil(pk) == -1)
+    return (-1);
+
+  if (pack_params(pk, res->params) == -1)
+    return (-1);
+
+  return (0);
+}
+
+
 int message_serialize_request(struct message_request *req,
     msgpack_packer *pk)
 {
