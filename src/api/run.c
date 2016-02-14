@@ -16,48 +16,43 @@
 
 #include <stdlib.h>
 #include <stddef.h>
-#include <sodium.h>
 
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
-    struct message_params_object args, msgpack_packer *pk,
+struct message_params_object * api_run(string pluginlongtermpk,
+    string function_name, uint64_t callid, struct message_params_object args,
     struct api_error *api_error)
 {
   struct message_object *data;
   struct message_object *meta;
-  struct message_request *request;
-  struct message_params_object run_params;
+  struct message_params_object *run_params;
 
-  if (!api_error || !pk)
-    return (-1);
+  run_params = CALLOC(1, struct message_params_object);
+
+  if (!api_error)
+    return (NULL);
 
   /* check if id is in database */
   if (db_apikey_verify(pluginlongtermpk) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
-    return (-1);
+    return (NULL);
   }
 
   if (db_function_verify(pluginlongtermpk, function_name, &args) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "run() verification failed.");
-    return (-1);
+    return (NULL);
   }
 
-  request = CALLOC(1, struct message_request);
+  run_params->size = 3;
+  run_params->obj = CALLOC(3, struct message_object);
 
-  if (!request)
-    return (-1);
-
-  run_params.size = 3;
-  run_params.obj = CALLOC(3, struct message_object);
-
-  if (!run_params.obj)
-    return (-1);
+  if (!run_params->obj)
+    return (NULL);
 
   /* data refs to first run_params parameter */
-  meta = &run_params.obj[0];
+  meta = &run_params->obj[0];
 
   meta->type = OBJECT_TYPE_ARRAY;
 
@@ -66,7 +61,7 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
   meta->data.params.obj = CALLOC(2, struct message_object);
 
   if (!meta->data.params.obj)
-    return (-1);
+    return (NULL);
 
   /* add nil */
   data = &meta->data.params.obj[0];
@@ -78,22 +73,15 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
   data->data.uinteger = callid;
 
   /* add function name, data refs to second run_params parameter */
-  data = &run_params.obj[1];
+  data = &run_params->obj[1];
   data->type = OBJECT_TYPE_STR;
   data->data.string = function_name;
 
   /* add function parameters, data refs to third run_params parameter */
-  data = &run_params.obj[2];
+  data = &run_params->obj[2];
 
   data->type = OBJECT_TYPE_ARRAY;
   data->data.params = args;
 
-  request->type = MESSAGE_TYPE_REQUEST;
-  request->msgid = randombytes_random();
-  request->method = cstring_copy_string("run");
-  request->params = run_params;
-
-  message_serialize_request(request, pk);
-
-  return (0);
+  return (run_params);
 }

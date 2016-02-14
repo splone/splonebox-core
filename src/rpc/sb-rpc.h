@@ -199,6 +199,12 @@ int connection_init(void);
  */
 int connection_create(uv_stream_t *stream);
 
+int connection_send_request(string pluginlongtermpk, string method,
+    struct message_params_object *params, struct api_error *api_error);
+int connection_send_response(string pluginlongtermpk, uint32_t msgid,
+    struct message_params_object *params, struct api_error *api_error);
+int connection_hashmap_put(string pluginlongtermpk, struct connection *con);
+
 /**
  * Create a new `outputstream` instance. A `outputstream` instance contains the
  * logic to write to a libuv stream

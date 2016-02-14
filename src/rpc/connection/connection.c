@@ -23,6 +23,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sodium.h>
 #include <uv.h>
 
 #include "rpc/sb-rpc.h"
@@ -141,12 +142,105 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
       msgpack_unpacker_next(con->mpac, &result)) == MSGPACK_UNPACK_SUCCESS) {
     if (message_is_request(&result.data))
       connection_handle_request(con, &result.data);
-    else if (message_is_response(&result.data))
+    else if (message_is_response(&result.data)) {
+      msgpack_object_print(stdout, result.data);
       connection_handle_response(con, &result.data);
-    else {
+    } else {
       /* invalid message, send response with error */
     }
   }
+}
+
+int connection_hashmap_put(string pluginlongtermpk, struct connection *con)
+{
+  hashmap_string_put(connections, pluginlongtermpk, con);
+
+  return (0);
+}
+
+int connection_send_request(string pluginlongtermpk, string method,
+    struct message_params_object *params, struct api_error *api_error)
+{
+  struct connection *con;
+  char *data;
+  msgpack_packer packer;
+  struct message_request request;
+
+  con = hashmap_string_get(connections, pluginlongtermpk);
+
+  /*
+   * if no connection is available for the key, set the connection to the
+   * the initial connection from the sender.
+   */
+  if (!con) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
+    return (-1);
+  }
+
+  request.type = MESSAGE_TYPE_REQUEST;
+  request.msgid = randombytes_random();
+  request.method = method;
+  request.params = *params;
+
+  msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
+
+  message_serialize_request(&request, &packer);
+  /* if error is set, generate an error response message */
+  if (api_error->isset)
+    return (-1);
+
+  data = MALLOC_ARRAY(sbuf.size, char);
+
+  if (data == NULL)
+    return (-1);
+
+  outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
+      sbuf.size);
+
+  msgpack_sbuffer_clear(&sbuf);
+
+  return (0);
+}
+
+int connection_send_response(string pluginlongtermpk, uint32_t msgid,
+    struct message_params_object *params, struct api_error *api_error)
+{
+  struct connection *con;
+  char *data;
+  msgpack_packer packer;
+  struct message_response response;
+
+  con = hashmap_string_get(connections, pluginlongtermpk);
+
+  /*
+   * if no connection is available for the key, set the connection to the
+   * the initial connection from the sender.
+   */
+  if (!con) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
+    return (-1);
+  }
+
+  response.msgid = msgid;
+  response.params = *params;
+
+  msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
+  message_serialize_response(&response, &packer);
+
+  if (api_error->isset)
+    return (-1);
+
+  data = MALLOC_ARRAY(sbuf.size, char);
+
+  if (data == NULL)
+    return (-1);
+
+  outputstream_write(con->streams.write, memcpy(data, sbuf.data,
+      sbuf.size), sbuf.size);
+
+  msgpack_sbuffer_clear(&sbuf);
+
+  return 0;
 }
 
 

@@ -45,12 +45,10 @@ int handle_error(connection_request_event_info *info)
  */
 int handle_register(connection_request_event_info *info)
 {
+  struct message_params_object *params = NULL;
   struct message_params_object *meta = NULL;
   struct message_params_object functions;
   string pluginlongtermpk, name, description, author, license;
-
-  char *data;
-  msgpack_packer packer;
 
   struct message_request *request = info->request;
   struct api_error *api_error = &info->api_error;
@@ -126,30 +124,24 @@ int handle_register(connection_request_event_info *info)
   api_register(pluginlongtermpk, name, description, author, license, functions,
       api_error);
 
-  /* TODO: pack status response */
+  if (api_error->isset)
+    return (-1);
 
   /*
    * add connection with the client long term public key as key to the
    * connection hashmap
    */
+  connection_hashmap_put(pluginlongtermpk, info->con);
 
-  if (api_error->isset)
+  params = CALLOC(1, struct message_params_object);
+
+  if (params == NULL)
     return (-1);
 
-  hashmap_string_put(connections, pluginlongtermpk, info->con);
+  params->size = 0;
 
-  msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
-  api_register_response(info->request->msgid, &packer);
-
-  data = MALLOC_ARRAY(sbuf.size, char);
-
-  if (data == NULL)
-    return (-1);
-
-  outputstream_write(info->con->streams.write, memcpy(data, sbuf.data,
-      sbuf.size), sbuf.size);
-
-  msgpack_sbuffer_clear(&sbuf);
+  connection_send_response(pluginlongtermpk, info->request->msgid, params,
+      api_error);
 
   return (0);
 }
@@ -159,10 +151,8 @@ int handle_run(connection_request_event_info *info)
 {
   struct message_params_object *meta = NULL;
   struct message_params_object args;
+  struct message_params_object *params;
   string pluginlongtermpk, function_name;
-  struct connection *con;
-  char *data;
-  msgpack_packer packer;
 
   struct message_request *request = info->request;
   struct api_error *api_error = &info->api_error;
@@ -241,40 +231,18 @@ int handle_run(connection_request_event_info *info)
 
   args = request->params.obj[2].data.params;
 
-  msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
 
-  con = hashmap_string_get(connections, pluginlongtermpk);
+  // move to connection
+  uint64_t callid = (uint64_t) randommod(281474976710656LL);
+  hashmap_uint64_put(callids, callid, info->con);
 
-  /*
-   * if no connection is available for the key, set the connection to the
-   * the initial connection from the sender.
-   */
-  if (!con) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
-    return (-1);
+  params = api_run(pluginlongtermpk, function_name, callid, args, api_error);
+
+  if (params == NULL) {
+    // send error response
   }
 
-  /*
-   * if a connection is available, generate a callid and save the connection in
-   * the callids hashmap with key callid.
-   */
-  uint64_t callid = (uint64_t) randommod(281474976710656LL);
-  hashmap_uint64_put(callids, callid, con);
-  api_run(pluginlongtermpk, function_name, callid, args, &packer, api_error);
-
-  /* if error is set, generate an error response message */
-  if (api_error->isset)
-    return (-1);
-
-  data = MALLOC_ARRAY(sbuf.size, char);
-
-  if (data == NULL)
-    return (-1);
-
-  outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
-      sbuf.size);
-
-  msgpack_sbuffer_clear(&sbuf);
+  connection_send_request(pluginlongtermpk, cstring_copy_string("run"), params, api_error);
 
   return (0);
 }
