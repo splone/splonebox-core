@@ -158,11 +158,27 @@ int connection_hashmap_put(string pluginlongtermpk, struct connection *con)
   return (0);
 }
 
+static int connection_write(struct connection *con)
+{
+  char *data;
+
+  data = MALLOC_ARRAY(sbuf.size, char);
+
+  if (data == NULL)
+    return (-1);
+
+  outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
+      sbuf.size);
+
+  msgpack_sbuffer_clear(&sbuf);
+
+  return (0);
+}
+
 int connection_send_request(string pluginlongtermpk, string method,
     struct message_params_object *params, struct api_error *api_error)
 {
   struct connection *con;
-  char *data;
   msgpack_packer packer;
   struct message_request request;
 
@@ -189,15 +205,14 @@ int connection_send_request(string pluginlongtermpk, string method,
   if (api_error->isset)
     return (-1);
 
-  data = MALLOC_ARRAY(sbuf.size, char);
+  connection_write(con);
+  /* increase connection pending requests */
 
-  if (data == NULL)
-    return (-1);
-
-  outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
-      sbuf.size);
-
-  msgpack_sbuffer_clear(&sbuf);
+  /* generate callinfo*/
+  /* push callinfo to callinfo vector */
+  /* wait until callinfo returned */
+  /* pop frame from callinfo vector */
+  /* decrease connection pending requests */
 
   return (0);
 }
@@ -206,7 +221,6 @@ int connection_send_response(string pluginlongtermpk, uint32_t msgid,
     struct message_params_object *params, struct api_error *api_error)
 {
   struct connection *con;
-  char *data;
   msgpack_packer packer;
   struct message_response response;
 
@@ -230,15 +244,7 @@ int connection_send_response(string pluginlongtermpk, uint32_t msgid,
   if (api_error->isset)
     return (-1);
 
-  data = MALLOC_ARRAY(sbuf.size, char);
-
-  if (data == NULL)
-    return (-1);
-
-  outputstream_write(con->streams.write, memcpy(data, sbuf.data,
-      sbuf.size), sbuf.size);
-
-  msgpack_sbuffer_clear(&sbuf);
+  connection_write(con);
 
   return 0;
 }
