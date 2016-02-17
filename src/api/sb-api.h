@@ -61,4 +61,5 @@ struct message_params_object * api_run_response(string pluginlongtermpk,
  */
 int api_get_key(string key);
 
-int api_register_response(uint32_t msgid, msgpack_packer *pk);
+struct message_params_object * api_register_response(
+    struct api_error *api_error);

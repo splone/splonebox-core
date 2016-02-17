@@ -132,13 +132,7 @@ int handle_register(connection_request_event_info *info)
    * connection hashmap
    */
   connection_hashmap_put(pluginlongtermpk, info->con);
-
-  params = CALLOC(1, struct message_params_object);
-
-  if (params == NULL)
-    return (-1);
-
-  params->size = 0;
+  params = api_register_response(api_error);
 
   connection_send_response(info->con, info->request->msgid, params,
       api_error);
