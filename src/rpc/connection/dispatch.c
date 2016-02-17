@@ -148,6 +148,7 @@ int handle_run(connection_request_event_info *info)
   struct message_params_object *params;
   string pluginlongtermpk, function_name;
   struct callinfo *cinfo;
+  uint64_t callid;
 
   struct message_request *request = info->request;
   struct api_error *api_error = &info->api_error;
@@ -226,15 +227,14 @@ int handle_run(connection_request_event_info *info)
 
   args = request->params.obj[2].data.params;
 
-
-  // move to connection
-  uint64_t callid = (uint64_t) randommod(281474976710656LL);
+  callid = (uint64_t) randommod(281474976710656LL);
   hashmap_uint64_put(callids, callid, info->con);
-
   params = api_run(pluginlongtermpk, function_name, callid, args, api_error);
 
   if (params == NULL) {
-    // send error response
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error creating run API request.");
+    return (-1);
   }
 
   cinfo = connection_send_request(pluginlongtermpk, cstring_copy_string("run"),
@@ -257,7 +257,9 @@ int handle_run(connection_request_event_info *info)
   params = api_run_response(pluginlongtermpk, callid, api_error);
 
   if (params == NULL) {
-    // send error response
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error creating run API response.");
+    return (-1);
   }
 
   connection_send_response(info->con, info->request->msgid, params,
