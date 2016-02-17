@@ -140,7 +140,7 @@ int handle_register(connection_request_event_info *info)
 
   params->size = 0;
 
-  connection_send_response(pluginlongtermpk, info->request->msgid, params,
+  connection_send_response(info->con, info->request->msgid, params,
       api_error);
 
   return (0);
@@ -153,6 +153,7 @@ int handle_run(connection_request_event_info *info)
   struct message_params_object args;
   struct message_params_object *params;
   string pluginlongtermpk, function_name;
+  struct callinfo *cinfo;
 
   struct message_request *request = info->request;
   struct api_error *api_error = &info->api_error;
@@ -163,7 +164,7 @@ int handle_run(connection_request_event_info *info)
   /* check params size */
   if (request->params.size != 3) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API request. Invalid params params size");
+        "Error dispatching run API request. Invalid params size");
     return (-1);
   }
 
@@ -242,7 +243,31 @@ int handle_run(connection_request_event_info *info)
     // send error response
   }
 
-  connection_send_request(pluginlongtermpk, cstring_copy_string("run"), params, api_error);
+  cinfo = connection_send_request(pluginlongtermpk, cstring_copy_string("run"),
+      params, api_error);
+
+  if (cinfo->response->params.size != 1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API response. Invalid params size");
+    return (-1);
+  }
+
+  if (cinfo->response->params.obj[0].type == OBJECT_TYPE_UINT) {
+    callid = cinfo->response->params.obj[0].data.uinteger;
+  } else {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API response. Cannot read callid");
+    return (-1);
+  }
+
+  params = api_run_response(pluginlongtermpk, callid, api_error);
+
+  if (params == NULL) {
+    // send error response
+  }
+
+  connection_send_response(info->con, info->request->msgid, params,
+      api_error);
 
   return (0);
 }

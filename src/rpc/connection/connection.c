@@ -30,8 +30,12 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-static struct hashmap_string *connections = NULL;
-static uint64_t id_cnt = 1;
+static void connection_callvector_init(struct connection *con);
+static void connection_callvector_add(struct connection *con, struct callinfo *cinfo);
+static void connection_callvector_delete_last(struct connection *con);
+static size_t connection_callvector_size(struct connection *con);
+static struct callinfo * connection_callvector_get(struct connection *con,
+    size_t pos);
 static void parse_cb(inputstream *istream, void *data, bool eof);
 static void close_cb(uv_handle_t *handle);
 static int connection_handle_request(struct connection *con,
@@ -40,8 +44,10 @@ static int connection_handle_response(struct connection *con,
     msgpack_object *obj);
 static void connection_request_event(connection_request_event_info *info);
 
+static struct hashmap_string *connections = NULL;
 static msgpack_sbuffer sbuf;
 equeue *equeue_root;
+uv_loop_t loop;
 
 int connection_init(void)
 {
@@ -68,7 +74,6 @@ int connection_create(uv_stream_t *stream)
   if (con == NULL)
     return (-1);
 
-  con->id = id_cnt++;
   con->msgid = 1;
   con->mpac = msgpack_unpacker_new(MSGPACK_UNPACKER_INIT_BUFFER_SIZE);
   con->closed = false;
@@ -76,6 +81,8 @@ int connection_create(uv_stream_t *stream)
   con->streams.read = inputstream_new(parse_cb, 1024, con);
   con->streams.write = outputstream_new(1024 * 1024);
   con->streams.uv = stream;
+
+  connection_callvector_init(con);
 
   inputstream_set(con->streams.read, stream);
   inputstream_start(con->streams.read);
@@ -143,8 +150,9 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
     if (message_is_request(&result.data))
       connection_handle_request(con, &result.data);
     else if (message_is_response(&result.data)) {
-      msgpack_object_print(stdout, result.data);
-      connection_handle_response(con, &result.data);
+      if (connection_handle_response(con, &result.data) != 0) {
+        break;
+      }
     } else {
       /* invalid message, send response with error */
     }
@@ -175,13 +183,41 @@ static int connection_write(struct connection *con)
   return (0);
 }
 
-int connection_send_request(string pluginlongtermpk, string method,
+static void connection_callvector_init(struct connection *con)
+{
+  kv_init(con->callvector);
+}
+
+static void connection_callvector_add(struct connection *con, struct callinfo *cinfo)
+{
+  kv_push(struct callinfo *, con->callvector, cinfo);
+}
+
+static void connection_callvector_delete_last(struct connection *con)
+{
+  kv_pop(con->callvector);
+}
+
+static size_t connection_callvector_size(struct connection *con)
+{
+  return kv_size(con->callvector);
+}
+
+static struct callinfo * connection_callvector_get(struct connection *con,
+    size_t pos)
+{
+  return kv_A(con->callvector, pos);
+}
+
+struct callinfo * connection_send_request(string pluginlongtermpk, string method,
     struct message_params_object *params, struct api_error *api_error)
 {
   struct connection *con;
   msgpack_packer packer;
   struct message_request request;
+  struct callinfo *cinfo;
 
+  cinfo = MALLOC(struct callinfo);
   con = hashmap_string_get(connections, pluginlongtermpk);
 
   /*
@@ -190,11 +226,11 @@ int connection_send_request(string pluginlongtermpk, string method,
    */
   if (!con) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
-    return (-1);
+    return (NULL);
   }
 
   request.type = MESSAGE_TYPE_REQUEST;
-  request.msgid = randombytes_random();
+  request.msgid = con->msgid++;
   request.method = method;
   request.params = *params;
 
@@ -203,28 +239,38 @@ int connection_send_request(string pluginlongtermpk, string method,
   message_serialize_request(&request, &packer);
   /* if error is set, generate an error response message */
   if (api_error->isset)
-    return (-1);
+    return (NULL);
 
   connection_write(con);
-  /* increase connection pending requests */
 
-  /* generate callinfo*/
-  /* push callinfo to callinfo vector */
-  /* wait until callinfo returned */
-  /* pop frame from callinfo vector */
-  /* decrease connection pending requests */
+  /* generate callinfo */
+  cinfo->msgid = request.msgid;
+  cinfo->hasresponse = false;
 
-  return (0);
+  /* push callinfo to connection callinfo vector */
+  connection_callvector_add(con, cinfo);
+
+  /* wait until requestinfo returned, in time process events */
+  while (!cinfo->hasresponse) {
+    if (con->queue && !equeue_empty(con->queue)) {
+      equeue_run_events(con->queue);
+    } else {
+      uv_run(&loop, UV_RUN_NOWAIT);
+      equeue_run_events(equeue_root);
+    }
+  }
+
+  /* delete last from callinfo vector */
+  connection_callvector_delete_last(con);
+
+  return cinfo;
 }
 
-int connection_send_response(string pluginlongtermpk, uint32_t msgid,
+int connection_send_response(struct connection *con, uint32_t msgid,
     struct message_params_object *params, struct api_error *api_error)
 {
-  struct connection *con;
   msgpack_packer packer;
   struct message_response response;
-
-  con = hashmap_string_get(connections, pluginlongtermpk);
 
   /*
    * if no connection is available for the key, set the connection to the
@@ -324,8 +370,42 @@ static void connection_request_event(connection_request_event_info *eventinfo)
 }
 
 
-static int connection_handle_response(UNUSED(struct connection *con),
-    UNUSED(msgpack_object *obj))
+static int connection_handle_response(struct connection *con,
+    msgpack_object *obj)
 {
+  struct callinfo *cinfo;
+  size_t csize;
+  size_t i;
+  struct api_error api_error = { .isset = false };
+
+  message_is_error_response(obj);
+
+  csize = connection_callvector_size(con);
+  cinfo = connection_callvector_get(con, csize - 1);
+
+  if (cinfo->msgid != message_get_id(obj)) {
+    for (i = 0; i < csize; i++) {
+      cinfo = connection_callvector_get(con, i);
+      cinfo->errorresponse = true;
+      cinfo->response = NULL;
+      cinfo->hasresponse = true;
+    }
+
+    connection_close(con);
+
+    return (-1);
+  }
+
+  cinfo->errorresponse = message_is_error_response(obj);
+
+  if (cinfo->errorresponse) {
+    cinfo->response = message_deserialize_error_response(obj, &api_error);
+  } else {
+    cinfo->response = message_deserialize_response(obj, &api_error);
+  }
+
+  /* unblock */
+  cinfo->hasresponse = true;
+
   return (0);
 }

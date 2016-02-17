@@ -47,8 +47,11 @@ int api_register(string api_key, string name, string desc, string author,
  * @return 0 in case of success otherwise -1
  */
  struct message_params_object * api_run(string pluginlongtermpk,
-     string function_name, uint64_t callid, struct message_params_object args,
-     struct api_error *api_error);
+    string function_name, uint64_t callid, struct message_params_object args,
+    struct api_error *api_error);
+
+struct message_params_object * api_run_response(string pluginlongtermpk,
+    uint64_t callid, struct api_error *api_error);
 
 /**
  * Generates an API key using /dev/urandom. The length of the key

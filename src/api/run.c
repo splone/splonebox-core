@@ -85,3 +85,28 @@ struct message_params_object * api_run(string pluginlongtermpk,
 
   return (run_params);
 }
+
+struct message_params_object * api_run_response(string pluginlongtermpk,
+    uint64_t callid, struct api_error *api_error)
+{
+  struct message_params_object *params;
+
+  params = CALLOC(1, struct message_params_object);
+
+  if (!api_error || !params)
+    return (NULL);
+
+  /* check if id is in database */
+  if (db_apikey_verify(pluginlongtermpk) == -1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
+    return (NULL);
+  }
+
+  params->size = 1;
+  params->obj = CALLOC(1, struct message_object);
+
+  params->obj[0].type = OBJECT_TYPE_UINT;
+  params->obj[0].data.uinteger = callid;
+
+  return (params);
+}

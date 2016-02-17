@@ -23,9 +23,11 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <err.h>
+#include <uv.h>
 
 #include "queue.h"
 #include "khash.h"
+#include "kvec.h"
 
 /* Structs */
 #define API_ERROR_MESSAGE_LEN 512
@@ -47,6 +49,9 @@ struct api_error {
 
 /* verbosity global */
 extern int8_t verbose_level;
+
+/* uv loop global */
+extern uv_loop_t loop;
 
 /* Hashmap Functions */
 /* Must be declared before initializing KHASH */

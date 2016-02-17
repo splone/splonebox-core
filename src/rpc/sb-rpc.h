@@ -16,7 +16,6 @@
 
 #pragma once
 
-#include <uv.h>
 #include <msgpack.h>
 #include <msgpack/pack.h>
 #include <stdbool.h>
@@ -99,8 +98,7 @@ struct message_response {
 };
 
 struct connection {
-  uint64_t id;
-  uint64_t msgid;
+  uint32_t msgid;
   msgpack_unpacker *mpac;
   msgpack_sbuffer *sbuf;
   bool closed;
@@ -110,6 +108,18 @@ struct connection {
     outputstream *write;
     uv_stream_t *uv;
   } streams;
+  struct {
+    size_t n;
+    size_t m;
+    struct callinfo **a;
+  } callvector;
+};
+
+struct callinfo {
+  uint32_t msgid;
+  bool hasresponse;
+  bool errorresponse;
+  struct message_response *response;
 };
 
 struct dispatch_info {
@@ -199,9 +209,9 @@ int connection_init(void);
  */
 int connection_create(uv_stream_t *stream);
 
-int connection_send_request(string pluginlongtermpk, string method,
+struct callinfo * connection_send_request(string pluginlongtermpk, string method,
     struct message_params_object *params, struct api_error *api_error);
-int connection_send_response(string pluginlongtermpk, uint32_t msgid,
+int connection_send_response(struct connection *con, uint32_t msgid,
     struct message_params_object *params, struct api_error *api_error);
 int connection_hashmap_put(string pluginlongtermpk, struct connection *con);
 
@@ -367,6 +377,8 @@ void equeue_run_events(equeue *queue);
  */
 void equeue_free(equeue *queue);
 
+bool equeue_empty(equeue *queue);
+
 
 
 
@@ -396,8 +408,14 @@ int message_serialize_response(struct message_response *res,
     msgpack_packer *pk);
 struct message_request *message_deserialize_request(msgpack_object *obj,
                                                     struct api_error *err);
+struct message_response *message_deserialize_response(msgpack_object *obj,
+    struct api_error *api_error);
+struct message_response *message_deserialize_error_response(msgpack_object *obj,
+    struct api_error *api_error);
 int message_serialize_request(struct message_request *req, msgpack_packer *pk);
 void message_dispatch(msgpack_object *req, msgpack_packer *res);
+uint64_t message_get_id(msgpack_object *obj);
+bool message_is_error_response(msgpack_object *obj);
 
 
 /* DB functions */
