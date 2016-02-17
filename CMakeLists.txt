@@ -99,6 +99,7 @@ set(SPLONEBOX-SOURCES
   src/main.c
   src/sb-common.h
   src/khash.h
+  src/kvec.h
   src/queue.h
   src/string.c
   src/reallocarray.c
