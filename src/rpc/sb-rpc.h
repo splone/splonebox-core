@@ -115,6 +115,7 @@ struct message_response {
 
 struct connection {
   uint32_t msgid;
+  uint32_t pendingcalls;
   msgpack_unpacker *mpac;
   msgpack_sbuffer *sbuf;
   bool closed;
@@ -124,11 +125,7 @@ struct connection {
     outputstream *write;
     uv_stream_t *uv;
   } streams;
-  struct {
-    size_t n;
-    size_t m;
-    struct callinfo **a;
-  } callvector;
+  kvec_t(struct callinfo *) callvector;
 };
 
 struct callinfo {

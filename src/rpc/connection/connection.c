@@ -46,12 +46,8 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-static void connection_callvector_init(struct connection *con);
-static void connection_callvector_add(struct connection *con, struct callinfo *cinfo);
-static void connection_callvector_delete_last(struct connection *con);
-static size_t connection_callvector_size(struct connection *con);
-static struct callinfo * connection_callvector_get(struct connection *con,
-    size_t pos);
+static inline void connection_loop_poll_events_until(struct connection *con,
+    bool *condition);
 static void parse_cb(inputstream *istream, void *data, bool eof);
 static void close_cb(uv_handle_t *handle);
 static int connection_handle_request(struct connection *con,
@@ -98,7 +94,7 @@ int connection_create(uv_stream_t *stream)
   con->streams.write = outputstream_new(1024 * 1024);
   con->streams.uv = stream;
 
-  connection_callvector_init(con);
+  kv_init(con->callvector);
 
   inputstream_set(con->streams.read, stream);
   inputstream_start(con->streams.read);
@@ -199,30 +195,17 @@ static int connection_write(struct connection *con)
   return (0);
 }
 
-static void connection_callvector_init(struct connection *con)
+static inline void connection_loop_poll_events_until(struct connection *con,
+    bool *condition)
 {
-  kv_init(con->callvector);
-}
-
-static void connection_callvector_add(struct connection *con, struct callinfo *cinfo)
-{
-  kv_push(struct callinfo *, con->callvector, cinfo);
-}
-
-static void connection_callvector_delete_last(struct connection *con)
-{
-  kv_pop(con->callvector);
-}
-
-static size_t connection_callvector_size(struct connection *con)
-{
-  return kv_size(con->callvector);
-}
-
-static struct callinfo * connection_callvector_get(struct connection *con,
-    size_t pos)
-{
-  return kv_A(con->callvector, pos);
+  while (!*condition) {
+    if (con->queue && !equeue_empty(con->queue)) {
+      equeue_run_events(con->queue);
+    } else {
+      uv_run(&loop, UV_RUN_NOWAIT);
+      equeue_run_events(equeue_root);
+    }
+  }
 }
 
 struct callinfo * connection_send_request(string pluginlongtermpk, string method,
@@ -264,20 +247,15 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   cinfo->hasresponse = false;
 
   /* push callinfo to connection callinfo vector */
-  connection_callvector_add(con, cinfo);
+  kv_push(struct callinfo *, con->callvector, cinfo);
+  con->pendingcalls++;
 
   /* wait until requestinfo returned, in time process events */
-  while (!cinfo->hasresponse) {
-    if (con->queue && !equeue_empty(con->queue)) {
-      equeue_run_events(con->queue);
-    } else {
-      uv_run(&loop, UV_RUN_NOWAIT);
-      equeue_run_events(equeue_root);
-    }
-  }
+  connection_loop_poll_events_until(con, &cinfo->hasresponse);
 
   /* delete last from callinfo vector */
-  connection_callvector_delete_last(con);
+  kv_pop(con->callvector);
+  con->pendingcalls--;
 
   return cinfo;
 }
@@ -396,12 +374,12 @@ static int connection_handle_response(struct connection *con,
 
   message_is_error_response(obj);
 
-  csize = connection_callvector_size(con);
-  cinfo = connection_callvector_get(con, csize - 1);
+  csize = kv_size(con->callvector);
+  cinfo = kv_A(con->callvector, csize - 1);
 
   if (cinfo->msgid != message_get_id(obj)) {
     for (i = 0; i < csize; i++) {
-      cinfo = connection_callvector_get(con, i);
+      cinfo = kv_A(con->callvector, i);
       cinfo->errorresponse = true;
       cinfo->response = NULL;
       cinfo->hasresponse = true;
