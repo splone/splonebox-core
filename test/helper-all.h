@@ -20,3 +20,4 @@
 
 void connect_to_db(void);
 void connect_and_create(string apikey);
+int validate_register_response(const unsigned long data1, const unsigned long data2);

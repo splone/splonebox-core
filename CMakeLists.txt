@@ -176,6 +176,7 @@ set(TEST-SOURCES
   test/main.c
   test/test-list.h
   test/helper-unix.h
+  test/wrapper-functions.c
   test/helper-all.c
   test/helper-all.h
   test/unit/server-start.c
@@ -245,6 +246,10 @@ target_include_directories(sb-test SYSTEM PUBLIC
   ${SODIUM_INCLUDE_DIRS}
   ${CMOCKA_INCLUDE_DIRS}
 )
+
+# Wrap send_request for tests
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write")
+
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}
   ${LIBUV_LIBRARIES}
