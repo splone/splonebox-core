@@ -171,6 +171,18 @@ int db_function_add(string apikey, struct message_params_object *func)
   for (size_t i = 0; i < args->data.params.size; i++) {
     arg = &args->data.params.obj[i];
 
+    if (!(arg->type == OBJECT_TYPE_NIL ||
+          arg->type == OBJECT_TYPE_INT ||
+          arg->type == OBJECT_TYPE_UINT ||
+          arg->type == OBJECT_TYPE_BOOL ||
+          arg->type == OBJECT_TYPE_FLOAT ||
+          arg->type == OBJECT_TYPE_STR ||
+          arg->type == OBJECT_TYPE_BIN ||
+          arg->type == OBJECT_TYPE_ARRAY)){
+      LOG_WARNING("Illegal function argument type.");
+      return (-1);
+    }
+
     if (db_function_add_args(apikey, name, arg->type) == -1) {
       LOG_WARNING("Failed to add function arguments!");
       return (-1);
