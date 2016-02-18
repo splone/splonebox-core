@@ -107,6 +107,7 @@ set(SPLONEBOX-SOURCES
   src/hashmap-uint64.c
   src/random.c
   src/optparser.c
+  src/signal.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
