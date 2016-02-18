@@ -121,6 +121,8 @@ static void connection_close(struct connection *con)
   if (handle && !is_closing)
     uv_close(handle, close_cb);
 
+  kv_destroy(con->callvector);
+
   con->closed = 0;
 }
 
