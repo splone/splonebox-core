@@ -13,7 +13,7 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
   msgpack_zone_init(&mempool, 2048);
 
   msgpack_unpack(buffer, len, NULL, &mempool, &deserialized);
-  msgpack_object_print(stdout, deserialized);
+//  msgpack_object_print(stdout, deserialized);
   check_expected(&deserialized);
 
   return (0);
