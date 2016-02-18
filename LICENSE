@@ -659,3 +659,14 @@ specific requirements.
 if any, to sign a "copyright disclaimer" for the program, if necessary.
 For more information on this, and how to apply and follow the GNU AGPL, see
 <http://www.gnu.org/licenses/>.
+
+====
+
+The above license applies to all parts of splonebox except externally maintained
+libraries.
+
+The externally maintained libraries used by splonebox are:
+
+  - klib: a generic library in C. MIT/X11 license.
+  - libuv: Copyright Joyent, Inc. and other Node contributors. Node.js license.
+  - queue.h: FreeBSD queue library
