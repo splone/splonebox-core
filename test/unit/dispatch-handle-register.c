@@ -259,15 +259,6 @@ void unit_dispatch_handle_register(UNUSED(void **state))
   info.api_error.isset = false;
   functions->size = 2;
 
-  /* registering with illegal argument count must fail */
-  args->size = SIZE_MAX;
-  assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_register(&info));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-  args->size = 2;
-
   free_params(request->params);
   FREE(info.con);
   FREE(request);
