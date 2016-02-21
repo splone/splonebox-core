@@ -1,1 +1,4 @@
+sudo: false
+language: c
 
+script: make sb && make test
