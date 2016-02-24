@@ -248,11 +248,10 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  if (cinfo->response->params.obj[0].type == OBJECT_TYPE_UINT) {
-    callid = cinfo->response->params.obj[0].data.uinteger;
-  } else {
+  if (!(cinfo->response->params.obj[0].type == OBJECT_TYPE_UINT &&
+    callid == cinfo->response->params.obj[0].data.uinteger)) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API response. Cannot read callid");
+        "Error dispatching run API response. Invalid callid");
     return (-1);
   }
 
