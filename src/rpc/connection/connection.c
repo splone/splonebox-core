@@ -210,6 +210,33 @@ static inline void connection_loop_poll_events_until(struct connection *con,
   }
 }
 
+struct callinfo *wait_for_response(struct connection *con,
+    struct message_request *request)
+{
+  struct callinfo *cinfo;
+  cinfo = MALLOC(struct callinfo);
+
+  if (!cinfo)
+    return (NULL);
+
+  /* generate callinfo */
+  cinfo->msgid = request->msgid;
+  cinfo->hasresponse = false;
+
+  /* push callinfo to connection callinfo vector */
+  kv_push(struct callinfo *, con->callvector, cinfo);
+  con->pendingcalls++;
+
+  /* wait until requestinfo returned, in time process events */
+  connection_loop_poll_events_until(con, &cinfo->hasresponse);
+
+  /* delete last from callinfo vector */
+  kv_pop(con->callvector);
+  con->pendingcalls--;
+
+  return cinfo;
+}
+
 struct callinfo * connection_send_request(string pluginlongtermpk, string method,
     struct message_params_object *params, struct api_error *api_error)
 {
@@ -218,7 +245,6 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   struct message_request request;
   struct callinfo *cinfo;
 
-  cinfo = MALLOC(struct callinfo);
   con = hashmap_string_get(connections, pluginlongtermpk);
 
   /*
@@ -244,20 +270,7 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
 
   connection_write(con);
 
-  /* generate callinfo */
-  cinfo->msgid = request.msgid;
-  cinfo->hasresponse = false;
-
-  /* push callinfo to connection callinfo vector */
-  kv_push(struct callinfo *, con->callvector, cinfo);
-  con->pendingcalls++;
-
-  /* wait until requestinfo returned, in time process events */
-  connection_loop_poll_events_until(con, &cinfo->hasresponse);
-
-  /* delete last from callinfo vector */
-  kv_pop(con->callvector);
-  con->pendingcalls--;
+  cinfo = wait_for_response(con, &request);
 
   return cinfo;
 }
