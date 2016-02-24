@@ -247,8 +247,8 @@ target_include_directories(sb-test SYSTEM PUBLIC
   ${CMOCKA_INCLUDE_DIRS}
 )
 
-# Wrap send_request for tests
-set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write")
+# wrap some functions for testing
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=wait_for_response")
 
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}
