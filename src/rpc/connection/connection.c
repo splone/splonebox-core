@@ -246,6 +246,11 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   struct message_request request;
   struct callinfo *cinfo;
 
+  /* BEGIN: just for debugging */
+  struct connection foo;
+  wait_for_response(&foo, &request);
+  /* END: just for debugging */
+
   con = hashmap_string_get(connections, pluginlongtermpk);
 
   /*

@@ -239,6 +239,11 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
+  /* BEGIN: just for debugging */
+  struct connection con;
+  wait_for_response(&con, info->request);
+  /* END: just for debugging */
+
   cinfo = connection_send_request(pluginlongtermpk, cstring_copy_string("run"),
       params, api_error);
 
