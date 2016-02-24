@@ -189,8 +189,9 @@ static int connection_write(struct connection *con)
   if (data == NULL)
     return (-1);
 
-  outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
-      sbuf.size);
+  if (outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
+      sbuf.size) < 0)
+    return (-1);
 
   msgpack_sbuffer_clear(&sbuf);
 
@@ -268,7 +269,8 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   if (api_error->isset)
     return (NULL);
 
-  connection_write(con);
+  if (connection_write(con) < 0)
+    return (NULL);
 
   cinfo = wait_for_response(con, &request);
 
@@ -299,7 +301,8 @@ int connection_send_response(struct connection *con, uint32_t msgid,
   if (api_error->isset)
     return (-1);
 
-  connection_write(con);
+  if (connection_write(con) < 0)
+    return (-1);
 
   return 0;
 }

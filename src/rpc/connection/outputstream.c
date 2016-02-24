@@ -94,6 +94,7 @@ int outputstream_write(outputstream *ostream, char *buffer, size_t len)
   req->data = data;
   ostream->curmem += len;
 
+  //TODO verify return value
   uv_write(req, ostream->stream, &buf, 1, write_cb);
 
   return (0);

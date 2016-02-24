@@ -134,8 +134,10 @@ int handle_register(connection_request_event_info *info)
   connection_hashmap_put(pluginlongtermpk, info->con);
   params = api_register_response(api_error);
 
-  connection_send_response(info->con, info->request->msgid, params,
-      api_error);
+  if (connection_send_response(info->con, info->request->msgid, params,
+      api_error) < 0) {
+    return (-1);
+  };
 
   return (0);
 }
@@ -262,8 +264,10 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  connection_send_response(info->con, info->request->msgid, params,
-      api_error);
+  if (connection_send_response(info->con, info->request->msgid, params,
+      api_error) < 0) {
+    return (-1);
+  };
 
   return (0);
 }
