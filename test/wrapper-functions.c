@@ -4,8 +4,6 @@
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 
-bool wrapping_hashmap_string_get = false;
-
 int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_t len)
 {
   msgpack_object deserialized;
