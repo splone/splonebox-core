@@ -270,63 +270,66 @@ void unit_dispatch_handle_run(UNUSED(void **state))
    * format.
    * */
   assert_false(info.api_error.isset);
-  expect_check(__wrap_outputstream_write, &deserialized, validate_run_response, NULL);
+  expect_check(__wrap_outputstream_write, &deserialized,
+    validate_run_request, NULL);
+   expect_check(__wrap_outputstream_write, &deserialized,
+    validate_run_response, NULL);
   assert_int_equal(0, handle_run(&info));
-//
-//  /*
-//   * The following asserts verify, that the handle_run method cancels
-//   * as soon as illegitim run calls are processed. A API_ERROR must be
-//   * set in order inform the caller later on.
-//   */
-//
-//  /* calling not registered function should fail */
-//  string function_name = request->params.obj[1].data.string;
-//  string invalid_function_name = cstring_copy_string("invalid func name");
-//  request->params.obj[1].data.string = invalid_function_name;
-//  assert_false(info.api_error.isset);
-//  assert_int_not_equal(0, handle_run(&info));
-//  assert_true(info.api_error.isset);
-//  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-//  free_string(invalid_function_name);
-//  request->params.obj[1].data.string = function_name;
-//  info.api_error.isset = false;
-//
-//  /* object has wrong type */
-//  request->params.obj[0].type = OBJECT_TYPE_STR;
-//  assert_false(info.api_error.isset);
-//  assert_int_not_equal(0, handle_run(&info));
-//  assert_true(info.api_error.isset);
-//  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-//  request->params.obj[0].type = OBJECT_TYPE_ARRAY;
-//  info.api_error.isset = false;
-//
-//  /* meta has wrong size */
-//  meta->size = 3;
-//  assert_false(info.api_error.isset);
-//  assert_int_not_equal(0, handle_run(&info));
-//  assert_true(info.api_error.isset);
-//  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-//  meta->size = 2;
-//  info.api_error.isset = false;
-//
-//  /* client2_id has wrong type */
-//  meta->obj[0].type = OBJECT_TYPE_BIN;
-//  assert_false(info.api_error.isset);
-//  assert_int_not_equal(0, handle_run(&info));
-//  assert_true(info.api_error.isset);
-//  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-//  meta->obj[0].type = OBJECT_TYPE_STR;
-//  info.api_error.isset = false;
-//
-//  /* call_id has wrong type */
-//  meta->obj[1].type = OBJECT_TYPE_BIN;
-//  assert_false(info.api_error.isset);
-//  assert_int_not_equal(0, handle_run(&info));
-//  assert_true(info.api_error.isset);
-//  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-//  meta->obj[1].type = OBJECT_TYPE_NIL;
-//  info.api_error.isset = false;
-//
+
+  /*
+   * The following asserts verify, that the handle_run method cancels
+   * as soon as illegitim run calls are processed. A API_ERROR must be
+   * set in order inform the caller later on.
+   */
+
+  /* calling not registered function should fail */
+  string function_name = request->params.obj[1].data.string;
+  string invalid_function_name = cstring_copy_string("invalid func name");
+  request->params.obj[1].data.string = invalid_function_name;
+  assert_false(info.api_error.isset);
+  assert_int_not_equal(0, handle_run(&info));
+  assert_true(info.api_error.isset);
+  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
+  free_string(invalid_function_name);
+  request->params.obj[1].data.string = function_name;
+  info.api_error.isset = false;
+
+  /* object has wrong type */
+  request->params.obj[0].type = OBJECT_TYPE_STR;
+  assert_false(info.api_error.isset);
+  assert_int_not_equal(0, handle_run(&info));
+  assert_true(info.api_error.isset);
+  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
+  request->params.obj[0].type = OBJECT_TYPE_ARRAY;
+  info.api_error.isset = false;
+
+  /* meta has wrong size */
+  meta->size = 3;
+  assert_false(info.api_error.isset);
+  assert_int_not_equal(0, handle_run(&info));
+  assert_true(info.api_error.isset);
+  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
+  meta->size = 2;
+  info.api_error.isset = false;
+
+  /* client2_id has wrong type */
+  meta->obj[0].type = OBJECT_TYPE_BIN;
+  assert_false(info.api_error.isset);
+  assert_int_not_equal(0, handle_run(&info));
+  assert_true(info.api_error.isset);
+  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
+  meta->obj[0].type = OBJECT_TYPE_STR;
+  info.api_error.isset = false;
+
+  /* call_id has wrong type */
+  meta->obj[1].type = OBJECT_TYPE_BIN;
+  assert_false(info.api_error.isset);
+  assert_int_not_equal(0, handle_run(&info));
+  assert_true(info.api_error.isset);
+  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
+  meta->obj[1].type = OBJECT_TYPE_NIL;
+  info.api_error.isset = false;
+
   free_params(request->params);
   FREE(info.con);
   FREE(request);
