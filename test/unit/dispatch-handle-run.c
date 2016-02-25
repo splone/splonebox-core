@@ -99,8 +99,16 @@ int validate_run_request(const unsigned long data1,
   /* client2 id should be nil */
   assert_true(meta.data.params.obj[0].type == OBJECT_TYPE_NIL);
 
-  /* the server must send a call id */
+  /* verify that the server sent a proper callid */
   assert_true(meta.data.params.obj[1].type == OBJECT_TYPE_UINT);
+
+  /* since the callid must be forwarded to the client1, the original
+   * sender of the rpc call, we need to push the callid on the cmocka test
+   * stack. this allows verifying of it later on */
+  uint64_t callid = meta.data.params.obj[1].data.uinteger;
+  will_return(__wrap_connection_wait_for_response, OBJECT_TYPE_UINT);
+  will_return(__wrap_connection_wait_for_response, callid);
+  expect_value(validate_run_response, response.data.params.obj[0].data.uinteger, callid);
 
   /* the function to call on client2 side */
   func = request.data.params.obj[1];
