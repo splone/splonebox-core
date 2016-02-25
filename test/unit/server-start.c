@@ -21,6 +21,8 @@
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 
+uv_loop_t loop;
+
 void unit_server_start(UNUSED(void **state))
 {
   string endpoint_ip_correct_1 = cstring_copy_string("127.0.0.1:11111");
@@ -30,6 +32,7 @@ void unit_server_start(UNUSED(void **state))
   char buf3[19];
   srand((unsigned)time(NULL));
   assert_int_equal(0, server_init());
+  uv_loop_init(&loop);
 
   snprintf(buf1, 19, "/tmp/splnbx-%d", rand() % (999999 + 1 - 100000) + 100000);
   assert_int_equal(0, server_start(cstring_to_string(buf1)));
@@ -48,8 +51,8 @@ void unit_server_start(UNUSED(void **state))
 
   server_close();
 
-  uv_run(uv_default_loop(), UV_RUN_ONCE);
-  uv_loop_close(uv_default_loop());
+  uv_run(&loop, UV_RUN_ONCE);
+  uv_loop_close(&loop);
 
   free_string(endpoint_ip_correct_1);
 }
