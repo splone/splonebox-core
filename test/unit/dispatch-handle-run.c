@@ -27,7 +27,43 @@
 #define ARG1 "test arg1"
 #define ARG2 "test arg2"
 
-int validate_run_response(const unsigned long data1, UNUSED(const unsigned long data2))
+int validate_run_response(const unsigned long data1,
+  UNUSED(const unsigned long data2))
+{
+  struct msgpack_object *deserialized = (struct msgpack_object *) data1;
+  struct message_object meta, response, func, args;
+  struct message_params_object params;
+
+  assert_int_equal(0, unpack_params(deserialized, &params));
+
+  /* msgpack response needs to be 1 */
+  assert_true(params.obj[0].type == OBJECT_TYPE_UINT);
+  assert_int_equal(1, params.obj[0].data.uinteger);
+
+  /* msg id which is random */
+  assert_true(params.obj[1].type == OBJECT_TYPE_UINT);
+
+  /* method should be NIL */
+  assert_true(params.obj[2].type == OBJECT_TYPE_NIL);
+
+  /* first level arrays:
+   *
+   * [meta] args->obj[0]
+   */
+  response = params.obj[3];
+  assert_true(response.type == OBJECT_TYPE_ARRAY);
+  assert_int_equal(1, response.data.params.size);
+
+  /* the server must send a call id, store the callid for further
+   * validation */
+  assert_true(response.data.params.obj[0].type == OBJECT_TYPE_UINT);
+  check_expected(response.data.params.obj[0].data.uinteger);
+
+  return (1);
+}
+
+int validate_run_request(const unsigned long data1,
+  UNUSED(const unsigned long data2))
 {
   struct msgpack_object *deserialized = (struct msgpack_object *) data1;
   struct message_object meta, request, func, args;
