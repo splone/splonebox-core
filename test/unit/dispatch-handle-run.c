@@ -31,7 +31,7 @@ int validate_run_response(const unsigned long data1,
   UNUSED(const unsigned long data2))
 {
   struct msgpack_object *deserialized = (struct msgpack_object *) data1;
-  struct message_object meta, response, func, args;
+  struct message_object response;
   struct message_params_object params;
 
   assert_int_equal(0, unpack_params(deserialized, &params));
@@ -68,7 +68,6 @@ int validate_run_request(const unsigned long data1,
   struct msgpack_object *deserialized = (struct msgpack_object *) data1;
   struct message_object meta, request, func, args;
   struct message_params_object params;
-//  msgpack_object_print(stdout, *deserialized);
 
   assert_int_equal(0, unpack_params(deserialized, &params));
 

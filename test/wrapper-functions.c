@@ -11,7 +11,9 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
   msgpack_zone_init(&mempool, 2048);
 
   msgpack_unpack(buffer, len, NULL, &mempool, &deserialized);
-//  msgpack_object_print(stdout, deserialized);
+  LOG("server sends: ");
+  msgpack_object_print(stdout, deserialized);
+  LOG("\n");
   check_expected(&deserialized);
 
   return (0);
@@ -20,9 +22,6 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
 struct callinfo *__wrap_connection_wait_for_response(UNUSED(struct connection *con),
     UNUSED(struct message_request *request))
 {
-  //TODO construct connection info
-  LOG("__wrap_wait_for_response\n");
-
   struct message_response *response;
   struct callinfo *cinfo;
 
