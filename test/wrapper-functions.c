@@ -17,7 +17,7 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
   return (0);
 }
 
-struct callinfo *__wrap_wait_for_response(struct connection *con,
+struct callinfo *__wrap_connection_wait_for_response(struct connection *con,
     struct message_request *request)
 {
   //TODO construct connection info

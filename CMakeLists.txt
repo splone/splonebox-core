@@ -117,6 +117,7 @@ set(SPLONEBOX-SOURCES
   src/rpc/connection/inputstream.c
   src/rpc/connection/outputstream.c
   src/rpc/connection/server.c
+  src/rpc/connection/loop.c
   src/rpc/connection/connection.c
   src/rpc/connection/dispatch.c
   src/rpc/msgpack/sb-msgpack-rpc.h
@@ -248,7 +249,7 @@ target_include_directories(sb-test SYSTEM PUBLIC
 )
 
 # wrap some functions for testing
-set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=wait_for_response")
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=connection_wait_for_response")
 
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}
