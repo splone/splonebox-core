@@ -4,7 +4,7 @@ matrix:
   include:
     - os: linux
       compiler: clang-3.6
-      env: GCOV=llvm-cov-3.6 EXTRA_FLAGS="-DUSE_GCOV=ON"
+      env: GCOV=llvm-cov-3.6 EXTRA_FLAGS="-DUSE_COVERAGE=ON"
 
 before_install:
   # libuv
