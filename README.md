@@ -7,6 +7,7 @@
 [twitter] (https://twitter.com/sploneberlin/) 
 
 [![Build Status](https://travis-ci.org/splone/splonebox-core.svg?branch=master)](https://travis-ci.org/splone/splonebox-core)
+[![Coverage Status](https://coveralls.io/repos/github/splone/splonebox-core/badge.svg?branch=master)](https://coveralls.io/github/splone/splonebox-core?branch=master)
 
 ## What's behind it
 
