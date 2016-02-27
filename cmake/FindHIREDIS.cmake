@@ -1,7 +1,9 @@
-find_package(PkgConfig)
-if (PKG_CONFIG_FOUND)
-  pkg_check_modules(SHARED_HIREDIS REQUIRED hiredis)
-endif()
+#find_package(PkgConfig)
+#if (PKG_CONFIG_FOUND)
+#  pkg_check_modules(SHARED_HIREDIS REQUIRED hiredis)
+#endif()
+
+set(SHARED_HIREDIS_INCLUDEDIR "/usr/include/hiredis")
 
 find_path(HIREDIS_INCLUDE_DIR hiredis/hiredis.h
   HINTS ${SHARED_HIREDIS_INCLUDEDIR} ${SHARED_HIREDIS_INCLUDE_DIRS}
