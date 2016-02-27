@@ -24,6 +24,8 @@ before_install:
   # msgpack-c
   - curl -L https://github.com/msgpack/msgpack-c/archive/cpp-1.4.0.tar.gz | tar xzf -
   - (cd msgpack-c-cpp-1.4.0 && ./bootstrap && ./configure --prefix=/usr && make && sudo make install)
+  # coveralls
+  - pip install --user cpp-coveralls
 
 addons:
   apt:
