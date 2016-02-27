@@ -23,7 +23,7 @@ before_install:
   - (cd libuv-1.8.0 && ./autogen.sh && ./configure --prefix=/usr && make && sudo make install)
   # msgpack-c
   - curl -L https://github.com/msgpack/msgpack-c/archive/cpp-1.4.0.tar.gz | tar xzf -
-  - (cd cpp-1.4.0 && ./bootstrap && ./configure --prefix=/usr && make && sudo make install)
+  - (cd msgpack-c-cpp-1.4.0 && ./bootstrap && ./configure --prefix=/usr && make && sudo make install)
 
 addons:
   apt:
