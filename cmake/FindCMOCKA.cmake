@@ -1,6 +1,6 @@
 find_package(PkgConfig)
 if (PKG_CONFIG_FOUND)
-  pkg_check_modules(SHARED_CMOCKA REQUIRED libsodium)
+  pkg_check_modules(SHARED_CMOCKA REQUIRED cmocka)
 endif()
 
 find_path(CMOCKA_INCLUDE_DIR cmocka.h
