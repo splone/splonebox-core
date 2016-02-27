@@ -1,9 +1,9 @@
 find_package(PkgConfig)
 if (PKG_CONFIG_FOUND)
-  pkg_check_modules(SHARED_HIREDIS REQUIRED hiredis)
+  pkg_search_module(SHARED_HIREDIS REQUIRED hiredis)
 endif()
 
-find_path(HIREDIS_INCLUDE_DIR msgpack.h
+find_path(HIREDIS_INCLUDE_DIR hiredis/hiredis.h
   HINTS ${SHARED_HIREDIS_INCLUDEDIR} ${SHARED_HIREDIS_INCLUDE_DIRS}
   ${LIMIT_SEARCH})
 
