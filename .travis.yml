@@ -7,9 +7,12 @@ matrix:
       env: GCOV=llvm-cov-3.6 EXTRA_FLAGS="-DUSE_GCOV=ON"
 
 before_install:
-  - sudo apt-get -qq update
+  # libuv
+  - sudo apt-add-repository ppa:linuxjedi/ppa -y
+  # libsodium
   - sudo add-apt-repository ppa:chris-lea/libsodium -y
-  - sudo apt-get install -y libuv-dev libmsgpack-dev hiredis libbsd-dev libsodium-dev
+  - sudo apt-get update -q
+  - sudo apt-get install -y libuv-dev libmsgpack-dev libsodium-dev
 
 addons:
   apt:
@@ -32,5 +35,7 @@ addons:
       - llvm-3.6-dev
       - ninja-build
       - pkg-config
+      - libbsd-dev
+      - libhiredis-dev
   
 script: make sb && make test
