@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.9)
+cmake_minimum_required(VERSION 2.8.7)
 project(SPLONEBOX)
 
 option(CLANG_ADDRESS_SANITIZER "Enable clang address sanitizer." OFF)
