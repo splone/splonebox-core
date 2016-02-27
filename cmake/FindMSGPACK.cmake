@@ -1,6 +1,6 @@
 find_package(PkgConfig)
 if (PKG_CONFIG_FOUND)
-  pkg_search_module(PC_MSGPACK QUIET
+  pkg_search_module(SHARED_MSGPACK QUIET
       msgpackc>=${Msgpack_FIND_VERSION}
       msgpack>=${Msgpack_FIND_VERSION})
 endif()
