@@ -55,4 +55,4 @@ addons:
   
 before_script: redis-server redis-test.conf
 script: make sb && make test && ./out/bin/sb-test
-after_success: coveralls --exclude test --exclude out --gcov "$(which "${GCOV}")" --encoding iso-8859-1 || echo 'coveralls upload failed.'
+after_success: coveralls --exclude test --exclude out/CMakeFiles/CompilerIdC/CMakeCCompilerId.c --exclude out/CMakeFiles/CompilerIdCXX/CMakeCXXCompilerId.cpp --gcov "$(which "${GCOV}")" --encoding iso-8859-1 || echo 'coveralls upload failed.'
