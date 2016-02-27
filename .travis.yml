@@ -10,6 +10,7 @@ matrix:
 addons:
   apt:
     sources:
+      - llvm-toolchain-precise-3.6
     packages:
       - autoconf
       - automake
