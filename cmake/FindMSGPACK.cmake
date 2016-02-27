@@ -1,6 +1,8 @@
 find_package(PkgConfig)
 if (PKG_CONFIG_FOUND)
-  pkg_check_modules(SHARED_MSGPACK REQUIRED msgpack)
+  pkg_search_module(PC_MSGPACK QUIET
+      msgpackc>=${Msgpack_FIND_VERSION}
+      msgpack>=${Msgpack_FIND_VERSION})
 endif()
 
 find_path(MSGPACK_INCLUDE_DIR msgpack.h
