@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 2.8.7)
 project(SPLONEBOX)
 
+option(USE_COVERAGE "Enable gcov (coverage) support." OFF)
 option(CLANG_ADDRESS_SANITIZER "Enable clang address sanitizer." OFF)
 option(CLANG_MEMORY_SANITIZER "Enable clang memory sanitizer." OFF)
 option(CLANG_THREAD_SANITIZER "Enable clang thread sanitizer." OFF)
@@ -229,6 +230,11 @@ target_link_libraries(sb-test
   ${SODIUM_LIBRARIES}
   ${CMOCKA_LIBRARIES}
 )
+
+if(USE_COVERAGE)
+  set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "--coverage ")
+  set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "--coverage ")
+endif()
 
 if(CLANG_ADDRESS_SANITIZER)
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
