@@ -6,6 +6,8 @@
 [wiki] (https://github.com/splone/splonebox-core/wiki) |
 [twitter] (https://twitter.com/sploneberlin/) 
 
+[![Build Status](https://travis-ci.org/splone/splonebox-core.svg?branch=master)](https://travis-ci.org/splone/splonebox-core)
+
 ## What's behind it
 
 splonebox is an open source network assessment tool with focus on modularity. It offers an ongoing analysis of a network and its devices. One major design decision features development of custom plugins.
