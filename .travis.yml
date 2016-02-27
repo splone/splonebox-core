@@ -7,12 +7,10 @@ matrix:
       env: GCOV=llvm-cov-3.6 EXTRA_FLAGS="-DUSE_COVERAGE=ON"
 
 before_install:
-  # libuv
-  - sudo apt-add-repository ppa:linuxjedi/ppa -y
   # libsodium
   - sudo add-apt-repository ppa:chris-lea/libsodium -y
   - sudo apt-get update -q
-  - sudo apt-get install -y libuv-dev libmsgpack-dev libsodium-dev
+  - sudo apt-get install -y libmsgpack-dev libsodium-dev
   # cmocka
   - wget https://cmocka.org/files/1.0/cmocka-1.0.1.tar.xz
   - tar -xJvf cmocka-1.0.1.tar.xz
@@ -20,6 +18,9 @@ before_install:
   - cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr .. && make -j2 && sudo make install
   - cd ../..
   - rm -rf cmocka-1.0.1
+  # libuv
+  - curl -L https://github.com/libuv/libuv/archive/v1.8.0.tar.gz | tar xzf -
+  - (cd libuv-1.8.0 && ./autogen.sh && ./configure --prefix=/usr && make && sudo make install)
 
 addons:
   apt:
