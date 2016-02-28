@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 2.9)
+cmake_minimum_required(VERSION 2.8.7)
 project(SPLONEBOX)
 
 option(USE_COVERAGE "Enable gcov (coverage) support." OFF)
@@ -209,16 +209,12 @@ if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
   list(APPEND gen_cflags "-DEXITFREE")
 endif()
 
+include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(${PROJECT_SOURCE_DIR}/test)
+include_directories(${BSD_INCLUDE_DIRS} ${LIBUV_INCLUDE_DIRS} ${MSGPACK_INCLUDE_DIRS} ${HIREDIS_INCLUDE_DIRS} ${SODIUM_INCLUDE_DIRS} ${CMOCKA_INCLUDE_DIRS})
+
 # sb target
 add_executable(sb ${SPLONEBOX-SOURCES})
-target_include_directories(sb PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_include_directories(sb SYSTEM PUBLIC
-  ${BSD_INCLUDE_DIRS}
-  ${LIBUV_INCLUDE_DIRS}
-  ${MSGPACK_INCLUDE_DIRS}
-  ${HIREDIS_INCLUDE_DIRS}
-  ${SODIUM_INCLUDE_DIRS}
-)
 target_link_libraries(sb
   ${BSD_LIBRARIES}
   ${LIBUV_LIBRARIES}
@@ -229,29 +225,10 @@ target_link_libraries(sb
 
 # sb-plugin target
 add_executable(sb-plugin ${SB-PLUGIN-SOURCES})
-target_include_directories(sb-plugin PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_include_directories(sb-plugin SYSTEM PUBLIC
-  ${BSD_INCLUDE_DIRS}
-  ${HIREDIS_INCLUDE_DIRS}
-)
 target_link_libraries(sb-plugin ${BSD_LIBRARIES} ${HIREDIS_LIBRARIES})
 
 # sb-test target
 add_executable(sb-test ${TEST-SOURCES})
-target_include_directories(sb-test PRIVATE "${PROJECT_SOURCE_DIR}/src"
-  "${PROJECT_SOURCE_DIR}/test")
-target_include_directories(sb-test SYSTEM PUBLIC
-  ${BSD_INCLUDE_DIRS}
-  ${LIBUV_INCLUDE_DIRS}
-  ${MSGPACK_INCLUDE_DIRS}
-  ${HIREDIS_INCLUDE_DIRS}
-  ${SODIUM_INCLUDE_DIRS}
-  ${CMOCKA_INCLUDE_DIRS}
-)
-
-# wrap some functions for testing
-set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=connection_wait_for_response ")
-
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}
   ${LIBUV_LIBRARIES}
@@ -260,6 +237,9 @@ target_link_libraries(sb-test
   ${SODIUM_LIBRARIES}
   ${CMOCKA_LIBRARIES}
 )
+
+# wrap some functions for testing
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=connection_wait_for_response ")
 
 if(USE_COVERAGE)
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "--coverage ")
