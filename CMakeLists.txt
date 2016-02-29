@@ -193,10 +193,10 @@ set(TEST-SOURCES
   test/unit/unpack-array.c
   test/unit/apikey.c
   test/unit/dispatch-table-get.c
-  test/unit/dispatch-handle-register.c
-  test/unit/dispatch-handle-run.c
   test/unit/event-queue-put.c
   test/unit/event-queue-get.c
+  test/functional/dispatch-handle-register.c
+  test/functional/dispatch-handle-run.c
   test/functional/db-connect.c
   test/functional/db-plugin-add.c
   test/functional/db-apikey-verify.c
