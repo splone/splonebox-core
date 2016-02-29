@@ -220,7 +220,7 @@ static void register_test_function(void)
   FREE(err);
 }
 
-void unit_dispatch_handle_run(UNUSED(void **state))
+void functional_dispatch_handle_run(UNUSED(void **state))
 {
   connection_request_event_info info;
   struct message_request *request;
@@ -336,4 +336,3 @@ void unit_dispatch_handle_run(UNUSED(void **state))
   FREE(err);
 
 }
-
