@@ -33,6 +33,11 @@ int main(int argc, char **argv)
 
   uv_loop_init(&loop);
 
+  /* initialize signal handler */
+  if (signal_init() == -1) {
+    LOG_ERROR("Failed to initialize signal handler.");
+  }
+
   /* initialize libsodium */
   if (sodium_init() == -1) {
     LOG_ERROR("Failed to initialize sodium.");

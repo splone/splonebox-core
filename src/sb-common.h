@@ -274,3 +274,5 @@ int64_t randommod(long long n);
  * @param argv  argument list
  */
 void optparser(int argc, char **argv);
+
+int signal_init(void);
