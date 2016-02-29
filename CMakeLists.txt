@@ -1,6 +1,7 @@
-cmake_minimum_required(VERSION 2.9)
+cmake_minimum_required(VERSION 2.8.7)
 project(SPLONEBOX)
 
+option(USE_COVERAGE "Enable gcov (coverage) support." OFF)
 option(CLANG_ADDRESS_SANITIZER "Enable clang address sanitizer." OFF)
 option(CLANG_MEMORY_SANITIZER "Enable clang memory sanitizer." OFF)
 option(CLANG_THREAD_SANITIZER "Enable clang thread sanitizer." OFF)
@@ -118,6 +119,7 @@ set(SPLONEBOX-SOURCES
   src/rpc/connection/inputstream.c
   src/rpc/connection/outputstream.c
   src/rpc/connection/server.c
+  src/rpc/connection/loop.c
   src/rpc/connection/connection.c
   src/rpc/connection/dispatch.c
   src/rpc/msgpack/sb-msgpack-rpc.h
@@ -177,6 +179,7 @@ set(TEST-SOURCES
   test/main.c
   test/test-list.h
   test/helper-unix.h
+  test/wrapper-functions.c
   test/helper-all.c
   test/helper-all.h
   test/unit/server-start.c
@@ -207,16 +210,12 @@ if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
   list(APPEND gen_cflags "-DEXITFREE")
 endif()
 
+include_directories(${PROJECT_SOURCE_DIR}/src)
+include_directories(${PROJECT_SOURCE_DIR}/test)
+include_directories(${BSD_INCLUDE_DIRS} ${LIBUV_INCLUDE_DIRS} ${MSGPACK_INCLUDE_DIRS} ${HIREDIS_INCLUDE_DIRS} ${SODIUM_INCLUDE_DIRS} ${CMOCKA_INCLUDE_DIRS})
+
 # sb target
 add_executable(sb ${SPLONEBOX-SOURCES})
-target_include_directories(sb PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_include_directories(sb SYSTEM PUBLIC
-  ${BSD_INCLUDE_DIRS}
-  ${LIBUV_INCLUDE_DIRS}
-  ${MSGPACK_INCLUDE_DIRS}
-  ${HIREDIS_INCLUDE_DIRS}
-  ${SODIUM_INCLUDE_DIRS}
-)
 target_link_libraries(sb
   ${BSD_LIBRARIES}
   ${LIBUV_LIBRARIES}
@@ -227,25 +226,14 @@ target_link_libraries(sb
 
 # sb-plugin target
 add_executable(sb-plugin ${SB-PLUGIN-SOURCES})
-target_include_directories(sb-plugin PRIVATE "${PROJECT_SOURCE_DIR}/src")
-target_include_directories(sb-plugin SYSTEM PUBLIC
-  ${BSD_INCLUDE_DIRS}
-  ${HIREDIS_INCLUDE_DIRS}
-)
 target_link_libraries(sb-plugin ${BSD_LIBRARIES} ${HIREDIS_LIBRARIES})
 
 # sb-test target
 add_executable(sb-test ${TEST-SOURCES})
-target_include_directories(sb-test PRIVATE "${PROJECT_SOURCE_DIR}/src"
-  "${PROJECT_SOURCE_DIR}/test")
-target_include_directories(sb-test SYSTEM PUBLIC
-  ${BSD_INCLUDE_DIRS}
-  ${LIBUV_INCLUDE_DIRS}
-  ${MSGPACK_INCLUDE_DIRS}
-  ${HIREDIS_INCLUDE_DIRS}
-  ${SODIUM_INCLUDE_DIRS}
-  ${CMOCKA_INCLUDE_DIRS}
-)
+
+# wrap some functions for testing
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=connection_wait_for_response ")
+
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}
   ${LIBUV_LIBRARIES}
@@ -254,6 +242,11 @@ target_link_libraries(sb-test
   ${SODIUM_LIBRARIES}
   ${CMOCKA_LIBRARIES}
 )
+
+if(USE_COVERAGE)
+  set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "--coverage ")
+  set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "--coverage ")
+endif()
 
 if(CLANG_ADDRESS_SANITIZER)
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")

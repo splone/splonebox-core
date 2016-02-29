@@ -280,7 +280,10 @@ static void connection_cb(uv_stream_t *server_stream, int status)
     LOG_VERBOSE(VERBOSE_LEVEL_0, "new client connection: host = %s\n", hbuf);
   }
 
-  connection_create(client);
+  if (connection_create(client) < 0) {
+    LOG_ERROR("Failed to create connection.");
+    uv_close((uv_handle_t *)client, client_free_cb);
+  }
 }
 
 

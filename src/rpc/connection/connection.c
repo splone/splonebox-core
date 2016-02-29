@@ -46,8 +46,6 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-static inline void connection_loop_poll_events_until(struct connection *con,
-    bool *condition);
 static void parse_cb(inputstream *istream, void *data, bool eof);
 static void close_cb(uv_handle_t *handle);
 static int connection_handle_request(struct connection *con,
@@ -76,7 +74,6 @@ int connection_init(void)
   return (0);
 }
 
-
 int connection_create(uv_stream_t *stream)
 {
   stream->data = NULL;
@@ -102,7 +99,6 @@ int connection_create(uv_stream_t *stream)
 
   return (0);
 }
-
 
 static void connection_close(struct connection *con)
 {
@@ -189,25 +185,13 @@ static int connection_write(struct connection *con)
   if (data == NULL)
     return (-1);
 
-  outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
-      sbuf.size);
+  if (outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
+      sbuf.size) < 0)
+    return (-1);
 
   msgpack_sbuffer_clear(&sbuf);
 
   return (0);
-}
-
-static inline void connection_loop_poll_events_until(struct connection *con,
-    bool *condition)
-{
-  while (!*condition) {
-    if (con->queue && !equeue_empty(con->queue)) {
-      equeue_run_events(con->queue);
-    } else {
-      uv_run(&loop, UV_RUN_NOWAIT);
-      equeue_run_events(equeue_root);
-    }
-  }
 }
 
 struct callinfo * connection_send_request(string pluginlongtermpk, string method,
@@ -218,7 +202,6 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   struct message_request request;
   struct callinfo *cinfo;
 
-  cinfo = MALLOC(struct callinfo);
   con = hashmap_string_get(connections, pluginlongtermpk);
 
   /*
@@ -242,22 +225,10 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   if (api_error->isset)
     return (NULL);
 
-  connection_write(con);
+  if (connection_write(con) < 0)
+    return (NULL);
 
-  /* generate callinfo */
-  cinfo->msgid = request.msgid;
-  cinfo->hasresponse = false;
-
-  /* push callinfo to connection callinfo vector */
-  kv_push(struct callinfo *, con->callvector, cinfo);
-  con->pendingcalls++;
-
-  /* wait until requestinfo returned, in time process events */
-  connection_loop_poll_events_until(con, &cinfo->hasresponse);
-
-  /* delete last from callinfo vector */
-  kv_pop(con->callvector);
-  con->pendingcalls--;
+  cinfo = connection_wait_for_response(con, &request);
 
   return cinfo;
 }
@@ -286,7 +257,8 @@ int connection_send_response(struct connection *con, uint32_t msgid,
   if (api_error->isset)
     return (-1);
 
-  connection_write(con);
+  if (connection_write(con) < 0)
+    return (-1);
 
   return 0;
 }

@@ -30,88 +30,53 @@
  *    limitations under the License.
  */
 
-#include <stdlib.h>
-#include <uv.h>
+#include <stdbool.h>
 
-#include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "sb-common.h"
 
-static void write_cb(uv_write_t *req, int status);
+static inline void connection_loop_poll_events_until(struct connection *con,
+    bool *condition);
+equeue *equeue_root;
+uv_loop_t loop;
 
-outputstream *outputstream_new(uint32_t maxmem)
+static inline void connection_loop_poll_events_until(struct connection *con,
+    bool *condition)
 {
-  outputstream *ws = MALLOC(outputstream);
+  while (!*condition) {
+    if (con->queue && !equeue_empty(con->queue)) {
+      equeue_run_events(con->queue);
+    } else {
+      uv_run(&loop, UV_RUN_NOWAIT);
+      equeue_run_events(equeue_root);
+    }
+  }
+}
 
-  if (ws == NULL)
+
+struct callinfo *connection_wait_for_response(struct connection *con,
+    struct message_request *request)
+{
+  struct callinfo *cinfo;
+  cinfo = MALLOC(struct callinfo);
+
+  if (!cinfo)
     return (NULL);
 
-  ws->maxmem = maxmem;
-  ws->stream = NULL;
-  ws->curmem = 0;
+  /* generate callinfo */
+  cinfo->msgid = request->msgid;
+  cinfo->hasresponse = false;
 
-  return (ws);
-}
+  /* push callinfo to connection callinfo vector */
+  kv_push(struct callinfo *, con->callvector, cinfo);
+  con->pendingcalls++;
 
+  /* wait until requestinfo returned, in time process events */
+  connection_loop_poll_events_until(con, &cinfo->hasresponse);
 
-void outputstream_set(outputstream *ostream, uv_stream_t *stream)
-{
-  streamhandle_set_outputstream((uv_handle_t *)stream, ostream);
-  ostream->stream = stream;
-}
+  /* delete last from callinfo vector */
+  kv_pop(con->callvector);
+  con->pendingcalls--;
 
-
-void outputstream_free(outputstream *ostream)
-{
-  FREE(ostream);
-}
-
-
-int outputstream_write(outputstream *ostream, char *buffer, size_t len)
-{
-  uv_buf_t buf;
-  uv_write_t *req;
-  struct write_request_data *data;
-
-  if ((ostream->curmem + len) > ostream->maxmem)
-    return (-1);
-
-  buf.base = buffer;
-  buf.len = len;
-
-  data = MALLOC(struct write_request_data);
-
-  if (data == NULL)
-    return (-1);
-
-  data->ostream = ostream;
-  data->buffer = buffer;
-  data->len = len;
-  req = MALLOC(uv_write_t);
-
-  if (req == NULL)
-    return (-1);
-
-  req->data = data;
-  ostream->curmem += len;
-
-  if (uv_write(req, ostream->stream, &buf, 1, write_cb) != 0)
-    return (-1);
-
-  return (0);
-}
-
-
-static void write_cb(uv_write_t *req, int status)
-{
-  struct write_request_data *data = req->data;
-
-  if (status == -1) {
-    LOG("error on write");
-    return;
-  }
-
-  FREE(req);
-  FREE(data->buffer);
-  data->ostream->curmem -= data->len;
-  FREE(data);
+  return cinfo;
 }
