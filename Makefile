@@ -3,12 +3,20 @@ CMAKE_BUILD_TYPE ?= Debug
 FLAGS := -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
 EXTRA_FLAGS ?=
 
-# ninja
-BUILD_TOOL := ninja
-BUILD_TYPE := Ninja
-# make
-#BUILD_TOOL = $(MAKE)
-#BUILD_TYPE := Unix Makefiles
+BUILD_TYPE ?= $(shell (type ninja > /dev/null 2>&1 && echo "Ninja") || echo "Unix Makefiles")
+
+ifeq (,$(BUILD_TOOL))
+  ifeq (Ninja,$(BUILD_TYPE))
+    ifneq ($(shell cmake --help 2>/dev/null | grep Ninja),)
+      BUILD_TOOL := ninja
+    else
+      BUILD_TOOL = $(MAKE)
+      BUILD_TYPE := Unix Makefiles
+    endif
+  else
+    BUILD_TOOL = $(MAKE)
+  endif
+endif
 
 ifneq ($(VERBOSE),)
   ifeq ($(BUILD_TYPE),Ninja)
