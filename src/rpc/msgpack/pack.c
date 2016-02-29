@@ -176,6 +176,9 @@ int pack_params(msgpack_packer *pk, struct message_params_object params)
     message_object_type type = object->type;
 
     switch (type) {
+    case (OBJECT_TYPE_NIL):
+      pack_nil(pk);
+      continue;
     case (OBJECT_TYPE_INT):
       pack_int64(pk, object->data.integer);
       continue;

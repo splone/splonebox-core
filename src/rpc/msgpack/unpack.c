@@ -116,7 +116,8 @@ int unpack_params(msgpack_object *obj, struct message_params_object *params)
       elem->data.boolean = unpack_boolean(tmp);
       continue;
     case MSGPACK_OBJECT_NIL:
-      return (-1);
+      elem->type = OBJECT_TYPE_NIL;
+      continue;
     case MSGPACK_OBJECT_FLOAT:
       elem->type = OBJECT_TYPE_FLOAT;
       elem->data.floating = unpack_float(tmp);

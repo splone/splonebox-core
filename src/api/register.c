@@ -61,3 +61,18 @@ int api_register(string api_key, string name, string desc, string author,
 
   return (0);
 }
+
+struct message_params_object * api_register_response(
+    struct api_error *api_error)
+{
+  struct message_params_object *params;
+
+  params = CALLOC(1, struct message_params_object);
+
+  if (!api_error || !params)
+    return (NULL);
+
+  params->size = 0;
+
+  return params;
+}

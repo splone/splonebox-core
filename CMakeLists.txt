@@ -100,10 +100,13 @@ set(SPLONEBOX-SOURCES
   src/main.c
   src/sb-common.h
   src/khash.h
+  src/kvec.h
   src/queue.h
   src/string.c
   src/reallocarray.c
-  src/hashmap.c
+  src/hashmap-string.c
+  src/hashmap-uint64.c
+  src/random.c
   src/optparser.c
   src/api/sb-api.h
   src/api/apikey.c
@@ -115,6 +118,7 @@ set(SPLONEBOX-SOURCES
   src/rpc/connection/inputstream.c
   src/rpc/connection/outputstream.c
   src/rpc/connection/server.c
+  src/rpc/connection/loop.c
   src/rpc/connection/connection.c
   src/rpc/connection/dispatch.c
   src/rpc/msgpack/sb-msgpack-rpc.h
@@ -147,7 +151,9 @@ set(TEST-SOURCES
   src/queue.h
   src/string.c
   src/reallocarray.c
-  src/hashmap.c
+  src/hashmap-string.c
+  src/hashmap-uint64.c
+  src/random.c
   src/optparser.c
   src/api/sb-api.h
   src/api/apikey.c
@@ -172,6 +178,7 @@ set(TEST-SOURCES
   test/main.c
   test/test-list.h
   test/helper-unix.h
+  test/wrapper-functions.c
   test/helper-all.c
   test/helper-all.h
   test/unit/server-start.c
@@ -222,6 +229,10 @@ target_link_libraries(sb-plugin ${BSD_LIBRARIES} ${HIREDIS_LIBRARIES})
 
 # sb-test target
 add_executable(sb-test ${TEST-SOURCES})
+
+# wrap some functions for testing
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=connection_wait_for_response ")
+
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}
   ${LIBUV_LIBRARIES}

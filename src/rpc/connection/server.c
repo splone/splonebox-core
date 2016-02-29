@@ -51,7 +51,7 @@ struct server {
 
 static server_type type = SERVER_TYPE_TCP;
 
-static struct hashmap *servers = NULL;
+static struct hashmap_string *servers = NULL;
 
 static server_type server_get_endpoint_type(string endpoint,
     struct server *server);
@@ -59,9 +59,11 @@ static void connection_cb(uv_stream_t *server_stream, int status);
 static void client_free_cb(uv_handle_t *handle);
 static void server_free_cb(uv_handle_t *handle);
 
+uv_loop_t loop;
+
 int server_init(void)
 {
-  servers = hashmap_new();
+  servers = hashmap_string_new();
 
   if (!servers)
     return (-1);
@@ -80,7 +82,7 @@ int server_start(string endpoint)
     return (-1);
   }
 
-  if (hashmap_contains_key(servers, endpoint)) {
+  if (hashmap_string_contains_key(servers, endpoint)) {
     LOG("Already listening on %s", endpoint.str);
     return (-1);
   }
@@ -94,7 +96,7 @@ int server_start(string endpoint)
   uv_stream_t *stream = NULL;
 
   if (type == SERVER_TYPE_TCP) {
-    uv_tcp_init(uv_default_loop(), &server->socket.tcp.handle);
+    uv_tcp_init(&loop, &server->socket.tcp.handle);
     result = uv_tcp_bind(&server->socket.tcp.handle,
         (const struct sockaddr *)&server->socket.tcp.addr, 0);
 
@@ -111,7 +113,7 @@ int server_start(string endpoint)
       return (-1);
     }
 
-    uv_pipe_init(uv_default_loop(), &server->socket.pipe.handle, 0);
+    uv_pipe_init(&loop, &server->socket.pipe.handle, 0);
     result =
         uv_pipe_bind(&server->socket.pipe.handle, server->socket.pipe.addr);
 
@@ -133,7 +135,7 @@ int server_start(string endpoint)
   server->type = type;
   stream->data = server;
 
-  hashmap_put(servers, endpoint, server);
+  hashmap_string_put(servers, endpoint, server);
 
   return (0);
 }
@@ -150,7 +152,7 @@ int server_close(void)
       uv_close((uv_handle_t *)&server->socket.pipe.handle, server_free_cb);
   });
 
-  hashmap_free(servers);
+  hashmap_string_free(servers);
 
   return (0);
 }
@@ -159,14 +161,14 @@ int server_stop(string endpoint)
 {
   struct server *server;
 
-  server = hashmap_get(servers, endpoint);
+  server = hashmap_string_get(servers, endpoint);
 
   if (server->type == SERVER_TYPE_TCP)
     uv_close((uv_handle_t *)&server->socket.tcp.handle, server_free_cb);
   else
     uv_close((uv_handle_t *)&server->socket.pipe.handle, server_free_cb);
 
-  hashmap_remove(servers, endpoint);
+  hashmap_string_remove(servers, endpoint);
 
   return (0);
 }
@@ -244,9 +246,9 @@ static void connection_cb(uv_stream_t *server_stream, int status)
     return;
 
   if (server->type == SERVER_TYPE_TCP)
-    uv_tcp_init(uv_default_loop(), (uv_tcp_t *)client);
+    uv_tcp_init(&loop, (uv_tcp_t *)client);
   else
-    uv_pipe_init(uv_default_loop(), (uv_pipe_t *)client, 0);
+    uv_pipe_init(&loop, (uv_pipe_t *)client, 0);
 
   result = uv_accept(server_stream, client);
 
@@ -278,7 +280,10 @@ static void connection_cb(uv_stream_t *server_stream, int status)
     LOG_VERBOSE(VERBOSE_LEVEL_0, "new client connection: host = %s\n", hbuf);
   }
 
-  connection_create(client);
+  if (connection_create(client) < 0) {
+    LOG_ERROR("Failed to create connection.");
+    uv_close((uv_handle_t *)client, client_free_cb);
+  }
 }
 
 

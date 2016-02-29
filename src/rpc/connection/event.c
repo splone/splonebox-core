@@ -36,7 +36,6 @@
 
 equeue *equeue_root;
 
-static bool equeue_empty(equeue *queue);
 static queue_entry *dequeue_child(equeue *queue);
 static queue_entry *dequeue_child_from_root(equeue *queue);
 
@@ -72,7 +71,7 @@ equeue *equeue_new(equeue *root)
  *
  * @params queue queue instance
  */
-static bool equeue_empty(equeue *queue)
+bool equeue_empty(equeue *queue)
 {
   return (TAILQ_EMPTY(&queue->head));
 }

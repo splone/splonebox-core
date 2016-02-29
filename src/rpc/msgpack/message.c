@@ -100,6 +100,27 @@ int message_serialize_error_response(msgpack_packer *pk,
 }
 
 
+int message_serialize_response(struct message_response *res,
+    msgpack_packer *pk)
+{
+  msgpack_pack_array(pk, 4);
+
+  if (pack_uint8(pk, MESSAGE_TYPE_RESPONSE) == -1)
+    return (-1);
+
+  if (pack_uint32(pk, res->msgid) == -1)
+    return (-1);
+
+  if (pack_nil(pk) == -1)
+    return (-1);
+
+  if (pack_params(pk, res->params) == -1)
+    return (-1);
+
+  return (0);
+}
+
+
 int message_serialize_request(struct message_request *req,
     msgpack_packer *pk)
 {
@@ -217,10 +238,174 @@ struct message_request *message_deserialize_request(msgpack_object *obj,
   return (req);
 }
 
+bool message_is_error_response(msgpack_object *obj)
+{
+  return (obj->via.array.ptr[2].type != MSGPACK_OBJECT_NIL);
+}
+
+uint64_t message_get_id(msgpack_object *obj)
+{
+  return (obj->via.array.ptr[1].via.u64);
+}
+
+struct message_response *message_deserialize_response(msgpack_object *obj,
+    struct api_error *api_error)
+{
+  msgpack_object *type, *msgid, *params;
+  struct message_response *res;
+  uint64_t tmp_msgid;
+
+  res = MALLOC(struct message_response);
+
+  if (!obj || !res || !api_error) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error");
+    return (NULL);
+  }
+
+  /* type */
+  if (obj->via.array.ptr[0].type == MSGPACK_OBJECT_POSITIVE_INTEGER) {
+    type = &obj->via.array.ptr[0];
+
+    if (type) {
+      if (unpack_uint(type) != MESSAGE_TYPE_RESPONSE) {
+        error_set(api_error, API_ERROR_TYPE_VALIDATION, "type must be 1");
+        return (NULL);
+      }
+    } else {
+      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack type failed");
+      return (NULL);
+    }
+  } else {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "type field has wrong type");
+    return (NULL);
+  }
+
+  /* message id */
+  msgid = &obj->via.array.ptr[1];
+
+  if (!msgid || msgid->type != MSGPACK_OBJECT_POSITIVE_INTEGER) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "illegal msgid");
+    return (NULL);
+  }
+
+  tmp_msgid = unpack_uint(msgid);
+
+  if (tmp_msgid >= UINT32_MAX) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "invalid msgid");
+    return (NULL);
+  }
+
+  res->msgid = (uint32_t)tmp_msgid;
+
+  /* nil */
+  if (obj->via.array.ptr[2].type != MSGPACK_OBJECT_NIL) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "nil field has wrong type");
+    return (NULL);
+  }
+
+  /* params */
+  if (obj->via.array.ptr[3].type == MSGPACK_OBJECT_ARRAY) {
+    params = &obj->via.array.ptr[3];
+
+    if (params) {
+      if (unpack_params(params, &res->params) == -1) {
+        error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error unpacking params");
+        return (NULL);
+      }
+    } else {
+      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack params failed");
+      return (NULL);
+    }
+  } else {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "params field has wrong type");
+    return (NULL);
+  }
+
+  return (res);
+}
+
+struct message_response *message_deserialize_error_response(msgpack_object *obj,
+    struct api_error *api_error)
+{
+  msgpack_object *type, *msgid, *params;
+  struct message_response *res;
+  uint64_t tmp_msgid;
+
+  res = MALLOC(struct message_response);
+
+  if (!obj || !res || !api_error) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error");
+    return (NULL);
+  }
+
+  /* type */
+  if (obj->via.array.ptr[0].type == MSGPACK_OBJECT_POSITIVE_INTEGER) {
+    type = &obj->via.array.ptr[0];
+
+    if (type) {
+      if (unpack_uint(type) != MESSAGE_TYPE_RESPONSE) {
+        error_set(api_error, API_ERROR_TYPE_VALIDATION, "type must be 1");
+        return (NULL);
+      }
+    } else {
+      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack type failed");
+      return (NULL);
+    }
+  } else {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "type field has wrong type");
+    return (NULL);
+  }
+
+  /* message id */
+  msgid = &obj->via.array.ptr[1];
+
+  if (!msgid || msgid->type != MSGPACK_OBJECT_POSITIVE_INTEGER) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "illegal msgid");
+    return (NULL);
+  }
+
+  tmp_msgid = unpack_uint(msgid);
+
+  if (tmp_msgid >= UINT32_MAX) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "invalid msgid");
+    return (NULL);
+  }
+
+  res->msgid = (uint32_t)tmp_msgid;
+
+  /* params */
+  if (obj->via.array.ptr[2].type == MSGPACK_OBJECT_ARRAY) {
+    params = &obj->via.array.ptr[2];
+
+    if (params) {
+      if (unpack_params(params, &res->params) == -1) {
+        error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error unpacking params");
+        return (NULL);
+      }
+    } else {
+      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack params failed");
+      return (NULL);
+    }
+  } else {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "params field has wrong type");
+    return (NULL);
+  }
+
+  /* nil */
+  if (obj->via.array.ptr[3].type != MSGPACK_OBJECT_NIL) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "nil field has wrong type");
+    return (NULL);
+  }
+
+  return (res);
+}
+
 
 static void free_message_object(message_object obj)
 {
   switch (obj.type) {
+  case OBJECT_TYPE_NIL:
+    break;
   case OBJECT_TYPE_INT:
     break;
   case OBJECT_TYPE_UINT:

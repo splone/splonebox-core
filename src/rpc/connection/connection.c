@@ -39,29 +39,29 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sodium.h>
 #include <uv.h>
 
 #include "rpc/sb-rpc.h"
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-static struct hashmap *connections = NULL;
-static uint64_t id_cnt = 1;
 static void parse_cb(inputstream *istream, void *data, bool eof);
 static void close_cb(uv_handle_t *handle);
 static int connection_handle_request(struct connection *con,
     msgpack_object *obj);
 static int connection_handle_response(struct connection *con,
     msgpack_object *obj);
-static void connection_request_event(
-    struct connection_request_event_info *info);
+static void connection_request_event(connection_request_event_info *info);
 
+static struct hashmap_string *connections = NULL;
 static msgpack_sbuffer sbuf;
 equeue *equeue_root;
+uv_loop_t loop;
 
 int connection_init(void)
 {
-  connections = hashmap_new();
+  connections = hashmap_string_new();
 
   if (dispatch_table_init() == -1)
     return (-1);
@@ -74,7 +74,6 @@ int connection_init(void)
   return (0);
 }
 
-
 int connection_create(uv_stream_t *stream)
 {
   stream->data = NULL;
@@ -84,7 +83,6 @@ int connection_create(uv_stream_t *stream)
   if (con == NULL)
     return (-1);
 
-  con->id = id_cnt++;
   con->msgid = 1;
   con->mpac = msgpack_unpacker_new(MSGPACK_UNPACKER_INIT_BUFFER_SIZE);
   con->closed = false;
@@ -93,13 +91,14 @@ int connection_create(uv_stream_t *stream)
   con->streams.write = outputstream_new(1024 * 1024);
   con->streams.uv = stream;
 
+  kv_init(con->callvector);
+
   inputstream_set(con->streams.read, stream);
   inputstream_start(con->streams.read);
   outputstream_set(con->streams.write, stream);
 
   return (0);
 }
-
 
 static void connection_close(struct connection *con)
 {
@@ -117,6 +116,8 @@ static void connection_close(struct connection *con)
 
   if (handle && !is_closing)
     uv_close(handle, close_cb);
+
+  kv_destroy(con->callvector);
 
   con->closed = 0;
 }
@@ -158,12 +159,108 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
       msgpack_unpacker_next(con->mpac, &result)) == MSGPACK_UNPACK_SUCCESS) {
     if (message_is_request(&result.data))
       connection_handle_request(con, &result.data);
-    else if (message_is_response(&result.data))
-      connection_handle_response(con, &result.data);
-    else {
+    else if (message_is_response(&result.data)) {
+      if (connection_handle_response(con, &result.data) != 0) {
+        break;
+      }
+    } else {
       /* invalid message, send response with error */
     }
   }
+}
+
+int connection_hashmap_put(string pluginlongtermpk, struct connection *con)
+{
+  hashmap_string_put(connections, pluginlongtermpk, con);
+
+  return (0);
+}
+
+static int connection_write(struct connection *con)
+{
+  char *data;
+
+  data = MALLOC_ARRAY(sbuf.size, char);
+
+  if (data == NULL)
+    return (-1);
+
+  if (outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
+      sbuf.size) < 0)
+    return (-1);
+
+  msgpack_sbuffer_clear(&sbuf);
+
+  return (0);
+}
+
+struct callinfo * connection_send_request(string pluginlongtermpk, string method,
+    struct message_params_object *params, struct api_error *api_error)
+{
+  struct connection *con;
+  msgpack_packer packer;
+  struct message_request request;
+  struct callinfo *cinfo;
+
+  con = hashmap_string_get(connections, pluginlongtermpk);
+
+  /*
+   * if no connection is available for the key, set the connection to the
+   * the initial connection from the sender.
+   */
+  if (!con) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
+    return (NULL);
+  }
+
+  request.type = MESSAGE_TYPE_REQUEST;
+  request.msgid = con->msgid++;
+  request.method = method;
+  request.params = *params;
+
+  msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
+
+  message_serialize_request(&request, &packer);
+  /* if error is set, generate an error response message */
+  if (api_error->isset)
+    return (NULL);
+
+  if (connection_write(con) < 0)
+    return (NULL);
+
+  cinfo = connection_wait_for_response(con, &request);
+
+  return cinfo;
+}
+
+int connection_send_response(struct connection *con, uint32_t msgid,
+    struct message_params_object *params, struct api_error *api_error)
+{
+  msgpack_packer packer;
+  struct message_response response;
+
+  /*
+   * if no connection is available for the key, set the connection to the
+   * the initial connection from the sender.
+   */
+  if (!con) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
+    return (-1);
+  }
+
+  response.msgid = msgid;
+  response.params = *params;
+
+  msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
+  message_serialize_response(&response, &packer);
+
+  if (api_error->isset)
+    return (-1);
+
+  if (connection_write(con) < 0)
+    return (-1);
+
+  return 0;
 }
 
 
@@ -172,7 +269,7 @@ static int connection_handle_request(struct connection *con,
 {
   struct dispatch_info *dispatcher = NULL;
   struct api_error api_error = { .isset = false };
-  struct connection_request_event_info eventinfo;
+  connection_request_event_info eventinfo;
   api_event event;
 
   if (!obj || !con)
@@ -216,35 +313,67 @@ static int connection_handle_request(struct connection *con,
 }
 
 
-static void connection_request_event(
-    struct connection_request_event_info *eventinfo)
+static void connection_request_event(connection_request_event_info *eventinfo)
 {
   char *data;
-  msgpack_packer response;
+  msgpack_packer packer;
 
-  msgpack_packer_init(&response, &sbuf, msgpack_sbuffer_write);
-  eventinfo->dispatcher->func(eventinfo->request, &response,
-      &eventinfo->api_error);
+  eventinfo->dispatcher->func(eventinfo);
 
-  if (eventinfo->api_error.isset)
-    message_serialize_error_response(&response, &eventinfo->api_error,
-        eventinfo->request->msgid);
+  if (eventinfo->api_error.isset) {
+    msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
+    message_serialize_error_response(&packer, &eventinfo->api_error, eventinfo->request->msgid);
+    data = MALLOC_ARRAY(sbuf.size, char);
 
-  data = MALLOC_ARRAY(sbuf.size, char);
+    if (data == NULL)
+      return;
 
-  if (data == NULL)
-    return;
+    outputstream_write(eventinfo->con->streams.write, memcpy(data, sbuf.data,
+        sbuf.size), sbuf.size);
 
-  outputstream_write(eventinfo->con->streams.write, memcpy(data, sbuf.data,
-      sbuf.size), sbuf.size);
-  msgpack_sbuffer_clear(&sbuf);
+    msgpack_sbuffer_clear(&sbuf);
+  }
 
   FREE(eventinfo->request);
 }
 
 
-static int connection_handle_response(UNUSED(struct connection *con),
-    UNUSED(msgpack_object *obj))
+static int connection_handle_response(struct connection *con,
+    msgpack_object *obj)
 {
+  struct callinfo *cinfo;
+  size_t csize;
+  size_t i;
+  struct api_error api_error = { .isset = false };
+
+  message_is_error_response(obj);
+
+  csize = kv_size(con->callvector);
+  cinfo = kv_A(con->callvector, csize - 1);
+
+  if (cinfo->msgid != message_get_id(obj)) {
+    for (i = 0; i < csize; i++) {
+      cinfo = kv_A(con->callvector, i);
+      cinfo->errorresponse = true;
+      cinfo->response = NULL;
+      cinfo->hasresponse = true;
+    }
+
+    connection_close(con);
+
+    return (-1);
+  }
+
+  cinfo->errorresponse = message_is_error_response(obj);
+
+  if (cinfo->errorresponse) {
+    cinfo->response = message_deserialize_error_response(obj, &api_error);
+  } else {
+    cinfo->response = message_deserialize_response(obj, &api_error);
+  }
+
+  /* unblock */
+  cinfo->hasresponse = true;
+
   return (0);
 }

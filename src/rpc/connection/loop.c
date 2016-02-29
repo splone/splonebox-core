@@ -30,70 +30,53 @@
  *    limitations under the License.
  */
 
+#include <stdbool.h>
+
+#include "rpc/sb-rpc.h"
 #include "sb-common.h"
 
-struct hashmap *hashmap_new()
+static inline void connection_loop_poll_events_until(struct connection *con,
+    bool *condition);
+equeue *equeue_root;
+uv_loop_t loop;
+
+static inline void connection_loop_poll_events_until(struct connection *con,
+    bool *condition)
 {
-  struct hashmap *hmap = MALLOC(struct hashmap);
-
-  if (hmap == NULL)
-    return (NULL);
-
-  hmap->table = kh_init(HASHMAP);
-
-  return (hmap);
-}
-
-
-void *hashmap_get(struct hashmap *hmap, string key)
-{
-  khiter_t i;
-
-  if ((i = kh_get(HASHMAP, hmap->table, key)) == kh_end(hmap->table))
-    return (NULL);
-
-  return (kh_val(hmap->table, i));
-}
-
-
-bool hashmap_contains_key(struct hashmap *hmap, string key)
-{
-  return (kh_get(HASHMAP, hmap->table, key) != kh_end(hmap->table));
-}
-
-
-void *hashmap_put(struct hashmap *hmap, string key, void *value)
-{
-  int ret;
-  void *retval = NULL;
-  khiter_t i = kh_put(HASHMAP, hmap->table, key, &ret);
-
-  if (!ret)
-    retval = kh_val(hmap->table, i);
-
-  kh_val(hmap->table, i) = value;
-
-  return (retval);
-}
-
-
-void *hashmap_remove(struct hashmap *hmap, string key)
-{
-  void *retval = NULL;
-  khiter_t i;
-
-  if ((i = kh_get(HASHMAP, hmap->table, key)) != kh_end(hmap->table)) {
-    retval = kh_val(hmap->table, i);
-    kh_del(HASHMAP, hmap->table, i);
+  while (!*condition) {
+    if (con->queue && !equeue_empty(con->queue)) {
+      equeue_run_events(con->queue);
+    } else {
+      uv_run(&loop, UV_RUN_NOWAIT);
+      equeue_run_events(equeue_root);
+    }
   }
-
-  return (retval);
 }
 
 
-void hashmap_free(struct hashmap *hmap)
+struct callinfo *connection_wait_for_response(struct connection *con,
+    struct message_request *request)
 {
-  kh_clear(HASHMAP, hmap->table);
-  kh_destroy(HASHMAP, hmap->table);
-  FREE(hmap);
+  struct callinfo *cinfo;
+  cinfo = MALLOC(struct callinfo);
+
+  if (!cinfo)
+    return (NULL);
+
+  /* generate callinfo */
+  cinfo->msgid = request->msgid;
+  cinfo->hasresponse = false;
+
+  /* push callinfo to connection callinfo vector */
+  kv_push(struct callinfo *, con->callvector, cinfo);
+  con->pendingcalls++;
+
+  /* wait until requestinfo returned, in time process events */
+  connection_loop_poll_events_until(con, &cinfo->hasresponse);
+
+  /* delete last from callinfo vector */
+  kv_pop(con->callvector);
+  con->pendingcalls--;
+
+  return cinfo;
 }

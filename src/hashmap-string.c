@@ -30,88 +30,70 @@
  *    limitations under the License.
  */
 
-#include <stdlib.h>
-#include <uv.h>
-
 #include "sb-common.h"
-#include "rpc/sb-rpc.h"
 
-static void write_cb(uv_write_t *req, int status);
-
-outputstream *outputstream_new(uint32_t maxmem)
+struct hashmap_string *hashmap_string_new()
 {
-  outputstream *ws = MALLOC(outputstream);
+  struct hashmap_string *hmap = MALLOC(struct hashmap_string);
 
-  if (ws == NULL)
+  if (hmap == NULL)
     return (NULL);
 
-  ws->maxmem = maxmem;
-  ws->stream = NULL;
-  ws->curmem = 0;
+  hmap->table = kh_init(HASHMAP_STRING);
 
-  return (ws);
+  return (hmap);
 }
 
 
-void outputstream_set(outputstream *ostream, uv_stream_t *stream)
+void *hashmap_string_get(struct hashmap_string *hmap, string key)
 {
-  streamhandle_set_outputstream((uv_handle_t *)stream, ostream);
-  ostream->stream = stream;
+  khiter_t i;
+
+  if ((i = kh_get(HASHMAP_STRING, hmap->table, key)) == kh_end(hmap->table))
+    return (NULL);
+
+  return (kh_val(hmap->table, i));
 }
 
 
-void outputstream_free(outputstream *ostream)
+bool hashmap_string_contains_key(struct hashmap_string *hmap, string key)
 {
-  FREE(ostream);
+  return (kh_get(HASHMAP_STRING, hmap->table, key) != kh_end(hmap->table));
 }
 
 
-int outputstream_write(outputstream *ostream, char *buffer, size_t len)
+void *hashmap_string_put(struct hashmap_string *hmap, string key, void *value)
 {
-  uv_buf_t buf;
-  uv_write_t *req;
-  struct write_request_data *data;
+  int ret;
+  void *retval = NULL;
+  khiter_t i = kh_put(HASHMAP_STRING, hmap->table, key, &ret);
 
-  if ((ostream->curmem + len) > ostream->maxmem)
-    return (-1);
+  if (!ret)
+    retval = kh_val(hmap->table, i);
 
-  buf.base = buffer;
-  buf.len = len;
+  kh_val(hmap->table, i) = value;
 
-  data = MALLOC(struct write_request_data);
-
-  if (data == NULL)
-    return (-1);
-
-  data->ostream = ostream;
-  data->buffer = buffer;
-  data->len = len;
-  req = MALLOC(uv_write_t);
-
-  if (req == NULL)
-    return (-1);
-
-  req->data = data;
-  ostream->curmem += len;
-
-  if (uv_write(req, ostream->stream, &buf, 1, write_cb) != 0)
-    return (-1);
-
-  return (0);
+  return (retval);
 }
 
 
-static void write_cb(uv_write_t *req, int status)
+void *hashmap_string_remove(struct hashmap_string *hmap, string key)
 {
-  struct write_request_data *data = req->data;
+  void *retval = NULL;
+  khiter_t i;
 
-  if (status == -1) {
-    LOG("error on write");
-    return;
+  if ((i = kh_get(HASHMAP_STRING, hmap->table, key)) != kh_end(hmap->table)) {
+    retval = kh_val(hmap->table, i);
+    kh_del(HASHMAP_STRING, hmap->table, i);
   }
 
-  FREE(req);
-  FREE(data->buffer);
-  data->ostream->curmem -= data->len;
-  FREE(data);
+  return (retval);
+}
+
+
+void hashmap_string_free(struct hashmap_string *hmap)
+{
+  kh_clear(HASHMAP_STRING, hmap->table);
+  kh_destroy(HASHMAP_STRING, hmap->table);
+  FREE(hmap);
 }

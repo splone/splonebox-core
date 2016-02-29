@@ -25,10 +25,13 @@
 #define ENV_VAR_LISTEN_ADDRESS    "SPLONEBOX_LISTEN_ADDRESS"
 
 int8_t verbose_level;
+uv_loop_t loop;
 
 int main(int argc, char **argv)
 {
   optparser(argc, argv);
+
+  uv_loop_init(&loop);
 
   /* initialize libsodium */
   if (sodium_init() == -1) {
@@ -61,7 +64,7 @@ int main(int argc, char **argv)
     LOG_ERROR("Failed to start server.");
   }
 
-  uv_run(uv_default_loop(), UV_RUN_DEFAULT);
+  uv_run(&loop, UV_RUN_DEFAULT);
 
   return (0);
 }

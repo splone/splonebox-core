@@ -20,12 +20,17 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-static struct hashmap *dispatch_table = NULL;
+static msgpack_sbuffer sbuf;
+static struct hashmap_string *connections = NULL;
+static struct hashmap_string *dispatch_table = NULL;
+static struct hashmap_uint64 *callids = NULL;
 
-int handle_error(struct message_request *request, msgpack_packer *pk,
-    struct api_error *api_error)
+int handle_error(connection_request_event_info *info)
 {
-  if (!request || !pk || !api_error )
+  struct message_request *request = info->request;
+  struct api_error *api_error = &info->api_error;
+
+  if (!request || !api_error )
     return (-1);
 
   return (0);
@@ -38,14 +43,17 @@ int handle_error(struct message_request *request, msgpack_packer *pk,
  * @param api_error `struct api_error` error object-instance
  * @return 0 if success, -1 otherwise
  */
-int handle_register(struct message_request *request,
-    UNUSED(msgpack_packer *pk), struct api_error *api_error)
+int handle_register(connection_request_event_info *info)
 {
-  struct message_params_object *meta;
+  struct message_params_object *params = NULL;
+  struct message_params_object *meta = NULL;
   struct message_params_object functions;
-  string apikey, name, description, author, license;
+  string pluginlongtermpk, name, description, author, license;
 
-  if (!api_error)
+  struct message_request *request = info->request;
+  struct api_error *api_error = &info->api_error;
+
+  if (!api_error || !request)
     return (-1);
 
   /* check params size */
@@ -65,7 +73,7 @@ int handle_register(struct message_request *request,
 
   /*
    * meta params:
-   * [apikey, name, description, author, license]
+   * [pluginlongtermpk, name, description, author, license]
    */
 
   if (!meta) {
@@ -99,7 +107,7 @@ int handle_register(struct message_request *request,
     return (-1);
   }
 
-  apikey = meta->obj[0].data.string;
+  pluginlongtermpk = meta->obj[0].data.string;
   name = meta->obj[1].data.string;
   description = meta->obj[2].data.string;
   author = meta->obj[3].data.string;
@@ -113,29 +121,47 @@ int handle_register(struct message_request *request,
 
   functions = request->params.obj[1].data.params;
 
-  api_register(apikey, name, description, author, license, functions,
+  api_register(pluginlongtermpk, name, description, author, license, functions,
       api_error);
 
-  /* TODO: pack status response */
+  if (api_error->isset)
+    return (-1);
+
+  /*
+   * add connection with the client long term public key as key to the
+   * connection hashmap
+   */
+  connection_hashmap_put(pluginlongtermpk, info->con);
+  params = api_register_response(api_error);
+
+  if (connection_send_response(info->con, info->request->msgid, params,
+      api_error) < 0) {
+    return (-1);
+  };
 
   return (0);
 }
 
 
-int handle_run(struct message_request *request, msgpack_packer *pk,
-    struct api_error *api_error)
+int handle_run(connection_request_event_info *info)
 {
-  struct message_params_object *meta;
+  struct message_params_object *meta = NULL;
   struct message_params_object args;
-  string apikey, function_name;
+  struct message_params_object *params;
+  string pluginlongtermpk, function_name;
+  struct callinfo *cinfo;
+  uint64_t callid;
 
-  if (!api_error || !pk)
+  struct message_request *request = info->request;
+  struct api_error *api_error = &info->api_error;
+
+  if (!api_error)
     return (-1);
 
   /* check params size */
   if (request->params.size != 3) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API request. Invalid params params size");
+        "Error dispatching run API request. Invalid params size");
     return (-1);
   }
 
@@ -153,7 +179,8 @@ int handle_run(struct message_request *request, msgpack_packer *pk,
     return (-1);
   }
 
-  if (meta->size != 1) {
+  /* meta = [pluginlongtermpk, nil]*/
+  if (meta->size != 2) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid meta params size");
     return (-1);
@@ -172,7 +199,13 @@ int handle_run(struct message_request *request, msgpack_packer *pk,
     return (-1);
   }
 
-  apikey = meta->obj[0].data.string;
+  pluginlongtermpk = meta->obj[0].data.string;
+
+  if (meta->obj[1].type != OBJECT_TYPE_NIL) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API request. meta elements have wrong type");
+    return (-1);
+  }
 
   if (request->params.obj[1].type != OBJECT_TYPE_STR) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -196,7 +229,44 @@ int handle_run(struct message_request *request, msgpack_packer *pk,
 
   args = request->params.obj[2].data.params;
 
-  api_run(apikey, function_name, args, pk, api_error);
+  callid = (uint64_t) randommod(281474976710656LL);
+  hashmap_uint64_put(callids, callid, info->con);
+  params = api_run(pluginlongtermpk, function_name, callid, args, api_error);
+
+  if (params == NULL) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error creating run API request.");
+    return (-1);
+  }
+
+  cinfo = connection_send_request(pluginlongtermpk, cstring_copy_string("run"),
+      params, api_error);
+
+  if (cinfo->response->params.size != 1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API response. Invalid params size");
+    return (-1);
+  }
+
+  if (!(cinfo->response->params.obj[0].type == OBJECT_TYPE_UINT &&
+    callid == cinfo->response->params.obj[0].data.uinteger)) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API response. Invalid callid");
+    return (-1);
+  }
+
+  params = api_run_response(pluginlongtermpk, callid, api_error);
+
+  if (params == NULL) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error creating run API response.");
+    return (-1);
+  }
+
+  if (connection_send_response(info->con, info->request->msgid, params,
+      api_error) < 0) {
+    return (-1);
+  };
 
   return (0);
 }
@@ -204,7 +274,7 @@ int handle_run(struct message_request *request, msgpack_packer *pk,
 
 void dispatch_table_put(string method, struct dispatch_info *info)
 {
-  hashmap_put(dispatch_table, method, info);
+  hashmap_string_put(dispatch_table, method, info);
 }
 
 
@@ -212,7 +282,7 @@ struct dispatch_info *dispatch_table_get(string method)
 {
   struct dispatch_info *info;
 
-  info = (struct dispatch_info *)hashmap_get(dispatch_table, method);
+  info = (struct dispatch_info *)hashmap_string_get(dispatch_table, method);
 
   if (!info)
     return (NULL);
@@ -229,7 +299,7 @@ int dispatch_table_free(void)
     FREE(info);
   });
 
-  hashmap_free(dispatch_table);
+  hashmap_string_free(dispatch_table);
 
   return (0);
 }
@@ -237,9 +307,20 @@ int dispatch_table_free(void)
 
 int dispatch_table_init(void)
 {
+
   struct dispatch_info *register_info, *run_info;
 
-  dispatch_table = hashmap_new();
+  msgpack_sbuffer_init(&sbuf);
+
+  connections = hashmap_string_new();
+  dispatch_table = hashmap_string_new();
+  callids = hashmap_uint64_new();
+
+  if (!connections)
+    return (-1);
+
+  if (!dispatch_table)
+    return (-1);
 
   /* register */
   register_info = MALLOC(struct dispatch_info);

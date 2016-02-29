@@ -32,7 +32,6 @@
 
 #pragma once
 
-#include <uv.h>
 #include <msgpack.h>
 #include <msgpack/pack.h>
 #include <stdbool.h>
@@ -48,6 +47,7 @@ typedef struct api_event api_event;
 typedef struct equeue equeue;
 typedef struct queue_entry queue_entry;
 typedef struct message_object message_object;
+typedef struct connection_request_event_info connection_request_event_info;
 
 
 #define MESSAGE_REQUEST_ARRAY_SIZE 4
@@ -71,6 +71,7 @@ typedef struct message_object message_object;
 /* Enums */
 
 typedef enum {
+  OBJECT_TYPE_NIL,
   OBJECT_TYPE_INT,
   OBJECT_TYPE_UINT,
   OBJECT_TYPE_BOOL,
@@ -108,14 +109,13 @@ struct message_request {
 };
 
 struct message_response {
-  uint8_t type;
   uint32_t msgid;
-  uint32_t status;
+  struct message_params_object params;
 };
 
 struct connection {
-  uint64_t id;
-  uint64_t msgid;
+  uint32_t msgid;
+  uint32_t pendingcalls;
   msgpack_unpacker *mpac;
   msgpack_sbuffer *sbuf;
   bool closed;
@@ -125,13 +125,19 @@ struct connection {
     outputstream *write;
     uv_stream_t *uv;
   } streams;
+  kvec_t(struct callinfo *) callvector;
+};
+
+struct callinfo {
+  uint32_t msgid;
+  bool hasresponse;
+  bool errorresponse;
+  struct message_response *response;
 };
 
 struct dispatch_info {
   int (*func)(
-    struct message_request *request,
-    msgpack_packer *pk,
-    struct api_error *error
+    connection_request_event_info *info
     );
   bool async;
   string name;
@@ -172,8 +178,8 @@ struct connection_request_event_info {
 /* this structure holds the request event information and a callback to a
    handler function */
 struct api_event {
-  struct connection_request_event_info info;
-  void (*handler)(struct connection_request_event_info *info);
+  connection_request_event_info info;
+  void (*handler)(connection_request_event_info *info);
 };
 
 TAILQ_HEAD(queue, queue_entry);
@@ -215,6 +221,14 @@ int connection_init(void);
  * @return 0 on success, -1 otherwise
  */
 int connection_create(uv_stream_t *stream);
+
+struct callinfo * connection_send_request(string pluginlongtermpk, string method,
+    struct message_params_object *params, struct api_error *api_error);
+int connection_send_response(struct connection *con, uint32_t msgid,
+    struct message_params_object *params, struct api_error *api_error);
+int connection_hashmap_put(string pluginlongtermpk, struct connection *con);
+struct callinfo *connection_wait_for_response(struct connection *con,
+    struct message_request *request);
 
 /**
  * Create a new `outputstream` instance. A `outputstream` instance contains the
@@ -378,6 +392,8 @@ void equeue_run_events(equeue *queue);
  */
 void equeue_free(equeue *queue);
 
+bool equeue_empty(equeue *queue);
+
 
 
 
@@ -392,12 +408,9 @@ int dispatch_table_init(void);
 int dispatch_table_free(void);
 struct dispatch_info *dispatch_table_get(string method);
 void dispatch_table_put(string method, struct dispatch_info *info);
-int handle_register(struct message_request *request, msgpack_packer *pk,
-    struct api_error *err);
-int handle_run(struct message_request *request, msgpack_packer *pk,
-    struct api_error *err);
-int handle_error(struct message_request *request, msgpack_packer *pk,
-    struct api_error *err);
+int handle_run(connection_request_event_info *info);
+int handle_register(connection_request_event_info *info);
+int handle_error(connection_request_event_info *info);
 
 
 /* Message Functions */
@@ -405,11 +418,19 @@ void free_params(struct message_params_object params);
 bool message_is_request(msgpack_object *obj);
 bool message_is_response(msgpack_object *obj);
 int message_serialize_error_response(msgpack_packer *pk, struct api_error *err,
-                                     uint32_t msgid);
+    uint32_t msgid);
+int message_serialize_response(struct message_response *res,
+    msgpack_packer *pk);
 struct message_request *message_deserialize_request(msgpack_object *obj,
                                                     struct api_error *err);
+struct message_response *message_deserialize_response(msgpack_object *obj,
+    struct api_error *api_error);
+struct message_response *message_deserialize_error_response(msgpack_object *obj,
+    struct api_error *api_error);
 int message_serialize_request(struct message_request *req, msgpack_packer *pk);
 void message_dispatch(msgpack_object *req, msgpack_packer *res);
+uint64_t message_get_id(msgpack_object *obj);
+bool message_is_error_response(msgpack_object *obj);
 
 
 /* DB functions */

@@ -18,10 +18,12 @@
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 
+uv_loop_t loop;
 
 void unit_server_stop(UNUSED(void **state))
 {
   string endpoint_ip_correct = cstring_copy_string("127.0.0.1:11111");
+  uv_loop_init(&loop);
 
   server_init();
 
@@ -30,8 +32,8 @@ void unit_server_stop(UNUSED(void **state))
 
   server_close();
 
-  uv_run(uv_default_loop(), UV_RUN_ONCE);
-  uv_loop_close(uv_default_loop());
+  uv_run(&loop, UV_RUN_ONCE);
+  uv_loop_close(&loop);
 
   free_string(endpoint_ip_correct);
 }

@@ -1,5 +1,5 @@
 /**
- *    Copyright (C) 2015 splone UG
+ *    Copyright (C) 2016 splone UG
  *
  *    This program is free software: you can redistribute it and/or  modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -14,11 +14,22 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
-
+#include <stdint.h>
+#include <sodium.h>
 #include "sb-common.h"
 
-void connect_to_db(void);
-void connect_and_create(string apikey);
-int validate_register_response(const unsigned long data1, const unsigned long data2);
-int validate_run_response(const unsigned long data1, const unsigned long data2);
+int64_t randommod(long long n)
+{
+  int64_t result = 0;
+  int64_t j;
+  unsigned char r[32];
+  if (n <= 1)
+    return 0;
+
+  randombytes(r,32);
+
+  for (j = 0; j < 32; ++j)
+    result = (int64_t)((uint64_t)(result * 256) + (uint64_t)r[j]) % n;
+
+  return result;
+}
