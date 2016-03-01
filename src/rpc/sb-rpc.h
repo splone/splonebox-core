@@ -159,12 +159,12 @@ struct inputstream {
   void * data;
   char * buffer;
   uv_stream_t * stream;
-  uv_file fd;
   inputstream_cb cb;
-  size_t buffer_size;
-  size_t rpos;
-  size_t cpos;
-  bool reading;
+  unsigned char *circbuf_start;
+  unsigned char *circbuf_end;
+  unsigned char *circbuf_read_pos;
+  unsigned char *circbuf_write_pos;
+  size_t size;
 };
 
 /* this structure holds a request and all information to send a response */
@@ -303,6 +303,18 @@ void inputstream_free(inputstream *inputstream);
  * @param inputstream The `inputstream` instance
  */
 size_t inputstream_pending(inputstream *inputstream);
+
+/**
+ * Get the number of bytes that can be read from the `inputstream` instance
+ * and the start pointer to the data that can be read
+ *
+ * @param inputstream The `inputstream` instance
+ * @param read_count A pointer to an the read count integer variable
+
+ * @return The data pointer
+ */
+unsigned char *inputstream_get_read(inputstream *istream, size_t *read_count);
+
 
 /**
  * Read data from the `inputstream` instance into a buffer
