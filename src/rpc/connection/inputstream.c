@@ -50,17 +50,16 @@ inputstream *inputstream_new(inputstream_cb cb, uint32_t buffer_size,
   if (rs == NULL)
     return (NULL);
 
-  rs->buffer = MALLOC_ARRAY(buffer_size, char);
-
-  if (rs->buffer == NULL)
-    return (NULL);
-
-  rs->buffer_size = buffer_size;
   rs->data = data;
+  rs->size = 0;
   rs->cb = cb;
   rs->stream = NULL;
-  rs->rpos = 0;
-  rs->cpos = 0;
+
+  /* initialize circular buffer */
+  rs->circbuf_start = MALLOC_ARRAY(buffer_size, unsigned char);
+  rs->circbuf_read_pos = rs->circbuf_start;
+  rs->circbuf_write_pos = rs->circbuf_start;
+  rs->circbuf_end = rs->circbuf_start + buffer_size;
 
   return (rs);
 }
@@ -75,7 +74,6 @@ void inputstream_set(inputstream *istream, uv_stream_t *stream)
 
 void inputstream_start(inputstream *istream)
 {
-  istream->reading = false;
   uv_read_start(istream->stream, alloc_cb, read_cb);
 }
 
@@ -94,29 +92,63 @@ void inputstream_free(inputstream *istream)
 
 size_t inputstream_pending(inputstream *istream)
 {
-  return (istream->cpos - istream->rpos);
+  return (istream->size);
+}
+
+unsigned char *inputstream_get_read(inputstream *istream, size_t *read_count)
+{
+  if (!inputstream_pending(istream)) {
+    *read_count = 0;
+    return NULL;
+  }
+
+  if (istream->circbuf_read_pos < istream->circbuf_write_pos)
+    *read_count = (size_t) (istream->circbuf_write_pos - istream->circbuf_read_pos);
+  else
+    *read_count = (size_t) (istream->circbuf_end - istream->circbuf_read_pos);
+
+  return istream->circbuf_read_pos;
 }
 
 
-size_t inputstream_read(inputstream *istream, char *buf, size_t size)
+size_t inputstream_read(inputstream *istream, char *buf, size_t count)
 {
-  if (size > 0) {
-    memcpy(buf, istream->buffer + istream->rpos, size);
-    istream->rpos += size;
+  size_t dst_size = count;
+  size_t size = dst_size;
+  size_t recent;
+  size_t infinite = 1;
+  size_t size_count;
+  unsigned char *rptr;
+
+  for (recent = 0; infinite; infinite = 0) {
+    for (rptr = inputstream_get_read(istream, &recent); istream->size;
+        rptr = inputstream_get_read(istream, &recent)) {
+      size_count = MIN(dst_size, recent);
+
+      memcpy(buf, rptr, size_count);
+
+      size_t capacity = (size_t)(istream->circbuf_end - istream->circbuf_start);
+      istream->circbuf_read_pos += size_count;
+
+      if (istream->circbuf_read_pos >= istream->circbuf_end)
+        istream->circbuf_read_pos -= capacity;
+
+      bool full = (capacity == istream->size);
+      istream->size -= size_count;
+
+      if (full) {
+        inputstream_start(istream);
+      }
+
+      if (!(dst_size -= size_count)) {
+        return size;
+      }
+
+      buf += size_count;
+    }
   }
 
-  if (istream->cpos == istream->buffer_size) {
-    memmove(istream->buffer, istream->buffer + istream->rpos,
-        istream->cpos - istream->rpos);
-
-    istream->cpos -= istream->rpos;
-    istream->rpos = 0;
-
-    if (istream->cpos < istream->buffer_size)
-      inputstream_start(istream);
-  }
-
-  return (size);
+  return size - dst_size;
 }
 
 
@@ -132,17 +164,18 @@ static void alloc_cb(uv_handle_t *handle, UNUSED(size_t suggested_size),
 {
   inputstream *istream = streamhandle_get_inputstream(handle);
 
-  if (istream->reading) {
+  if (istream->size == (size_t)(istream->circbuf_end -
+      istream->circbuf_start)) {
     buf->len = 0;
     return;
   }
 
-  /* available space */
-  buf->len = istream->buffer_size - istream->cpos;
-  /* first byte for write */
-  buf->base = istream->buffer + istream->cpos;
+  if (istream->circbuf_write_pos >= istream->circbuf_read_pos)
+    buf->len = (size_t)(istream->circbuf_end - istream->circbuf_write_pos);
+  else
+    buf->len = (size_t)(istream->circbuf_read_pos - istream->circbuf_write_pos);
 
-  istream->reading = true;
+  buf->base = (char*) istream->circbuf_write_pos;
 }
 
 
@@ -150,8 +183,9 @@ static void read_cb(uv_stream_t *stream, ssize_t nread,
     UNUSED(const uv_buf_t *buf))
 {
   size_t read;
-  inputstream *istream =
-      streamhandle_get_inputstream((uv_handle_t *)stream);
+  inputstream *istream;
+
+  istream = streamhandle_get_inputstream((uv_handle_t *)stream);
 
   /*
    * nread is > 0 if there is data available, 0 if libuv is done reading for
@@ -161,17 +195,24 @@ static void read_cb(uv_stream_t *stream, ssize_t nread,
     if (nread != UV_ENOBUFS) {
       /* no buffer space available */
       uv_read_stop(stream);
+      /* close connection */
       istream->cb(istream, istream->data, true);
     }
     return;
   }
 
   read = (size_t)nread;
-  istream->cpos += read;
 
-  if (istream->cpos == istream->buffer_size)
+  istream->circbuf_write_pos += read;
+
+  if (istream->circbuf_write_pos >= istream->circbuf_end)
+    istream->circbuf_write_pos -= (size_t)(istream->circbuf_end - istream->circbuf_start);
+
+  istream->size += read;
+
+  if (!((size_t)(istream->circbuf_end - istream->circbuf_start) - istream->size)) {
     inputstream_stop(istream);
+  }
 
-  istream->reading = false;
   istream->cb(istream, istream->data, false);
 }

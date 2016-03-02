@@ -242,6 +242,12 @@ int handle_run(connection_request_event_info *info)
   cinfo = connection_send_request(pluginlongtermpk, cstring_copy_string("run"),
       params, api_error);
 
+  if (cinfo == NULL) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error sending run API request.");
+    return (-1);
+  }
+
   if (cinfo->response->params.size != 1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API response. Invalid params size");
