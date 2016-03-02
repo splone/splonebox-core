@@ -196,6 +196,7 @@ set(TEST-SOURCES
   test/unit/dispatch-table-get.c
   test/unit/event-queue-put.c
   test/unit/event-queue-get.c
+  test/unit/unit-dispatch-handle-run.c
   test/functional/dispatch-handle-register.c
   test/functional/dispatch-handle-run.c
   test/functional/db-connect.c
