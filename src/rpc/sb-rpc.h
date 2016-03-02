@@ -227,7 +227,7 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
 int connection_send_response(struct connection *con, uint32_t msgid,
     struct message_params_object *params, struct api_error *api_error);
 int connection_hashmap_put(string pluginlongtermpk, struct connection *con);
-struct callinfo *connection_wait_for_response(struct connection *con,
+struct callinfo *loop_wait_for_response(struct connection *con,
     struct message_request *request);
 
 /**

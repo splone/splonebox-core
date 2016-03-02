@@ -228,7 +228,7 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   if (connection_write(con) < 0)
     return (NULL);
 
-  cinfo = connection_wait_for_response(con, &request);
+  cinfo = loop_wait_for_response(con, &request);
 
   return cinfo;
 }
