@@ -51,7 +51,7 @@ int validate_register_response(const unsigned long data1, UNUSED(const unsigned 
 }
 
 
-void unit_dispatch_handle_register(UNUSED(void **state))
+void functional_dispatch_handle_register(UNUSED(void **state))
 {
   connection_request_event_info info;
   struct message_request *request;
