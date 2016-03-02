@@ -135,6 +135,7 @@ static void register_test_function(void)
   struct message_request *request;
   struct message_params_object *meta, *functions, *func1, *args;
   struct api_error *err = MALLOC(struct api_error);
+  err->isset = false;
 
   string apikey = cstring_copy_string(KEY);
   string pluginname = cstring_copy_string("plugin name");

@@ -79,6 +79,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
 
   info.api_error = *err;
   assert_non_null(err);
+  info.api_error.isset = false;
 
   info.con = MALLOC(struct connection);
   assert_non_null(info.con);
