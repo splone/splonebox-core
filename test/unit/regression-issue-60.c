@@ -20,11 +20,14 @@
 #include "rpc/msgpack/sb-msgpack-rpc.h"
 #include "helper-unix.h"
 
-static msgpack_object pack_array()
+void unit_regression_issue_60(UNUSED(void **state))
 {
+  struct message_params_object params;
+  struct msgpack_object deserialized;
   msgpack_unpacked result;
   msgpack_sbuffer sbuf;
   msgpack_packer pk;
+
   size_t off = 0;
 
   msgpack_sbuffer_init(&sbuf);
@@ -35,15 +38,10 @@ static msgpack_object pack_array()
   msgpack_unpacked_init(&result);
   msgpack_unpack_next(&result, sbuf.data, sbuf.size, &off);
   msgpack_sbuffer_destroy(&sbuf);
-  return result.data;
-}
 
-void unit_regression_issue_60(UNUSED(void **state))
-{
-  struct message_params_object params;
-  struct msgpack_object deserialized;
+  deserialized = result.data;
 
-  deserialized = pack_array();
   assert_int_equal(0, unpack_params(&deserialized, &params));
   free_params(params);
+  msgpack_unpacked_destroy(&result);
 }

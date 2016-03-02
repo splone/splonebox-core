@@ -57,6 +57,8 @@ typedef struct connection_request_event_info connection_request_event_info;
 #define MESSAGE_RESPONSE_UNKNOWN UINT32_MAX
 #define MESSAGE_APIKEY_LENGTH 64
 
+#define ARRAY_INIT {.size = 0, .capacity = 0, .obj = NULL}
+
 
 
 /*
@@ -86,6 +88,7 @@ typedef enum {
 struct message_params_object {
   message_object *obj;
   size_t size;
+  size_t capacity;
 };
 
 struct message_object {
@@ -229,6 +232,7 @@ int connection_send_response(struct connection *con, uint32_t msgid,
 int connection_hashmap_put(string pluginlongtermpk, struct connection *con);
 struct callinfo *connection_wait_for_response(struct connection *con,
     struct message_request *request);
+int connection_teardown(void);
 
 /**
  * Create a new `outputstream` instance. A `outputstream` instance contains the
@@ -417,7 +421,7 @@ inputstream * streamhandle_get_inputstream(uv_handle_t *handle);
 
 
 int dispatch_table_init(void);
-int dispatch_table_free(void);
+int dispatch_teardown(void);
 struct dispatch_info *dispatch_table_get(string method);
 void dispatch_table_put(string method, struct dispatch_info *info);
 int handle_run(connection_request_event_info *info);
@@ -443,6 +447,7 @@ int message_serialize_request(struct message_request *req, msgpack_packer *pk);
 void message_dispatch(msgpack_object *req, msgpack_packer *res);
 uint64_t message_get_id(msgpack_object *obj);
 bool message_is_error_response(msgpack_object *obj);
+struct message_object message_object_copy(struct message_object obj);
 
 
 /* DB functions */

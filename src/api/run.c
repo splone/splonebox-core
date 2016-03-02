@@ -22,13 +22,10 @@
 
 struct message_params_object * api_run(string pluginlongtermpk,
     string function_name, uint64_t callid, struct message_params_object args,
-    struct api_error *api_error)
+    struct message_params_object *run_params, struct api_error *api_error)
 {
   struct message_object *data;
   struct message_object *meta;
-  struct message_params_object *run_params;
-
-  run_params = CALLOC(1, struct message_params_object);
 
   if (!api_error)
     return (NULL);
@@ -86,20 +83,16 @@ struct message_params_object * api_run(string pluginlongtermpk,
   return (run_params);
 }
 
-struct message_params_object * api_run_response(string pluginlongtermpk,
-    uint64_t callid, struct api_error *api_error)
+int api_run_response(string pluginlongtermpk, uint64_t callid,
+    struct message_params_object *params, struct api_error *api_error)
 {
-  struct message_params_object *params;
-
-  params = CALLOC(1, struct message_params_object);
-
   if (!api_error || !params)
-    return (NULL);
+    return (-1);
 
   /* check if id is in database */
   if (db_apikey_verify(pluginlongtermpk) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
-    return (NULL);
+    return (-1);
   }
 
   params->size = 1;
@@ -108,5 +101,5 @@ struct message_params_object * api_run_response(string pluginlongtermpk,
   params->obj[0].type = OBJECT_TYPE_UINT;
   params->obj[0].data.uinteger = callid;
 
-  return (params);
+  return (0);
 }

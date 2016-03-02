@@ -21,7 +21,6 @@
 #include "sb-common.h"
 
 static msgpack_sbuffer sbuf;
-static struct hashmap_string *connections = NULL;
 static struct hashmap_string *dispatch_table = NULL;
 static struct hashmap_uint64 *callids = NULL;
 
@@ -45,7 +44,7 @@ int handle_error(connection_request_event_info *info)
  */
 int handle_register(connection_request_event_info *info)
 {
-  struct message_params_object *params = NULL;
+  struct message_params_object params = ARRAY_INIT;
   struct message_params_object *meta = NULL;
   struct message_params_object functions;
   string pluginlongtermpk, name, description, author, license;
@@ -132,12 +131,14 @@ int handle_register(connection_request_event_info *info)
    * connection hashmap
    */
   connection_hashmap_put(pluginlongtermpk, info->con);
-  params = api_register_response(api_error);
+  api_register_response(api_error, &params);
 
-  if (connection_send_response(info->con, info->request->msgid, params,
+  if (connection_send_response(info->con, info->request->msgid, &params,
       api_error) < 0) {
     return (-1);
   };
+
+  free_params(params);
 
   return (0);
 }
@@ -146,8 +147,9 @@ int handle_register(connection_request_event_info *info)
 int handle_run(connection_request_event_info *info)
 {
   struct message_params_object *meta = NULL;
-  struct message_params_object args;
-  struct message_params_object *params;
+  struct message_object args;
+  struct message_params_object run_forward_params = ARRAY_INIT;
+  struct message_params_object run_response_params = ARRAY_INIT;
   string pluginlongtermpk, function_name;
   struct callinfo *cinfo;
   uint64_t callid;
@@ -199,9 +201,10 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  pluginlongtermpk = meta->obj[0].data.string;
+  pluginlongtermpk = cstring_copy_string(meta->obj[0].data.string.str);
 
   if (meta->obj[1].type != OBJECT_TYPE_NIL) {
+    free_string(pluginlongtermpk);
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. meta elements have wrong type");
     return (-1);
@@ -219,7 +222,7 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  function_name = request->params.obj[1].data.string;
+  function_name = cstring_copy_string(request->params.obj[1].data.string.str);
 
   if (request->params.obj[2].type != OBJECT_TYPE_ARRAY) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -227,20 +230,34 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  args = request->params.obj[2].data.params;
+  args = message_object_copy(request->params.obj[2]);
 
   callid = (uint64_t) randommod(281474976710656LL);
   hashmap_uint64_put(callids, callid, info->con);
-  params = api_run(pluginlongtermpk, function_name, callid, args, api_error);
 
-  if (params == NULL) {
+  if (api_run(pluginlongtermpk, function_name, callid, args.data.params,
+      &run_forward_params, api_error) == NULL) {
+    free_string(function_name);
+    free_string(pluginlongtermpk);
+    free_params(args.data.params);
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error creating run API request.");
+        "Error executing run API request.");
     return (-1);
   }
 
-  cinfo = connection_send_request(pluginlongtermpk, cstring_copy_string("run"),
-      params, api_error);
+  string run = cstring_copy_string("run");
+
+  cinfo = connection_send_request(pluginlongtermpk, run,
+      &run_forward_params, api_error);
+
+  free_string(run);
+
+  if (cinfo == NULL) {
+      free_params(run_forward_params);
+      error_set(api_error, API_ERROR_TYPE_VALIDATION,
+            "Error sending run API request.");
+      return (-1);
+  }
 
   if (cinfo == NULL) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -261,18 +278,20 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  params = api_run_response(pluginlongtermpk, callid, api_error);
+  api_run_response(pluginlongtermpk, callid, &run_response_params, api_error);
 
-  if (params == NULL) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error creating run API response.");
-    return (-1);
-  }
-
-  if (connection_send_response(info->con, info->request->msgid, params,
-      api_error) < 0) {
+  if (connection_send_response(info->con, info->request->msgid,
+      &run_response_params, api_error) < 0) {
     return (-1);
   };
+
+  free_string(pluginlongtermpk);
+  //free_params(args.data.params);
+  free_params(run_forward_params);
+  free_params(run_response_params);
+  free_params(cinfo->response->params);
+  FREE(cinfo->response);
+  FREE(cinfo);
 
   return (0);
 }
@@ -296,7 +315,7 @@ struct dispatch_info *dispatch_table_get(string method)
   return (info);
 }
 
-int dispatch_table_free(void)
+int dispatch_teardown(void)
 {
   struct dispatch_info *info;
 
@@ -306,6 +325,7 @@ int dispatch_table_free(void)
   });
 
   hashmap_string_free(dispatch_table);
+  hashmap_uint64_free(callids);
 
   return (0);
 }
@@ -318,12 +338,8 @@ int dispatch_table_init(void)
 
   msgpack_sbuffer_init(&sbuf);
 
-  connections = hashmap_string_new();
   dispatch_table = hashmap_string_new();
   callids = hashmap_uint64_new();
-
-  if (!connections)
-    return (-1);
 
   if (!dispatch_table)
     return (-1);

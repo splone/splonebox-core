@@ -427,6 +427,40 @@ static void free_message_object(message_object obj)
   }
 }
 
+struct message_object message_object_copy(struct message_object obj)
+{
+  switch (obj.type) {
+  case OBJECT_TYPE_NIL:
+    /* FALLTHROUGH */
+  case OBJECT_TYPE_BOOL:
+    /* FALLTHROUGH */
+  case OBJECT_TYPE_INT:
+    /* FALLTHROUGH */
+  case OBJECT_TYPE_UINT:
+    /* FALLTHROUGH */
+  case OBJECT_TYPE_FLOAT:
+    return obj;
+  case OBJECT_TYPE_BIN:
+    /* FALLTHROUGH */
+  case OBJECT_TYPE_STR:
+    return (struct message_object) {.type = OBJECT_TYPE_STR, .data.string =
+        cstring_copy_string(obj.data.string.str) };
+  case OBJECT_TYPE_ARRAY: {
+    struct message_params_object array = ARRAY_INIT;
+
+    for (size_t i = 0; i < obj.data.params.size; i++) {
+      kv_push(struct message_object, array,
+          message_object_copy(obj.data.params.obj[i]));
+    }
+
+    return (struct message_object) {.type = OBJECT_TYPE_ARRAY,
+        .data.params = array};
+  }
+  default:
+    abort();
+  }
+}
+
 
 void free_params(struct message_params_object params)
 {

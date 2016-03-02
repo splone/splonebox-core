@@ -53,6 +53,7 @@ static int connection_handle_request(struct connection *con,
 static int connection_handle_response(struct connection *con,
     msgpack_object *obj);
 static void connection_request_event(connection_request_event_info *info);
+static void connection_close(struct connection *con);
 
 static struct hashmap_string *connections = NULL;
 static msgpack_sbuffer sbuf;
@@ -70,6 +71,25 @@ int connection_init(void)
     return (-1);
 
   msgpack_sbuffer_init(&sbuf);
+
+  return (0);
+}
+
+int connection_teardown(void)
+{
+  if (!connections)
+    return (-1);
+
+  struct connection *con;
+
+  HASHMAP_ITERATE_VALUE(connections, con, {
+    connection_close(con);
+    FREE(con);
+  });
+
+  hashmap_string_free(connections);
+  dispatch_teardown();
+  msgpack_sbuffer_destroy(&sbuf);
 
   return (0);
 }
@@ -189,7 +209,7 @@ static int connection_write(struct connection *con)
       sbuf.size) < 0)
     return (-1);
 
-  msgpack_sbuffer_clear(&sbuf);
+  FREE(data);
 
   return (0);
 }
@@ -230,6 +250,8 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
 
   cinfo = connection_wait_for_response(con, &request);
 
+  msgpack_sbuffer_clear(&sbuf);
+
   return cinfo;
 }
 
@@ -259,6 +281,8 @@ int connection_send_response(struct connection *con, uint32_t msgid,
 
   if (connection_write(con) < 0)
     return (-1);
+
+  msgpack_sbuffer_clear(&sbuf);
 
   return 0;
 }
@@ -332,6 +356,7 @@ static void connection_request_event(connection_request_event_info *eventinfo)
         sbuf.size), sbuf.size);
 
     msgpack_sbuffer_clear(&sbuf);
+    FREE(data);
   }
 
   FREE(eventinfo->request);

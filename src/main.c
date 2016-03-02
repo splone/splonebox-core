@@ -23,6 +23,7 @@
 #include "rpc/sb-rpc.h"
 
 #define ENV_VAR_LISTEN_ADDRESS    "SPLONEBOX_LISTEN_ADDRESS"
+#define DB_PORT 6378
 
 int8_t verbose_level;
 uv_loop_t loop;
@@ -32,6 +33,13 @@ int main(int argc, char **argv)
   optparser(argc, argv);
 
   uv_loop_init(&loop);
+
+  string db_ip = cstring_copy_string("127.0.0.1");
+  string db_auth = cstring_copy_string("vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2");
+
+  struct timeval timeout = { 1, 500000 };
+
+  db_connect(db_ip, DB_PORT, timeout, db_auth);
 
   /* initialize signal handler */
   if (signal_init() == -1) {
