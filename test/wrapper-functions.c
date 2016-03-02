@@ -6,13 +6,30 @@
 #include "wrappers.h"
 #include "sb-common.h"
 
-/* enable/disable wrapper for api_run */
+/* enable/disable wrapper */
 bool WRAP_API_RUN = false;
-/* Declare original api_run (__real_api_run) */
+bool WRAP_CONNECTION_SEND_REQUEST = false;
+bool WRAP_API_RUN_RESPONSE = false;
+bool WRAP_CONNECTION_SEND_RESPONSE = false;
+bool WRAP_RANDOMMOD = false;
+/* Declare original (__real) functions */
 struct message_params_object * __real_api_run(string pluginlongtermpk,
     string function_name, uint64_t callid, struct message_params_object args,
                                               struct api_error *api_error);
 
+struct callinfo * __real_connection_send_request(string pluginlongtermpk,
+                                                 string method,
+                                                 struct message_params_object *params,
+                                                 struct api_error *api_error);
+
+struct message_params_object * __real_api_run_response(string pluginlongtermpk,
+                                                       uint64_t callid,
+                                                       struct api_error *api_error);
+int __real_connection_send_response(struct connection *con, uint32_t msgid,
+                                    struct message_params_object *params,
+                                    struct api_error *api_error);
+
+int64_t __real_randommod(long long n);
 
 
 int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_t len)
@@ -55,10 +72,56 @@ struct callinfo *__wrap_connection_wait_for_response(UNUSED(struct connection *c
 
 struct message_params_object * __wrap_api_run(string pluginlongtermpk,
     string function_name, uint64_t callid, struct message_params_object args,
-                                              struct api_error *api_error){
+                                              struct api_error *api_error)
+{
   if(WRAP_API_RUN){
-          return (struct message_params_object *) mock();
+    return ((struct message_params_object *) mock());
   }
 
   return __real_api_run(pluginlongtermpk, function_name, callid, args, api_error);
+}
+
+struct callinfo * __wrap_connection_send_request(string pluginlongtermpk,
+                                                 string method,
+                                                 struct message_params_object *params,
+                                                 struct api_error *api_error)
+{
+  if(WRAP_CONNECTION_SEND_REQUEST){
+    return ((struct callinfo *) mock());
+  }
+
+  return  __real_connection_send_request(pluginlongtermpk, method, params,
+                                           api_error);
+}
+
+
+struct message_params_object * __wrap_api_run_response(string pluginlongtermpk,
+                                                       uint64_t callid,
+                                                       struct api_error *api_error)
+{
+  if(WRAP_API_RUN_RESPONSE){
+    return ((struct message_params_object *) mock());
+  }
+
+  return (__real_api_run_response(pluginlongtermpk,  callid, api_error));
+
+}
+
+int __wrap_connection_send_response(struct connection *con, uint32_t msgid,
+                                    struct message_params_object *params,
+                                    struct api_error *api_error)
+{
+  if(WRAP_CONNECTION_SEND_RESPONSE){
+    return ((int) mock());
+  }
+
+  return __real_connection_send_response(con, msgid, params, api_error);
+}
+
+int64_t __wrap_randommod(long long n){
+  if(WRAP_RANDOMMOD){
+    return ((int64_t) mock());
+  }
+
+  return (__real_randommod(n));
 }

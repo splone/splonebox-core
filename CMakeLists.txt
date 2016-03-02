@@ -233,7 +233,7 @@ target_link_libraries(sb-plugin ${BSD_LIBRARIES} ${HIREDIS_LIBRARIES})
 add_executable(sb-test ${TEST-SOURCES})
 
 # wrap some functions for testing
-set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=api_run,--wrap=outputstream_write,--wrap=connection_wait_for_response ")
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=api_run,--wrap=outputstream_write,--wrap=connection_wait_for_response,--wrap=api_run,--wrap=connection_send_request,--wrap=api_run_response,--wrap=connection_send_response,--wrap=randommod")
 
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}

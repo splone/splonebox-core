@@ -21,6 +21,7 @@
 #include "rpc/msgpack/sb-msgpack-rpc.h"
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
+#include "wrappers.h"
 
 #define KEY "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"
 #define FUNC "test_function"
@@ -226,6 +227,13 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   struct message_request *request;
   struct message_params_object *meta, *args;
   struct api_error *err = MALLOC(struct api_error);
+
+  /* disabled wrapping of used functions */
+  WRAP_API_RUN = false;
+  WRAP_CONNECTION_SEND_REQUEST = false;
+  WRAP_API_RUN_RESPONSE = false;
+  WRAP_CONNECTION_SEND_RESPONSE = false;
+  WRAP_RANDOMMOD = false;
 
   register_test_function();
 

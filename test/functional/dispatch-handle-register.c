@@ -22,6 +22,7 @@
 #include "helper-unix.h"
 #include "helper-all.h"
 #include "rpc/msgpack/sb-msgpack-rpc.h"
+#include "wrappers.h"
 
 
 int validate_register_response(const unsigned long data1, UNUSED(const unsigned long data2))
@@ -64,6 +65,13 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   string description = cstring_copy_string("register a plugin");
   string author = cstring_copy_string("test");
   string license = cstring_copy_string("none");
+
+  /* disabled wrapping of used functions */
+  WRAP_API_RUN = false;
+  WRAP_CONNECTION_SEND_REQUEST = false;
+  WRAP_API_RUN_RESPONSE = false;
+  WRAP_CONNECTION_SEND_RESPONSE = false;
+  WRAP_RANDOMMOD = false;
 
   info.request = MALLOC(struct message_request);
   request = info.request;
