@@ -72,7 +72,7 @@ struct message_params_object * api_run(string pluginlongtermpk,
   /* add function name, data refs to second run_params parameter */
   data = &run_params->obj[1];
   data->type = OBJECT_TYPE_STR;
-  data->data.string = function_name;
+  data->data.string = cstring_copy_string(function_name.str);
 
   /* add function parameters, data refs to third run_params parameter */
   data = &run_params->obj[2];
