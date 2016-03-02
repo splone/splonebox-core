@@ -173,7 +173,7 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  if (!meta) {
+  if (!meta->obj) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. meta params is NULL");
     return (-1);
