@@ -22,10 +22,10 @@ int filesystem_open_write(const char *fn)
 {
   int fd;
 #ifdef O_CLOEXEC
-  fd = open(fn, O_CREAT | O_WRONLY | O_NONBLOCK | O_CLOEXEC, 0644);
+  fd = open(fn, O_CREAT | O_WRONLY | O_NONBLOCK | O_CLOEXEC, 0600);
   return (fd);
 #else
-  fd = open(fn, O_CREAT | O_WRONLY | O_NONBLOCK, 0644);
+  fd = open(fn, O_CREAT | O_WRONLY | O_NONBLOCK, 0600);
 
   if (fd == -1)
     return (-1);
