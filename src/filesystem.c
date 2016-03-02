@@ -131,7 +131,8 @@ int filesystem_save_sync(const char *fn, const void *x, size_t xlen)
 
   r = fsync(fd);
 
-  close(fd);
+  if (close(fd) == -1)
+    return (-1);
 
   return (r);
 }
@@ -148,7 +149,8 @@ int filesystem_load(const char *fn, void *x, size_t xlen)
 
   r = filesystem_read_all(fd, x, xlen);
 
-  close(fd);
+  if (close(fd) == -1)
+    return (-1);
 
   return (r);
 }
