@@ -85,7 +85,7 @@ int filesystem_write_all(int fd, const void *x, size_t xlen)
     xlen -= (size_t)res;
   }
 
-  return 0;
+  return (0);
 }
 
 int filesystem_read_all(int fd, void *x, size_t xlen)
@@ -133,7 +133,7 @@ int filesystem_save_sync(const char *fn, const void *x, size_t xlen)
 
   close(fd);
 
-  return r;
+  return (r);
 }
 
 int filesystem_load(const char *fn, void *x, size_t xlen)
