@@ -226,9 +226,9 @@ int connection_init(void);
 int connection_create(uv_stream_t *stream);
 
 struct callinfo * connection_send_request(string pluginlongtermpk, string method,
-    array *params, struct api_error *api_error);
+    array params, struct api_error *api_error);
 int connection_send_response(struct connection *con, uint32_t msgid,
-    array *params, struct api_error *api_error);
+    array params, struct api_error *api_error);
 int connection_hashmap_put(string pluginlongtermpk, struct connection *con);
 struct callinfo *loop_wait_for_response(struct connection *con,
     struct message_request *request);

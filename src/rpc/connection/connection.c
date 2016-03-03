@@ -214,7 +214,7 @@ static int connection_write(struct connection *con)
 }
 
 struct callinfo * connection_send_request(string pluginlongtermpk, string method,
-    array *params, struct api_error *api_error)
+    array params, struct api_error *api_error)
 {
   struct connection *con;
   msgpack_packer packer;
@@ -228,6 +228,7 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
    * the initial connection from the sender.
    */
   if (!con) {
+    free_params(params);
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
     return (NULL);
   }
@@ -235,11 +236,12 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   request.type = MESSAGE_TYPE_REQUEST;
   request.msgid = con->msgid++;
   request.method = method;
-  request.params = *params;
+  request.params = params;
 
   msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
-
   message_serialize_request(&request, &packer);
+  free_params(params);
+
   /* if error is set, generate an error response message */
   if (api_error->isset)
     return (NULL);
@@ -255,7 +257,7 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
 }
 
 int connection_send_response(struct connection *con, uint32_t msgid,
-    array *params, struct api_error *api_error)
+    array params, struct api_error *api_error)
 {
   msgpack_packer packer;
   struct message_response response;
@@ -270,10 +272,11 @@ int connection_send_response(struct connection *con, uint32_t msgid,
   }
 
   response.msgid = msgid;
-  response.params = *params;
+  response.params = params;
 
   msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
   message_serialize_response(&response, &packer);
+  free_params(params);
 
   if (api_error->isset)
     return (-1);

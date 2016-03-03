@@ -44,7 +44,6 @@ int handle_error(connection_request_event_info *info)
  */
 int handle_register(connection_request_event_info *info)
 {
-  array params = ARRAY_INIT;
   array *meta = NULL;
   array functions;
   string pluginlongtermpk, name, description, author, license;
@@ -120,25 +119,12 @@ int handle_register(connection_request_event_info *info)
 
   functions = request->params.obj[1].data.params;
 
-  api_register(pluginlongtermpk, name, description, author, license, functions,
-      api_error);
-
-  if (api_error->isset)
+  if (api_register(pluginlongtermpk, name, description, author, license, functions,
+      api_error, info->con, info->request->msgid) == -1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error running register API request.");
     return (-1);
-
-  /*
-   * add connection with the client long term public key as key to the
-   * connection hashmap
-   */
-  connection_hashmap_put(pluginlongtermpk, info->con);
-  api_register_response(api_error, &params);
-
-  if (connection_send_response(info->con, info->request->msgid, &params,
-      api_error) < 0) {
-    return (-1);
-  };
-
-  free_params(params);
+  }
 
   return (0);
 }
@@ -148,14 +134,9 @@ int handle_run(connection_request_event_info *info)
 {
   array *meta = NULL;
   struct message_object args_object;
-  array args;
-  array run_forward_params = ARRAY_INIT;
-  array run_response_params = ARRAY_INIT;
   string pluginlongtermpk, function_name;
   string functionnamecopy;
-  struct callinfo *cinfo;
   uint64_t callid;
-
   struct message_request *request = info->request;
   struct api_error *api_error = &info->api_error;
 
@@ -231,70 +212,19 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  args = request->params.obj[2].data.params;
   args_object = message_object_copy(request->params.obj[2]);
   callid = (uint64_t) randommod(281474976710656LL);
   hashmap_uint64_put(callids, callid, info->con);
-
   functionnamecopy = cstring_copy_string(function_name.str);
 
-  if (api_run(pluginlongtermpk, functionnamecopy, callid, args_object.data.params,
-      &run_forward_params, api_error) == NULL) {
+  if (api_run(pluginlongtermpk, functionnamecopy, callid,
+    args_object.data.params, api_error, info->con, info->request->msgid) == -1) {
     free_string(functionnamecopy);
     free_params(args_object.data.params);
-    free_params(run_forward_params);
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error executing run API request.");
     return (-1);
   }
-
-  string run = cstring_copy_string("run");
-
-  cinfo = connection_send_request(pluginlongtermpk, run,
-      &run_forward_params, api_error);
-
-  free_string(run);
-
-  if (cinfo == NULL) {
-      free_params(args_object.data.params);
-      free_params(run_forward_params);
-      error_set(api_error, API_ERROR_TYPE_VALIDATION,
-            "Error sending run API request.");
-      return (-1);
-  }
-
-  if (cinfo->response->params.size != 1) {
-    free_params(args_object.data.params);
-    free_params(run_forward_params);
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API response. Invalid params size");
-    return (-1);
-  }
-
-  if (!(cinfo->response->params.obj[0].type == OBJECT_TYPE_UINT &&
-    callid == cinfo->response->params.obj[0].data.uinteger)) {
-    free_params(args_object.data.params);
-    free_params(run_forward_params);
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API response. Invalid callid");
-    return (-1);
-  }
-
-  api_run_response(pluginlongtermpk, callid, &run_response_params, api_error);
-
-  if (connection_send_response(info->con, info->request->msgid,
-      &run_response_params, api_error) < 0) {
-    free_params(args_object.data.params);
-    free_params(run_forward_params);
-    free_params(run_response_params);
-    return (-1);
-  };
-
-  free_params(run_forward_params);
-  free_params(run_response_params);
-  free_params(cinfo->response->params);
-  FREE(cinfo->response);
-  FREE(cinfo);
 
   return (0);
 }
