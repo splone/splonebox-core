@@ -105,8 +105,8 @@ int validate_run_request(const unsigned long data1,
    * sender of the rpc call, we need to push the callid on the cmocka test
    * stack. this allows verifying of it later on */
   uint64_t callid = meta.data.params.obj[1].data.uinteger;
-  will_return(__wrap_connection_wait_for_response, OBJECT_TYPE_UINT);
-  will_return(__wrap_connection_wait_for_response, callid);
+  will_return(__wrap_loop_wait_for_response, OBJECT_TYPE_UINT);
+  will_return(__wrap_loop_wait_for_response, callid);
   expect_value(validate_run_response, response.data.params.obj[0].data.uinteger, callid);
 
   /* the function to call on client2 side */
@@ -220,7 +220,7 @@ static void register_test_function(void)
   FREE(err);
 }
 
-void unit_dispatch_handle_run(UNUSED(void **state))
+void functional_dispatch_handle_run(UNUSED(void **state))
 {
   connection_request_event_info info;
   struct message_request *request;
