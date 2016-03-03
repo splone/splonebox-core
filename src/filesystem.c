@@ -26,10 +26,10 @@ int filesystem_open_write(const char *fn)
     return (-1);
 
 #ifdef O_CLOEXEC
-  fd = open(fn, O_CREAT | O_WRONLY | O_NONBLOCK | O_CLOEXEC, 0644);
+  fd = open(fn, O_CREAT | O_WRONLY | O_NONBLOCK | O_CLOEXEC, 0600);
   return (fd);
 #else
-  fd = open(fn, O_CREAT | O_WRONLY | O_NONBLOCK, 0644);
+  fd = open(fn, O_CREAT | O_WRONLY | O_NONBLOCK, 0600);
 
   if (fd == -1)
     return (-1);
@@ -92,7 +92,7 @@ int filesystem_write_all(int fd, const void *x, size_t xlen)
     xlen -= (size_t)res;
   }
 
-  return 0;
+  return (0);
 }
 
 int filesystem_read_all(int fd, void *x, size_t xlen)
@@ -138,9 +138,10 @@ int filesystem_save_sync(const char *fn, const void *x, size_t xlen)
 
   r = fsync(fd);
 
-  close(fd);
+  if (close(fd) == -1)
+    return (-1);
 
-  return r;
+  return (r);
 }
 
 int filesystem_load(const char *fn, void *x, size_t xlen)
@@ -155,7 +156,8 @@ int filesystem_load(const char *fn, void *x, size_t xlen)
 
   r = filesystem_read_all(fd, x, xlen);
 
-  close(fd);
+  if (close(fd) == -1)
+    return (-1);
 
   return (r);
 }
