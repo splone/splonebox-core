@@ -34,8 +34,8 @@
  * @return 0 in case of success otherwise 1
  */
  int api_register(string pluginlongtermpk, string name, string desc,
-     string author, string license, array functions, struct api_error *api_error,
-     struct connection *con, uint32_t msgid);
+     string author, string license, array functions, struct connection *con,
+     uint32_t msgid, struct api_error *api_error);
 
 /**
  * Run a plugin function
@@ -47,8 +47,8 @@
  * @return 0 in case of success otherwise -1
  */
 int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
-    array args, struct api_error *api_error, struct connection *con,
-    uint32_t msgid);
+    struct message_object args, struct connection *con,
+    uint32_t msgid, struct api_error *api_error);
 
 /**
  * Generates an API key using /dev/urandom. The length of the key

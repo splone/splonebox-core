@@ -119,8 +119,8 @@ int handle_register(connection_request_event_info *info)
 
   functions = request->params.obj[1].data.params;
 
-  if (api_register(pluginlongtermpk, name, description, author, license, functions,
-      api_error, info->con, info->request->msgid) == -1) {
+  if (api_register(pluginlongtermpk, name, description, author, license,
+      functions, info->con, info->request->msgid, api_error) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error running register API request.");
     return (-1);
@@ -134,7 +134,7 @@ int handle_run(connection_request_event_info *info)
 {
   uint64_t callid;
   array *meta = NULL;
-  string pluginlongtermpk, function_name, functionnamecopy;
+  string pluginlongtermpk, function_name;
   struct message_object args_object;
   struct message_request *request;
   struct api_error *api_error;
@@ -214,15 +214,12 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  args_object = message_object_copy(request->params.obj[2]);
+  args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
   hashmap_uint64_put(callids, callid, info->con);
-  functionnamecopy = cstring_copy_string(function_name.str);
 
-  if (api_run(pluginlongtermpk, functionnamecopy, callid,
-    args_object.data.params, api_error, info->con, info->request->msgid) == -1) {
-    free_string(functionnamecopy);
-    free_params(args_object.data.params);
+  if (api_run(pluginlongtermpk, function_name, callid, args_object, info->con,
+      info->request->msgid, api_error) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error executing run API request.");
     return (-1);

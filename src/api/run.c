@@ -21,8 +21,8 @@
 #include "sb-common.h"
 
 int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
-    array args, struct api_error *api_error, struct connection *con,
-    uint32_t msgid)
+    struct message_object args, struct connection *con,
+    uint32_t msgid, struct api_error *api_error)
 {
   struct message_object *data;
   struct message_object *meta;
@@ -40,7 +40,7 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
     return (-1);
   }
 
-  if (db_function_verify(pluginlongtermpk, function_name, &args) == -1) {
+  if (db_function_verify(pluginlongtermpk, function_name, &args.data.params) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "run() verification failed.");
     return (-1);
@@ -76,13 +76,13 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
   /* add function name, data refs to second run_params parameter */
   data = &run_params.obj[1];
   data->type = OBJECT_TYPE_STR;
-  data->data.string = function_name;
+  data->data.string = cstring_copy_string(function_name.str);
 
   /* add function parameters, data refs to third run_params parameter */
   data = &run_params.obj[2];
 
   data->type = OBJECT_TYPE_ARRAY;
-  data->data.params = args;
+  data->data.params = message_object_copy(args).data.params;
 
   /* send request */
   run = cstring_copy_string("run");

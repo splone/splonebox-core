@@ -21,8 +21,8 @@
 #include "sb-common.h"
 
 int api_register(string pluginlongtermpk, string name, string desc,
-    string author, string license, array functions, struct api_error *api_error,
-    struct connection *con, uint32_t msgid)
+    string author, string license, array functions, struct connection *con,
+    uint32_t msgid, struct api_error *api_error)
 {
   struct message_object *func;
   array params = ARRAY_INIT;
