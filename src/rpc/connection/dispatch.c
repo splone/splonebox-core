@@ -132,15 +132,17 @@ int handle_register(connection_request_event_info *info)
 
 int handle_run(connection_request_event_info *info)
 {
-  array *meta = NULL;
-  struct message_object args_object;
-  string pluginlongtermpk, function_name;
-  string functionnamecopy;
   uint64_t callid;
-  struct message_request *request = info->request;
-  struct api_error *api_error = &info->api_error;
+  array *meta = NULL;
+  string pluginlongtermpk, function_name, functionnamecopy;
+  struct message_object args_object;
+  struct message_request *request;
+  struct api_error *api_error;
 
-  if (!api_error)
+  request = info->request;
+  api_error = &info->api_error;
+
+  if (!api_error || !request)
     return (-1);
 
   /* check params size */
