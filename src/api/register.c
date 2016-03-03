@@ -21,7 +21,7 @@
 #include "sb-common.h"
 
 int api_register(string api_key, string name, string desc, string author,
-                 string license, struct message_params_object functions,
+                 string license, array functions,
                  struct api_error *api_error)
 {
   struct message_object *func;
@@ -63,7 +63,7 @@ int api_register(string api_key, string name, string desc, string author,
 }
 
 int api_register_response(
-    struct api_error *api_error, struct message_params_object *params)
+    struct api_error *api_error, array *params)
 {
   if (!api_error)
     return (-1);

@@ -22,7 +22,7 @@
 
 void unit_regression_issue_60(UNUSED(void **state))
 {
-  struct message_params_object params;
+  array params;
   struct msgpack_object deserialized;
   msgpack_unpacked result;
   msgpack_sbuffer sbuf;

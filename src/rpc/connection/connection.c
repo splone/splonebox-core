@@ -214,7 +214,7 @@ static int connection_write(struct connection *con)
 }
 
 struct callinfo * connection_send_request(string pluginlongtermpk, string method,
-    struct message_params_object *params, struct api_error *api_error)
+    array *params, struct api_error *api_error)
 {
   struct connection *con;
   msgpack_packer packer;
@@ -255,7 +255,7 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
 }
 
 int connection_send_response(struct connection *con, uint32_t msgid,
-    struct message_params_object *params, struct api_error *api_error)
+    array *params, struct api_error *api_error)
 {
   msgpack_packer packer;
   struct message_response response;

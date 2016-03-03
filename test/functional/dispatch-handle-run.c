@@ -40,7 +40,7 @@ int validate_run_response(const unsigned long data1,
 {
   struct msgpack_object *deserialized = (struct msgpack_object *) data1;
   struct message_object response;
-  struct message_params_object params;
+  array params;
 
   assert_int_equal(0, unpack_params(deserialized, &params));
 
@@ -77,7 +77,7 @@ int validate_run_request(const unsigned long data1,
 {
   struct msgpack_object *deserialized = (struct msgpack_object *) data1;
   struct message_object meta, request, func, args;
-  struct message_params_object params;
+  array params;
 
   assert_int_equal(0, unpack_params(deserialized, &params));
 
@@ -143,7 +143,7 @@ int validate_run_request(const unsigned long data1,
 static void register_test_function(void)
 {
   connection_request_event_info info;
-  struct message_params_object *meta, *functions, *func1, *args;
+  array *meta, *functions, *func1, *args;
   struct api_error *err = MALLOC(struct api_error);
   const char *key = "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2";
 
@@ -239,8 +239,8 @@ static struct message_request * run_request_helper(string key,
     size_t metasize, message_object_type metaclientidtype,
     message_object_type metacallidtype)
 {
-  struct message_params_object argsarray = ARRAY_INIT;
-  struct message_params_object *meta;
+  array argsarray = ARRAY_INIT;
+  array *meta;
   struct message_request *rr;
 
   rr = MALLOC(struct message_request);

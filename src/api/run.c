@@ -20,9 +20,9 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-struct message_params_object * api_run(string pluginlongtermpk,
-    string function_name, uint64_t callid, struct message_params_object args,
-    struct message_params_object *run_params, struct api_error *api_error)
+array * api_run(string pluginlongtermpk,
+    string function_name, uint64_t callid, array args,
+    array *run_params, struct api_error *api_error)
 {
   struct message_object *data;
   struct message_object *meta;
@@ -84,7 +84,7 @@ struct message_params_object * api_run(string pluginlongtermpk,
 }
 
 int api_run_response(string pluginlongtermpk, uint64_t callid,
-    struct message_params_object *params, struct api_error *api_error)
+    array *params, struct api_error *api_error)
 {
   if (!api_error || !params)
     return (-1);

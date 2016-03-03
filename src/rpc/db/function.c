@@ -120,7 +120,7 @@ static int db_function_flush_args(string apikey, string name)
 }
 
 
-int db_function_add(string apikey, struct message_params_object *func)
+int db_function_add(string apikey, array *func)
 {
   struct message_object *name_elem, *desc_elem, *args, *arg;
   string name, desc;
@@ -234,7 +234,7 @@ static ssize_t db_function_get_argc(string apikey, string name)
 
 
 static int db_function_typecheck(string apikey, string name,
-    struct message_params_object *args)
+    array *args)
 {
   redisReply *reply;
   ssize_t argc = 0;
@@ -305,7 +305,7 @@ static int db_function_typecheck(string apikey, string name,
 
 
 int db_function_verify(string apikey, string name,
-    struct message_params_object *args)
+    array *args)
 {
   if (!db_function_exists(apikey, name))
     return (-1);

@@ -59,7 +59,7 @@ int message_serialize_error_response(msgpack_packer *pk,
     struct api_error *api_error, uint32_t msgid)
 {
   struct message_object *err_data;
-  struct message_params_object err_array;
+  array err_array;
 
   msgpack_pack_array(pk, 4);
 
@@ -446,7 +446,7 @@ struct message_object message_object_copy(struct message_object obj)
     return (struct message_object) {.type = OBJECT_TYPE_STR, .data.string =
         cstring_copy_string(obj.data.string.str) };
   case OBJECT_TYPE_ARRAY: {
-    struct message_params_object array = ARRAY_INIT;
+    array array = ARRAY_INIT;
 
     for (size_t i = 0; i < obj.data.params.size; i++) {
       kv_push(struct message_object, array,
@@ -462,7 +462,7 @@ struct message_object message_object_copy(struct message_object obj)
 }
 
 
-void free_params(struct message_params_object params)
+void free_params(array params)
 {
   for (size_t i = 0; i < params.size; i++)
     free_message_object(params.obj[i]);

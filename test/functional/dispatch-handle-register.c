@@ -28,7 +28,7 @@ int validate_register_response(const unsigned long data1, UNUSED(const unsigned 
 {
   struct msgpack_object *deserialized = (struct msgpack_object *) data1;
   struct message_object request;
-  struct message_params_object params;
+  array params;
 
   assert_int_equal(0, unpack_params(deserialized, &params));
 
@@ -57,7 +57,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
 {
   connection_request_event_info info;
   struct message_request *request;
-  struct message_params_object *meta, *functions, *func1, *func2, *args;
+  array *meta, *functions, *func1, *func2, *args;
   struct api_error *err = MALLOC(struct api_error);
 
   string apikey = cstring_copy_string(

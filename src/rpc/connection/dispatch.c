@@ -38,15 +38,15 @@ int handle_error(connection_request_event_info *info)
 /*
  * Dispatch a register message to API-register function
  *
- * @param params register arguments saved in `struct message_params_object`
+ * @param params register arguments saved in `array`
  * @param api_error `struct api_error` error object-instance
  * @return 0 if success, -1 otherwise
  */
 int handle_register(connection_request_event_info *info)
 {
-  struct message_params_object params = ARRAY_INIT;
-  struct message_params_object *meta = NULL;
-  struct message_params_object functions;
+  array params = ARRAY_INIT;
+  array *meta = NULL;
+  array functions;
   string pluginlongtermpk, name, description, author, license;
 
   struct message_request *request = info->request;
@@ -146,11 +146,11 @@ int handle_register(connection_request_event_info *info)
 
 int handle_run(connection_request_event_info *info)
 {
-  struct message_params_object *meta = NULL;
+  array *meta = NULL;
   struct message_object args_object;
-  struct message_params_object args;
-  struct message_params_object run_forward_params = ARRAY_INIT;
-  struct message_params_object run_response_params = ARRAY_INIT;
+  array args;
+  array run_forward_params = ARRAY_INIT;
+  array run_response_params = ARRAY_INIT;
   string pluginlongtermpk, function_name;
   string functionnamecopy;
   struct callinfo *cinfo;

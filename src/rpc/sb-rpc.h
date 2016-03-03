@@ -85,11 +85,11 @@ typedef enum {
 
 /* Structs */
 
-struct message_params_object {
+typedef struct {
   message_object *obj;
   size_t size;
   size_t capacity;
-};
+} array;
 
 struct message_object {
   message_object_type type;
@@ -100,7 +100,7 @@ struct message_object {
     char *bin;
     bool boolean;
     double floating;
-    struct message_params_object params;
+    array params;
   } data;
 };
 
@@ -108,12 +108,12 @@ struct message_request {
   uint8_t type;
   uint32_t msgid;
   string method;
-  struct message_params_object params;
+  array params;
 };
 
 struct message_response {
   uint32_t msgid;
-  struct message_params_object params;
+  array params;
 };
 
 struct connection {
@@ -226,9 +226,9 @@ int connection_init(void);
 int connection_create(uv_stream_t *stream);
 
 struct callinfo * connection_send_request(string pluginlongtermpk, string method,
-    struct message_params_object *params, struct api_error *api_error);
+    array *params, struct api_error *api_error);
 int connection_send_response(struct connection *con, uint32_t msgid,
-    struct message_params_object *params, struct api_error *api_error);
+    array *params, struct api_error *api_error);
 int connection_hashmap_put(string pluginlongtermpk, struct connection *con);
 struct callinfo *loop_wait_for_response(struct connection *con,
     struct message_request *request);
@@ -430,7 +430,7 @@ int handle_error(connection_request_event_info *info);
 
 
 /* Message Functions */
-void free_params(struct message_params_object params);
+void free_params(array params);
 bool message_is_request(msgpack_object *obj);
 bool message_is_response(msgpack_object *obj);
 int message_serialize_error_response(msgpack_packer *pk, struct api_error *err,
@@ -474,7 +474,7 @@ extern void db_close(void);
  * @param[in] func    array of functions to actually store
  * @return 0 on success otherwise -1
  */
-extern int db_function_add(string apikey, struct message_params_object *func);
+extern int db_function_add(string apikey, array *func);
 
 /**
  * Verifies whether the corresponding function is called correctly. To
@@ -486,7 +486,7 @@ extern int db_function_add(string apikey, struct message_params_object *func);
  * @return 0 if call is valid, otherwise -1
  */
 extern int db_function_verify(string apikey, string name,
-  struct message_params_object *args);
+  array *args);
 
 /**
  * Creates a plugin entry in the database and uses the API key as key.

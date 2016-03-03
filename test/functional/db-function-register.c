@@ -31,7 +31,7 @@ void functional_db_function_add(UNUSED(void **state))
       "name of function");
   string desc = cstring_copy_string(
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
-  struct message_params_object params;
+  array params;
 
   params.size = 4;
   params.obj =  CALLOC(params.size, struct message_object);
