@@ -276,3 +276,10 @@ int64_t randommod(long long n);
 void optparser(int argc, char **argv);
 
 int signal_init(void);
+
+int filesystem_open_write(const char *fn);
+int filesystem_open_read(const char *fn);
+int filesystem_write_all(int fd, const void *x, size_t xlen);
+int filesystem_read_all(int fd, void *x, size_t xlen);
+int filesystem_save_sync(const char *fn, const void *x, size_t xlen);
+int filesystem_load(const char *fn, void *x, size_t xlen);
