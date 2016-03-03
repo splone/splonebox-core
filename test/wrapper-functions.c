@@ -20,7 +20,7 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
   return (0);
 }
 
-struct callinfo *__wrap_connection_wait_for_response(UNUSED(struct connection *con),
+struct callinfo *__wrap_loop_wait_for_response(UNUSED(struct connection *con),
     UNUSED(struct message_request *request))
 {
   struct message_response *response;
