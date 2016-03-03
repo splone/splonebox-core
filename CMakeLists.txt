@@ -196,8 +196,6 @@ set(TEST-SOURCES
   test/unit/unpack-array.c
   test/unit/apikey.c
   test/unit/dispatch-table-get.c
-  test/unit/dispatch-handle-register.c
-  test/unit/dispatch-handle-run.c
   test/unit/event-queue-put.c
   test/unit/event-queue-get.c
   test/functional/db-connect.c
@@ -209,6 +207,8 @@ set(TEST-SOURCES
   test/functional/db-function-flush-args.c
   test/functional/filesystem-load.c
   test/functional/filesystem-save-sync.c
+  test/functional/dispatch-handle-register.c
+  test/functional/dispatch-handle-run.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
@@ -237,7 +237,7 @@ target_link_libraries(sb-plugin ${BSD_LIBRARIES} ${HIREDIS_LIBRARIES})
 add_executable(sb-test ${TEST-SOURCES})
 
 # wrap some functions for testing
-set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=connection_wait_for_response ")
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response ")
 
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}

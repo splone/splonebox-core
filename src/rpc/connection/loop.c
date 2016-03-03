@@ -35,12 +35,12 @@
 #include "rpc/sb-rpc.h"
 #include "sb-common.h"
 
-static inline void connection_loop_poll_events_until(struct connection *con,
+static inline void loop_poll_events_until(struct connection *con,
     bool *condition);
 equeue *equeue_root;
 uv_loop_t loop;
 
-static inline void connection_loop_poll_events_until(struct connection *con,
+static inline void loop_poll_events_until(struct connection *con,
     bool *condition)
 {
   while (!*condition) {
@@ -54,7 +54,7 @@ static inline void connection_loop_poll_events_until(struct connection *con,
 }
 
 
-struct callinfo *connection_wait_for_response(struct connection *con,
+struct callinfo *loop_wait_for_response(struct connection *con,
     struct message_request *request)
 {
   struct callinfo *cinfo;
@@ -72,7 +72,7 @@ struct callinfo *connection_wait_for_response(struct connection *con,
   con->pendingcalls++;
 
   /* wait until requestinfo returned, in time process events */
-  connection_loop_poll_events_until(con, &cinfo->hasresponse);
+  loop_poll_events_until(con, &cinfo->hasresponse);
 
   /* delete last from callinfo vector */
   kv_pop(con->callvector);

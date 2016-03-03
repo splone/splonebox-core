@@ -28,8 +28,6 @@ void unit_unpack_uint(void **state);
 void unit_unpack_array(void **state);
 void unit_api_get_key(void **state);
 void unit_dispatch_table_get(void **state);
-void unit_dispatch_handle_register(void **state);
-void unit_dispatch_handle_run(void **state);
 void unit_event_queue_put(void **state);
 void unit_event_queue_get(void **state);
 void unit_regression_issue_60(void **state);
@@ -44,11 +42,11 @@ void functional_db_function_verify(void **state);
 void functional_db_function_flush_args(void **state);
 void functional_filesystem_load(void **state);
 void functional_filesystem_save_sync(void **state);
+void functional_dispatch_handle_register(void **state);
+void functional_dispatch_handle_run(void **state);
 
 const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_dispatch_table_get),
-  cmocka_unit_test(unit_dispatch_handle_register),
-  cmocka_unit_test(unit_dispatch_handle_run),
   cmocka_unit_test(unit_server_start),
   cmocka_unit_test(unit_server_stop),
   cmocka_unit_test(unit_pack_string),
@@ -70,4 +68,6 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(functional_db_function_flush_args),
   cmocka_unit_test(functional_filesystem_load),
   cmocka_unit_test(functional_filesystem_save_sync),
+  cmocka_unit_test(functional_dispatch_handle_register),
+  cmocka_unit_test(functional_dispatch_handle_run),
 };
