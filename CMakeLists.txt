@@ -109,6 +109,7 @@ set(SPLONEBOX-SOURCES
   src/random.c
   src/optparser.c
   src/signal.c
+  src/filesystem.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -156,6 +157,8 @@ set(TEST-SOURCES
   src/hashmap-uint64.c
   src/random.c
   src/optparser.c
+  src/signal.c
+  src/filesystem.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -204,6 +207,8 @@ set(TEST-SOURCES
   test/functional/db-function-register.c
   test/functional/db-function-verify.c
   test/functional/db-function-flush-args.c
+  test/functional/filesystem-load.c
+  test/functional/filesystem-save-sync.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
