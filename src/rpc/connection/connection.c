@@ -205,8 +205,7 @@ static int connection_write(struct connection *con)
   if (data == NULL)
     return (-1);
 
-  if (outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
-      sbuf.size) < 0)
+  if (outputstream_write(con->streams.write, sbuf.data, sbuf.size) < 0)
     return (-1);
 
   FREE(data);

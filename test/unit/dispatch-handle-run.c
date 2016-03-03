@@ -233,67 +233,84 @@ static void register_test_function(void)
   FREE(err);
 }
 
+static struct message_request * run_request_helper(string key,
+    string function_name, message_object_type metaarraytype,
+    message_object_type functionnametype, message_object_type argstype,
+    size_t metasize, message_object_type metaclientidtype,
+    message_object_type metacallidtype)
+{
+  struct message_params_object argsarray = ARRAY_INIT;
+  struct message_params_object *meta;
+  struct message_request *rr;
+
+  rr = MALLOC(struct message_request);
+  assert_non_null(rr);
+
+  rr->msgid = 1;
+
+  rr->params.size = 3;
+  rr->params.obj = CALLOC(rr->params.size, struct message_object);
+  rr->params.obj[0].type = metaarraytype;
+  rr->params.obj[1].type = functionnametype;
+  rr->params.obj[2].type = argstype;
+
+  meta = &rr->params.obj[0].data.params;
+  meta->size = metasize;
+  meta->obj = CALLOC(meta->size, struct message_object);
+  meta->obj[0].type = metaclientidtype;
+  meta->obj[0].data.string = cstring_copy_string(key.str);
+  meta->obj[1].type = metacallidtype;
+
+  rr->params.obj[1].data.string = cstring_copy_string(function_name.str);
+
+  argsarray.size = 2;
+  argsarray.obj = CALLOC(argsarray.size, struct message_object);
+  argsarray.obj[0].type = OBJECT_TYPE_STR; /* first argument */
+  argsarray.obj[0].data.string = cstring_copy_string(ARG1);
+  argsarray.obj[1].type = OBJECT_TYPE_STR; /* second argument */
+  argsarray.obj[1].data.string = cstring_copy_string(ARG2);
+
+  rr->params.obj[2].data.params = argsarray;
+
+  return (rr);
+}
+
 void unit_dispatch_handle_run(UNUSED(void **state))
 {
   connection_request_event_info info;
-  struct message_request *run_request;
-  struct message_params_object *meta, *args;
   struct api_error *err = MALLOC(struct api_error);
+  string key, functionname, invalidfunctionname;
 
   register_test_function();
-
-  info.request = MALLOC(struct message_request);
-  info.request->msgid = 1;
-  run_request = info.request;
-  assert_non_null(run_request);
 
   info.api_error = *err;
   assert_non_null(err);
   info.api_error.isset = false;
-
+  assert_false(info.api_error.isset);
   info.con = MALLOC(struct connection);
   info.con->closed = true;
   assert_non_null(info.con);
 
-  run_request->params.size = 3;
-  run_request->params.obj = CALLOC(run_request->params.size,
-      struct message_object);
-  run_request->params.obj[0].type = OBJECT_TYPE_ARRAY;
-  run_request->params.obj[1].type = OBJECT_TYPE_STR;
-  run_request->params.obj[2].type = OBJECT_TYPE_ARRAY;
+  key = cstring_copy_string(KEY);
+  functionname = cstring_copy_string(FUNC);
 
-  meta = &run_request->params.obj[0].data.params;
-  meta->size = 2;
-  meta->obj = CALLOC(meta->size, struct message_object);
-  meta->obj[0].type = OBJECT_TYPE_STR;
-  meta->obj[0].data.string = cstring_copy_string(KEY);
-  meta->obj[1].type = OBJECT_TYPE_NIL;
-
-  /* function name to call */
-  run_request->params.obj[1].data.string = cstring_copy_string(FUNC);
-
-  /* list of arguments */
-  args = &run_request->params.obj[2].data.params;
-  args->size = 2;
-  args->obj = CALLOC(args->size, struct message_object);
-  args->obj[0].type = OBJECT_TYPE_STR; /* first argument */
-  args->obj[0].data.string = cstring_copy_string(ARG1);
-  args->obj[1].type = OBJECT_TYPE_STR; /* second argument */
-  args->obj[1].data.string = cstring_copy_string(ARG2);
+  expect_check(__wrap_outputstream_write, &deserialized,
+    validate_run_request, NULL);
+  expect_check(__wrap_outputstream_write, &deserialized,
+    validate_run_response, NULL);
 
   /*
    * The following asserts verifies a legitim run call. In detail, it
    * verifies, that the forwarded run request by the server is of proper
    * format.
    * */
-  assert_false(info.api_error.isset);
-  expect_check(__wrap_outputstream_write, &deserialized,
-    validate_run_request, NULL);
-  expect_check(__wrap_outputstream_write, &deserialized,
-    validate_run_response, NULL);
+  info.request = run_request_helper(key, functionname, OBJECT_TYPE_ARRAY,
+      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
+
   assert_int_equal(0, handle_run(&info));
 
-
+  free_params(info.request->params);
+  FREE(info.request);
 
   /*
    * The following asserts verify, that the handle_run method cancels
@@ -302,59 +319,77 @@ void unit_dispatch_handle_run(UNUSED(void **state))
    */
 
   /* calling not registered function should fail */
-  string function_name = run_request->params.obj[1].data.string;
-  string invalid_function_name = cstring_copy_string("invalid func name");
-  run_request->params.obj[1].data.string = invalid_function_name;
+  invalidfunctionname = cstring_copy_string("invalid func name");
+  info.request = run_request_helper(key, invalidfunctionname, OBJECT_TYPE_ARRAY,
+      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
+
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  free_string(invalid_function_name);
-  run_request->params.obj[1].data.string = function_name;
   info.api_error.isset = false;
+
+  free_params(info.request->params);
+  FREE(info.request);
 
   /* object has wrong type */
-  run_request->params.obj[0].type = OBJECT_TYPE_STR;
+  info.request = run_request_helper(key, functionname, OBJECT_TYPE_STR,
+      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  run_request->params.obj[0].type = OBJECT_TYPE_ARRAY;
   info.api_error.isset = false;
+
+  /* need to free key string manually, because type is wrong */
+  free_string(info.request->params.obj[0].data.params.obj[0].data.string);
+  free_params(info.request->params);
+  FREE(info.request);
 
   /* meta has wrong size */
-  meta->size = 3;
+  info.request = run_request_helper(key, functionname, OBJECT_TYPE_ARRAY,
+      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 3, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  meta->size = 2;
   info.api_error.isset = false;
+
+  free_params(info.request->params);
+  FREE(info.request);
 
   /* client2_id has wrong type */
-  meta->obj[0].type = OBJECT_TYPE_BIN;
+  info.request = run_request_helper(key, functionname, OBJECT_TYPE_ARRAY,
+      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_BIN, OBJECT_TYPE_NIL);
+
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  meta->obj[0].type = OBJECT_TYPE_STR;
   info.api_error.isset = false;
+
+  free_params(info.request->params);
+  FREE(info.request);
 
   /* call_id has wrong type */
-  meta->obj[1].type = OBJECT_TYPE_BIN;
+  info.request = run_request_helper(key, functionname, OBJECT_TYPE_ARRAY,
+      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_BIN, OBJECT_TYPE_BIN);
+
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  meta->obj[1].type = OBJECT_TYPE_NIL;
-  info.api_error.isset = false;
 
+  free_params(info.request->params);
+  FREE(info.request);
+
+  free_string(invalidfunctionname);
+  free_string(key);
+  free_string(functionname);
   free_params(register_request->params);
-  free_params(run_request->params);
   FREE(info.con);
   FREE(register_request);
   connection_teardown();
-  FREE(run_request);
   FREE(err);
   db_close();
 }

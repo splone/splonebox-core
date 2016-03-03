@@ -147,10 +147,12 @@ int handle_register(connection_request_event_info *info)
 int handle_run(connection_request_event_info *info)
 {
   struct message_params_object *meta = NULL;
-  struct message_object args;
+  struct message_object args_object;
+  struct message_params_object args;
   struct message_params_object run_forward_params = ARRAY_INIT;
   struct message_params_object run_response_params = ARRAY_INIT;
   string pluginlongtermpk, function_name;
+  string functionnamecopy;
   struct callinfo *cinfo;
   uint64_t callid;
 
@@ -229,13 +231,17 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  args = message_object_copy(request->params.obj[2]);
+  args = request->params.obj[2].data.params;
+  args_object = message_object_copy(request->params.obj[2]);
   callid = (uint64_t) randommod(281474976710656LL);
   hashmap_uint64_put(callids, callid, info->con);
 
-  if (api_run(pluginlongtermpk, function_name, callid, args.data.params,
+  functionnamecopy = cstring_copy_string(function_name.str);
+
+  if (api_run(pluginlongtermpk, functionnamecopy, callid, args_object.data.params,
       &run_forward_params, api_error) == NULL) {
-    free_params(args.data.params);
+    free_string(functionnamecopy);
+    free_params(args_object.data.params);
     free_params(run_forward_params);
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error executing run API request.");
@@ -250,7 +256,7 @@ int handle_run(connection_request_event_info *info)
   free_string(run);
 
   if (cinfo == NULL) {
-      free_params(args.data.params);
+      free_params(args_object.data.params);
       free_params(run_forward_params);
       error_set(api_error, API_ERROR_TYPE_VALIDATION,
             "Error sending run API request.");
@@ -258,7 +264,7 @@ int handle_run(connection_request_event_info *info)
   }
 
   if (cinfo->response->params.size != 1) {
-    free_params(args.data.params);
+    free_params(args_object.data.params);
     free_params(run_forward_params);
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API response. Invalid params size");
@@ -267,7 +273,7 @@ int handle_run(connection_request_event_info *info)
 
   if (!(cinfo->response->params.obj[0].type == OBJECT_TYPE_UINT &&
     callid == cinfo->response->params.obj[0].data.uinteger)) {
-    free_params(args.data.params);
+    free_params(args_object.data.params);
     free_params(run_forward_params);
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API response. Invalid callid");
@@ -278,7 +284,7 @@ int handle_run(connection_request_event_info *info)
 
   if (connection_send_response(info->con, info->request->msgid,
       &run_response_params, api_error) < 0) {
-    free_params(args.data.params);
+    free_params(args_object.data.params);
     free_params(run_forward_params);
     free_params(run_response_params);
     return (-1);
