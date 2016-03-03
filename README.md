@@ -21,6 +21,8 @@ Supervisory Control And Data Acquisition (SCADA) is the buzzword that summarizes
 
 The splonebox consists of three components, which communicate through a central API. On the one hand, there is a core component that enforces security. On the other hand, we have several plugins, that do the actual work. Using this API the plugins are able to communicate with the splonebox core or even with other plugins.
 
+<img src="https://raw.githubusercontent.com/wiki/splone/splonebox-core/images/network.png" width="400px">
+
 ## What's done so far
 
 * see [Roadmap](https://github.com/splone/splonebox-core/wiki/Roadmap%20Progress)
