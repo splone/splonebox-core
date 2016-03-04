@@ -293,8 +293,8 @@ int connection_send_response(struct connection *con, uint32_t msgid,
 static int connection_handle_request(struct connection *con,
     msgpack_object *obj)
 {
-  struct dispatch_info *dispatcher = NULL;
-  struct api_error api_error = { .isset = false };
+  dispatch_info dispatcher;;
+  struct api_error api_error = ERROR_INIT;
   connection_request_event_info eventinfo;
   api_event event;
 
@@ -311,11 +311,10 @@ static int connection_handle_request(struct connection *con,
     dispatcher = dispatch_table_get(eventinfo.request->method);
   }
 
-  if (!dispatcher) {
+  if (dispatcher.func == NULL) {
     error_set(&api_error, API_ERROR_TYPE_VALIDATION, "could not dispatch method");
-    dispatcher = MALLOC(struct dispatch_info);
-    dispatcher->func = handle_error;
-    dispatcher->async = true;
+    dispatcher.func = handle_error;
+    dispatcher.async = true;
   }
 
   LOG_VERBOSE(VERBOSE_LEVEL_0, "received request: method = %s\n",
@@ -323,9 +322,9 @@ static int connection_handle_request(struct connection *con,
 
   eventinfo.con = con;
   eventinfo.api_error = api_error;
-  eventinfo.dispatcher = dispatcher;
+  eventinfo.dispatcher = &dispatcher;
 
-  if (dispatcher->async)
+  if (dispatcher.async)
     connection_request_event(&eventinfo);
   else {
     event.handler = connection_request_event;

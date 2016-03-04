@@ -138,13 +138,13 @@ struct callinfo {
   struct message_response *response;
 };
 
-struct dispatch_info {
+typedef struct {
   int (*func)(
     connection_request_event_info *info
     );
   bool async;
   string name;
-};
+} dispatch_info;
 
 struct outputstream {
   uv_stream_t *stream;
@@ -174,7 +174,7 @@ struct inputstream {
 struct connection_request_event_info {
   struct connection *con;
   struct message_request *request;
-  struct dispatch_info *dispatcher;
+  dispatch_info *dispatcher;
   struct api_error api_error;
 };
 
@@ -427,8 +427,8 @@ inputstream * streamhandle_get_inputstream(uv_handle_t *handle);
 
 int dispatch_table_init(void);
 int dispatch_teardown(void);
-struct dispatch_info *dispatch_table_get(string method);
-void dispatch_table_put(string method, struct dispatch_info *info);
+dispatch_info dispatch_table_get(string method);
+void dispatch_table_put(string method, dispatch_info info);
 int handle_run(connection_request_event_info *info);
 int handle_register(connection_request_event_info *info);
 int handle_error(connection_request_event_info *info);

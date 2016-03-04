@@ -251,18 +251,17 @@ int dispatch_teardown(void)
 
 int dispatch_table_init(void)
 {
-
-  struct dispatch_info *register_info, *run_info;
+  dispatch_info register_info = {.func = handle_register, .async = true,
+      .name = (string) {.str = "register", .length = sizeof("register") - 1,}};
+  dispatch_info run_info = {.func = handle_run, .async = true,
+      .name = (string) {.str = "run", .length = sizeof("run") - 1,}};
 
   msgpack_sbuffer_init(&sbuf);
 
   dispatch_table = hashmap_new(string, dispatch_info)();
   callids = hashmap_new(uint64_t, ptr_t)();
 
-  /* run */
-  run_info = MALLOC(struct dispatch_info);
-
-  if (!run_info)
+  if (!dispatch_table || !callids)
     return (-1);
 
   dispatch_table_put(register_info.name, register_info);
