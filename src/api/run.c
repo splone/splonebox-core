@@ -85,7 +85,7 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
   data->data.params = message_object_copy(args).data.params;
 
   /* send request */
-  run = cstring_copy_string("run");
+  run = (string) {.str = "run", .length = sizeof("run") - 1,};
   cinfo = connection_send_request(pluginlongtermpk, run, run_params,
       api_error);
 
@@ -117,7 +117,6 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
     return (-1);
   };
 
-  free_string(run);
   free_params(cinfo->response->params);
   FREE(cinfo->response);
   FREE(cinfo);
