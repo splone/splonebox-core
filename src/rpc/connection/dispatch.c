@@ -73,7 +73,7 @@ int handle_register(connection_request_event_info *info)
   /* check params size */
   if (request->params.size != 2) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching register API request. Invalid params params size");
+        "Error dispatching register API request. Invalid params size");
     return (-1);
   }
 
