@@ -203,6 +203,11 @@ struct queue_entry {
   TAILQ_ENTRY(queue_entry) node;
 };
 
+/* hashmap declarations */
+MAP_DECLS(uint64_t, ptr_t)
+MAP_DECLS(string, ptr_t)
+MAP_DECLS(string, dispatch_info)
+
 /* define global root event queue */
 extern equeue *equeue_root;
 

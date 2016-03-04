@@ -47,6 +47,8 @@ struct api_error {
   bool isset;
 };
 
+typedef void * ptr_t;
+
 /* verbosity global */
 extern int8_t verbose_level;
 
@@ -59,7 +61,7 @@ extern uv_loop_t loop;
 #define MIN(a, b) (((a) < (b)) ? (a) : (b))
 #define MAX(a, b) (((a) > (b)) ? (a) : (b))
 
-static inline khint_t string_djb2_hash(string s)
+static inline khint_t string_hash(string s)
 {
   khint_t h = 5831;
 
@@ -75,21 +77,33 @@ static inline bool string_eq(string a, string b)
   return (strncmp(a.str, b.str, MIN(a.length, b.length)) == 0);
 }
 
-
-/* Init khash */
-KHASH_INIT(HASHMAP_STRING, string, void *, 1, string_djb2_hash, string_eq)
-
-struct hashmap_string {
-  khash_t(HASHMAP_STRING) *table;
-};
-
-/* Init khash */
-KHASH_INIT(HASHMAP_UINT64, uint64_t, void *, 1, kh_int64_hash_func, kh_int64_hash_equal)
-
-struct hashmap_uint64 {
-  khash_t(HASHMAP_UINT64) *table;
-};
 /* Defines */
+#define hashmap(T, U) hashmap_##T##_##U
+
+#define MAP_DECLS(T, U)                                                       \
+  KHASH_DECLARE(T##_##U##_map, T, U)                                          \
+                                                                              \
+  typedef struct {                                                            \
+    khash_t(T##_##U##_map) *table;                                            \
+  } hashmap(T, U);                                                            \
+                                                                              \
+  hashmap(T, U) *hashmap_##T##_##U##_new(void);                               \
+  void hashmap_##T##_##U##_free(hashmap(T, U) *map);                          \
+  U hashmap_##T##_##U##_get(hashmap(T, U) *map, T key);                       \
+  bool hashmap_##T##_##U##_has(hashmap(T, U) *map, T key);                    \
+  U hashmap_##T##_##U##_put(hashmap(T, U) *map, T key, U value);              \
+  U *hashmap_##T##_##U##_ref(hashmap(T, U) *map, T key, bool put);            \
+  U hashmap_##T##_##U##_del(hashmap(T, U) *map, T key);                       \
+  void hashmap_##T##_##U##_clear(hashmap(T, U) *map);
+
+#define hashmap_new(T, U) hashmap_##T##_##U##_new
+#define hashmap_free(T, U) hashmap_##T##_##U##_free
+#define hashmap_get(T, U) hashmap_##T##_##U##_get
+#define hashmap_has(T, U) hashmap_##T##_##U##_has
+#define hashmap_put(T, U) hashmap_##T##_##U##_put
+#define hashmap_ref(T, U) hashmap_##T##_##U##_ref
+#define hashmap_del(T, U) hashmap_##T##_##U##_del
+#define hashmap_clear(T, U) hashmap_##T##_##U##_clear
 
 #define error_set(err, errtype, ...)                                \
   do {                                                              \
@@ -99,8 +113,8 @@ struct hashmap_uint64 {
     (err)->type = errtype;                                          \
   } while (0)
 
-#define HASHMAP_ITERATE_VALUE(hashmap, var, code) \
-  kh_foreach_value(hashmap->table, var, code)
+#define hashmap_foreach_value(map, value, block) \
+  kh_foreach_value(map->table, value, block)
 
 #if defined(__clang__) ||                       \
   defined(__GNUC__) ||                          \
@@ -154,111 +168,6 @@ define UNUSED(x) x
 #define VERBOSE_LEVEL_0             0
 
 /* Functions */
-
-
-/**
- * Creates a new `struct map` instance
- *
- * @return a pointer to the new instance
- */
-struct hashmap_string *hashmap_string_new(void);
-
-/**
- * Free the memory of the `struct hashmap_string` instance
- *
- * @param the `struct hashmap_string` instance to free
- */
-void hashmap_string_free(struct hashmap_string *hmap);
-
-/**
- * Returns the value to whiche the specified key is mapped
- *
- * @param hmap The `struct hashmap_string` instance
- * @param key The key whose associated value is to be returned
- * @return The value to which the specified key is mapped, or null if this map
- *         contains no mapping for the key
- */
-void *hashmap_string_get(struct hashmap_string *hmap, string key);
-
-/**
- * Returns true if this map contains a mapping for the specified key.
- *
- * @param hmap The `struct hashmap_string` instance
- * @param key The key whose presence in this map is to be tested
- * @return true if this map contains a mapping for the specified key, false
- *         otherwise
- */
-bool hashmap_string_contains_key(struct hashmap_string *hmap, string key);
-
-/**
- * Associates the specified value with the specified key in this map
- *
- * @param hmap The `struct hashmap_string` instance
- * @param key Key with which the specified value is to be associated
- * @param value Value to be associated with the specified key
- */
-void *hashmap_string_put(struct hashmap_string *hmap, string key, void *value);
-
-/**
- * Remove the mapping for a key from this map if it is present
- *
- * @param key key whose mapping is to be deleted from the map
- * @return The current value if exists or NULL otherwise
- */
-void *hashmap_string_remove(struct hashmap_string *hmap, string key);
-
-/**
- * Creates a new `struct map` instance
- *
- * @return a pointer to the new instance
- */
-struct hashmap_uint64 *hashmap_uint64_new(void);
-
-/**
- * Free the memory of the `struct hashmap` instance
- *
- * @param the `struct hashmap` instance to free
- */
-void hashmap_uint64_free(struct hashmap_uint64 *hmap);
-
-/**
- * Returns the value to whiche the specified key is mapped
- *
- * @param hmap The `struct hashmap` instance
- * @param key The key whose associated value is to be returned
- * @return The value to which the specified key is mapped, or null if this map
- *         contains no mapping for the key
- */
-void *hashmap_uint64_get(struct hashmap_uint64 *hmap, uint64_t key);
-
-/**
- * Returns true if this map contains a mapping for the specified key.
- *
- * @param hmap The `struct hashmap` instance
- * @param key The key whose presence in this map is to be tested
- * @return true if this map contains a mapping for the specified key, false
- *         otherwise
- */
-bool hashmap_uint64_contains_key(struct hashmap_uint64 *hmap, uint64_t key);
-
-/**
- * Associates the specified value with the specified key in this map
- *
- * @param hmap The `struct hashmap` instance
- * @param key Key with which the specified value is to be associated
- * @param value Value to be associated with the specified key
- */
-void *hashmap_uint64_put(struct hashmap_uint64 *hmap, uint64_t key, void *value);
-
-/**
- * Remove the mapping for a key from this map if it is present
- *
- * @param key key whose mapping is to be deleted from the map
- * @return The current value if exists or NULL otherwise
- */
-void *hashmap_uint64_remove(struct hashmap_uint64 *hmap, uint64_t key);
-
-
 void *reallocarray(void *optr, size_t nmemb, size_t size);
 
 string cstring_to_string(char *str);

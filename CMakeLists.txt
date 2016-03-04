@@ -104,8 +104,7 @@ set(SPLONEBOX-SOURCES
   src/queue.h
   src/string.c
   src/reallocarray.c
-  src/hashmap-string.c
-  src/hashmap-uint64.c
+  src/hashmap.c
   src/random.c
   src/optparser.c
   src/signal.c
@@ -153,8 +152,7 @@ set(TEST-SOURCES
   src/queue.h
   src/string.c
   src/reallocarray.c
-  src/hashmap-string.c
-  src/hashmap-uint64.c
+  src/hashmap.c
   src/random.c
   src/optparser.c
   src/signal.c

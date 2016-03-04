@@ -21,8 +21,8 @@
 #include "sb-common.h"
 
 static msgpack_sbuffer sbuf;
-static struct hashmap_string *dispatch_table = NULL;
-static struct hashmap_uint64 *callids = NULL;
+static hashmap(string, dispatch_info) *dispatch_table = NULL;
+static hashmap(uint64_t, ptr_t) *callids = NULL;
 
 int handle_error(connection_request_event_info *info)
 {
@@ -216,7 +216,7 @@ int handle_run(connection_request_event_info *info)
 
   args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
-  hashmap_uint64_put(callids, callid, info->con);
+  hashmap_put(uint64_t, ptr_t)(callids, callid, info->con);
 
   if (api_run(pluginlongtermpk, function_name, callid, args_object, info->con,
       info->request->msgid, api_error) == -1) {
@@ -229,35 +229,21 @@ int handle_run(connection_request_event_info *info)
 }
 
 
-void dispatch_table_put(string method, struct dispatch_info *info)
+void dispatch_table_put(string method, dispatch_info info)
 {
-  hashmap_string_put(dispatch_table, method, info);
+  hashmap_put(string, dispatch_info)(dispatch_table, method, info);
 }
 
 
-struct dispatch_info *dispatch_table_get(string method)
+dispatch_info dispatch_table_get(string method)
 {
-  struct dispatch_info *info;
-
-  info = (struct dispatch_info *)hashmap_string_get(dispatch_table, method);
-
-  if (!info)
-    return (NULL);
-
-  return (info);
+  return (hashmap_get(string, dispatch_info)(dispatch_table, method));
 }
 
 int dispatch_teardown(void)
 {
-  struct dispatch_info *info;
-
-  HASHMAP_ITERATE_VALUE(dispatch_table, info, {
-    free_string(info->name);
-    FREE(info);
-  });
-
-  hashmap_string_free(dispatch_table);
-  hashmap_uint64_free(callids);
+  hashmap_free(string, dispatch_info)(dispatch_table);
+  hashmap_free(uint64_t, ptr_t)(callids);
 
   return (0);
 }
@@ -270,23 +256,8 @@ int dispatch_table_init(void)
 
   msgpack_sbuffer_init(&sbuf);
 
-  dispatch_table = hashmap_string_new();
-  callids = hashmap_uint64_new();
-
-  if (!dispatch_table)
-    return (-1);
-
-  /* register */
-  register_info = MALLOC(struct dispatch_info);
-
-  if (!register_info)
-    return (-1);
-
-  register_info->func = handle_register;
-  register_info->async = true;
-  register_info->name = cstring_copy_string("register");
-
-  dispatch_table_put(register_info->name, register_info);
+  dispatch_table = hashmap_new(string, dispatch_info)();
+  callids = hashmap_new(uint64_t, ptr_t)();
 
   /* run */
   run_info = MALLOC(struct dispatch_info);
@@ -294,11 +265,8 @@ int dispatch_table_init(void)
   if (!run_info)
     return (-1);
 
-  run_info->func = handle_run;
-  run_info->async = false;
-  run_info->name = cstring_copy_string("run");
-
-  dispatch_table_put(run_info->name, run_info);
+  dispatch_table_put(register_info.name, register_info);
+  dispatch_table_put(run_info.name, run_info);
 
   return (0);
 }
