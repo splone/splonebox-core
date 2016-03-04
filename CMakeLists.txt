@@ -147,6 +147,17 @@ set(SB-PLUGIN-SOURCES
   src/rpc/db/plugin.c
 )
 
+# sb-plugin target sources
+set(SB-MAKEKEY-SOURCES
+  src/sb-common.h
+  src/reallocarray.c
+  src/tweetnacl.c
+  src/tweetnacl.h
+  src/devurandom.c
+  src/sb-makekey.c
+  src/filesystem.c
+)
+
 # splonebox test(s) sources
 set(TEST-SOURCES
   src/sb-common.h
@@ -234,6 +245,10 @@ target_link_libraries(sb
 # sb-plugin target
 add_executable(sb-plugin ${SB-PLUGIN-SOURCES})
 target_link_libraries(sb-plugin ${BSD_LIBRARIES} ${HIREDIS_LIBRARIES})
+
+# sb-makekey target
+add_executable(sb-makekey ${SB-MAKEKEY-SOURCES})
+target_link_libraries(sb-makekey ${BSD_LIBRARIES})
 
 # sb-test target
 add_executable(sb-test ${TEST-SOURCES})
