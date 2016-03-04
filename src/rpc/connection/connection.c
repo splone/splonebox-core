@@ -39,9 +39,9 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sodium.h>
 #include <uv.h>
 
+#include "tweetnacl.h"
 #include "rpc/sb-rpc.h"
 #include "api/sb-api.h"
 #include "sb-common.h"

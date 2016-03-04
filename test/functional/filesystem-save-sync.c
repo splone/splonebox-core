@@ -15,7 +15,7 @@
  */
 
 #include "sb-common.h"
-#include "sodium.h"
+#include "tweetnacl.h"
 #include "helper-unix.h"
 
 unsigned char data[32];

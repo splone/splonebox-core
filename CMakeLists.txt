@@ -54,7 +54,6 @@ endif()
 find_package(LIBUV REQUIRED)
 find_package(MSGPACK REQUIRED)
 find_package(HIREDIS REQUIRED)
-find_package(SODIUM REQUIRED)
 find_package(CMOCKA REQUIRED)
 
 include(CheckLibraryExists)
@@ -109,6 +108,9 @@ set(SPLONEBOX-SOURCES
   src/optparser.c
   src/signal.c
   src/filesystem.c
+  src/devurandom.c
+  src/tweetnacl.h
+  src/tweetnacl.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -157,6 +159,9 @@ set(TEST-SOURCES
   src/optparser.c
   src/signal.c
   src/filesystem.c
+  src/devurandom.c
+  src/tweetnacl.h
+  src/tweetnacl.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -215,7 +220,7 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/test)
-include_directories(${BSD_INCLUDE_DIRS} ${LIBUV_INCLUDE_DIRS} ${MSGPACK_INCLUDE_DIRS} ${HIREDIS_INCLUDE_DIRS} ${SODIUM_INCLUDE_DIRS} ${CMOCKA_INCLUDE_DIRS})
+include_directories(${BSD_INCLUDE_DIRS} ${LIBUV_INCLUDE_DIRS} ${MSGPACK_INCLUDE_DIRS} ${HIREDIS_INCLUDE_DIRS} ${CMOCKA_INCLUDE_DIRS})
 
 # sb target
 add_executable(sb ${SPLONEBOX-SOURCES})
@@ -224,7 +229,6 @@ target_link_libraries(sb
   ${LIBUV_LIBRARIES}
   ${MSGPACK_LIBRARIES}
   ${HIREDIS_LIBRARIES}
-  ${SODIUM_LIBRARIES}
 )
 
 # sb-plugin target
@@ -242,7 +246,6 @@ target_link_libraries(sb-test
   ${LIBUV_LIBRARIES}
   ${MSGPACK_LIBRARIES}
   ${HIREDIS_LIBRARIES}
-  ${SODIUM_LIBRARIES}
   ${CMOCKA_LIBRARIES}
 )
 

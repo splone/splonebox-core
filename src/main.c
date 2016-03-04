@@ -17,9 +17,9 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sodium.h>
 
 #include "sb-common.h"
+#include "tweetnacl.h"
 #include "rpc/sb-rpc.h"
 
 #define ENV_VAR_LISTEN_ADDRESS    "SPLONEBOX_LISTEN_ADDRESS"
@@ -36,11 +36,6 @@ int main(int argc, char **argv)
   /* initialize signal handler */
   if (signal_init() == -1) {
     LOG_ERROR("Failed to initialize signal handler.");
-  }
-
-  /* initialize libsodium */
-  if (sodium_init() == -1) {
-    LOG_ERROR("Failed to initialize sodium.");
   }
 
   /* initialize event queue */
