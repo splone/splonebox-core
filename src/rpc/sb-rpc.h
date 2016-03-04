@@ -58,6 +58,7 @@ typedef struct connection_request_event_info connection_request_event_info;
 #define MESSAGE_APIKEY_LENGTH 64
 
 #define ARRAY_INIT {.size = 0, .capacity = 0, .obj = NULL}
+#define ERROR_INIT {.isset = false}
 
 
 

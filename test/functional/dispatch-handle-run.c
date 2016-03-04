@@ -144,7 +144,7 @@ static void register_test_function(void)
 {
   connection_request_event_info info;
   array *meta, *functions, *func1, *args;
-  struct api_error *err = MALLOC(struct api_error);
+  struct api_error err = ERROR_INIT;
   const char *key = "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2";
 
   apikey = cstring_copy_string(key);
@@ -158,8 +158,7 @@ static void register_test_function(void)
   register_request = info.request;
   assert_non_null(register_request);
 
-  info.api_error = *err;
-  assert_non_null(err);
+  info.api_error = err;
 
   info.con = MALLOC(struct connection);
   info.con->closed = true;
@@ -228,9 +227,6 @@ static void register_test_function(void)
   expect_check(__wrap_outputstream_write, &deserialized, validate_register_response, NULL);
   assert_int_equal(0, handle_register(&info));
   assert_false(info.api_error.isset);
-
-  //FREE(info.con);
-  FREE(err);
 }
 
 static struct message_request * run_request_helper(string key,
@@ -278,14 +274,12 @@ static struct message_request * run_request_helper(string key,
 void functional_dispatch_handle_run(UNUSED(void **state))
 {
   connection_request_event_info info;
-  struct api_error *err = MALLOC(struct api_error);
+  struct api_error err = ERROR_INIT;
   string key, functionname, invalidfunctionname;
 
   register_test_function();
 
-  info.api_error = *err;
-  assert_non_null(err);
-  info.api_error.isset = false;
+  info.api_error = err;
   assert_false(info.api_error.isset);
   info.con = MALLOC(struct connection);
   info.con->closed = true;
@@ -387,9 +381,8 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   free_string(key);
   free_string(functionname);
   free_params(register_request->params);
-  FREE(info.con);
   FREE(register_request);
+  FREE(info.con);
   connection_teardown();
-  FREE(err);
   db_close();
 }
