@@ -293,7 +293,7 @@ int connection_send_response(struct connection *con, uint32_t msgid,
 static int connection_handle_request(struct connection *con,
     msgpack_object *obj)
 {
-  dispatch_info dispatcher;;
+  dispatch_info dispatcher;
   struct api_error api_error = ERROR_INIT;
   connection_request_event_info eventinfo;
   api_event event;
