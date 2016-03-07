@@ -20,13 +20,14 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-int api_register(string api_key, string name, string desc, string author,
-                 string license, struct message_params_object functions,
-                 struct api_error *api_error)
+int api_register(string pluginlongtermpk, string name, string desc,
+    string author, string license, array functions, struct connection *con,
+    uint32_t msgid, struct api_error *api_error)
 {
   struct message_object *func;
+  array params = ARRAY_INIT;
 
-  if (db_apikey_verify(api_key) == -1) {
+  if (db_apikey_verify(pluginlongtermpk) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
     return (-1);
   }
@@ -37,7 +38,7 @@ int api_register(string api_key, string name, string desc, string author,
     return (-1);
   }
 
-  if (db_plugin_add(api_key, name, desc, author, license) == -1) {
+  if (db_plugin_add(pluginlongtermpk, name, desc, author, license) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Failed to register plugin in database.");
     return (-1);
@@ -52,27 +53,25 @@ int api_register(string api_key, string name, string desc, string author,
       continue;
     }
 
-    if (db_function_add(api_key, &func->data.params) == -1) {
+    if (db_function_add(pluginlongtermpk, &func->data.params) == -1) {
       error_set(api_error, API_ERROR_TYPE_VALIDATION,
           "Failed to register function in database.");
       continue;
     }
   }
 
+  if (api_error->isset)
+    return (-1);
+
+  /*
+   * add connection with the client long term public key as key to the
+   * connection hashmap
+   */
+  connection_hashmap_put(pluginlongtermpk, con);
+
+  if (connection_send_response(con, msgid, params, api_error) < 0) {
+    return (-1);
+  };
+
   return (0);
-}
-
-struct message_params_object * api_register_response(
-    struct api_error *api_error)
-{
-  struct message_params_object *params;
-
-  params = CALLOC(1, struct message_params_object);
-
-  if (!api_error || !params)
-    return (NULL);
-
-  params->size = 0;
-
-  return params;
 }

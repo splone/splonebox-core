@@ -111,7 +111,6 @@ static void write_cb(uv_write_t *req, int status)
   }
 
   FREE(req);
-  FREE(data->buffer);
   data->ostream->curmem -= data->len;
   FREE(data);
 }

@@ -21,6 +21,10 @@
 int filesystem_open_write(const char *fn)
 {
   int fd;
+
+  if (fn == NULL)
+    return (-1);
+
 #ifdef O_CLOEXEC
   fd = open(fn, O_CREAT | O_WRONLY | O_NONBLOCK | O_CLOEXEC, 0600);
   return (fd);
@@ -39,6 +43,9 @@ int filesystem_open_write(const char *fn)
 int filesystem_open_read(const char *fn)
 {
   int fd;
+
+  if (fn == NULL)
+    return (-1);
 
 #ifdef O_CLOEXEC
   fd = open(fn, O_RDONLY | O_NONBLOCK | O_CLOEXEC);

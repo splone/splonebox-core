@@ -23,7 +23,7 @@
 
 void unit_pack_array(UNUSED(void **state))
 {
-  struct message_params_object params;
+  array params;
   msgpack_sbuffer sbuf;
   msgpack_packer pk;
 

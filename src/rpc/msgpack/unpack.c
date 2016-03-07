@@ -71,7 +71,7 @@ double unpack_float(msgpack_object *obj)
 }
 
 
-int unpack_params(msgpack_object *obj, struct message_params_object *params)
+int unpack_params(msgpack_object *obj, array *params)
 {
   struct message_object *elem;
   msgpack_object *tmp;

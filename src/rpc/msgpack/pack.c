@@ -162,7 +162,7 @@ int pack_nil(msgpack_packer *pk)
 }
 
 
-int pack_params(msgpack_packer *pk, struct message_params_object params)
+int pack_params(msgpack_packer *pk, array params)
 {
   size_t i;
 

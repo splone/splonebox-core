@@ -12,6 +12,22 @@
  *
  *    You should have received a copy of the GNU Affero General Public License
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *    This file incorporates code covered by the following terms:
+ *
+ *    Copyright Neovim contributors. All rights reserved.
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
  */
 
 #include <stdlib.h>
@@ -21,9 +37,8 @@
 #include "sb-common.h"
 
 static msgpack_sbuffer sbuf;
-static struct hashmap_string *connections = NULL;
-static struct hashmap_string *dispatch_table = NULL;
-static struct hashmap_uint64 *callids = NULL;
+static hashmap(string, dispatch_info) *dispatch_table = NULL;
+static hashmap(uint64_t, ptr_t) *callids = NULL;
 
 int handle_error(connection_request_event_info *info)
 {
@@ -39,15 +54,14 @@ int handle_error(connection_request_event_info *info)
 /*
  * Dispatch a register message to API-register function
  *
- * @param params register arguments saved in `struct message_params_object`
+ * @param params register arguments saved in `array`
  * @param api_error `struct api_error` error object-instance
  * @return 0 if success, -1 otherwise
  */
 int handle_register(connection_request_event_info *info)
 {
-  struct message_params_object *params = NULL;
-  struct message_params_object *meta = NULL;
-  struct message_params_object functions;
+  array *meta = NULL;
+  array functions;
   string pluginlongtermpk, name, description, author, license;
 
   struct message_request *request = info->request;
@@ -59,7 +73,7 @@ int handle_register(connection_request_event_info *info)
   /* check params size */
   if (request->params.size != 2) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching register API request. Invalid params params size");
+        "Error dispatching register API request. Invalid params size");
     return (-1);
   }
 
@@ -121,23 +135,12 @@ int handle_register(connection_request_event_info *info)
 
   functions = request->params.obj[1].data.params;
 
-  api_register(pluginlongtermpk, name, description, author, license, functions,
-      api_error);
-
-  if (api_error->isset)
+  if (api_register(pluginlongtermpk, name, description, author, license,
+      functions, info->con, info->request->msgid, api_error) == -1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error running register API request.");
     return (-1);
-
-  /*
-   * add connection with the client long term public key as key to the
-   * connection hashmap
-   */
-  connection_hashmap_put(pluginlongtermpk, info->con);
-  params = api_register_response(api_error);
-
-  if (connection_send_response(info->con, info->request->msgid, params,
-      api_error) < 0) {
-    return (-1);
-  };
+  }
 
   return (0);
 }
@@ -145,17 +148,17 @@ int handle_register(connection_request_event_info *info)
 
 int handle_run(connection_request_event_info *info)
 {
-  struct message_params_object *meta = NULL;
-  struct message_params_object args;
-  struct message_params_object *params;
-  string pluginlongtermpk, function_name;
-  struct callinfo *cinfo;
   uint64_t callid;
+  array *meta = NULL;
+  string pluginlongtermpk, function_name;
+  struct message_object args_object;
+  struct message_request *request;
+  struct api_error *api_error;
 
-  struct message_request *request = info->request;
-  struct api_error *api_error = &info->api_error;
+  request = info->request;
+  api_error = &info->api_error;
 
-  if (!api_error)
+  if (!api_error || !request)
     return (-1);
 
   /* check params size */
@@ -227,85 +230,36 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  args = request->params.obj[2].data.params;
-
+  args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
-  hashmap_uint64_put(callids, callid, info->con);
-  params = api_run(pluginlongtermpk, function_name, callid, args, api_error);
+  hashmap_put(uint64_t, ptr_t)(callids, callid, info->con);
 
-  if (params == NULL) {
+  if (api_run(pluginlongtermpk, function_name, callid, args_object, info->con,
+      info->request->msgid, api_error) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error creating run API request.");
+        "Error executing run API request.");
     return (-1);
   }
-
-  cinfo = connection_send_request(pluginlongtermpk, cstring_copy_string("run"),
-      params, api_error);
-
-  if (cinfo == NULL) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error sending run API request.");
-    return (-1);
-  }
-
-  if (cinfo->response->params.size != 1) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API response. Invalid params size");
-    return (-1);
-  }
-
-  if (!(cinfo->response->params.obj[0].type == OBJECT_TYPE_UINT &&
-    callid == cinfo->response->params.obj[0].data.uinteger)) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API response. Invalid callid");
-    return (-1);
-  }
-
-  params = api_run_response(pluginlongtermpk, callid, api_error);
-
-  if (params == NULL) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error creating run API response.");
-    return (-1);
-  }
-
-  if (connection_send_response(info->con, info->request->msgid, params,
-      api_error) < 0) {
-    return (-1);
-  };
 
   return (0);
 }
 
 
-void dispatch_table_put(string method, struct dispatch_info *info)
+void dispatch_table_put(string method, dispatch_info info)
 {
-  hashmap_string_put(dispatch_table, method, info);
+  hashmap_put(string, dispatch_info)(dispatch_table, method, info);
 }
 
 
-struct dispatch_info *dispatch_table_get(string method)
+dispatch_info dispatch_table_get(string method)
 {
-  struct dispatch_info *info;
-
-  info = (struct dispatch_info *)hashmap_string_get(dispatch_table, method);
-
-  if (!info)
-    return (NULL);
-
-  return (info);
+  return (hashmap_get(string, dispatch_info)(dispatch_table, method));
 }
 
-int dispatch_table_free(void)
+int dispatch_teardown(void)
 {
-  struct dispatch_info *info;
-
-  HASHMAP_ITERATE_VALUE(dispatch_table, info, {
-    free_string(info->name);
-    FREE(info);
-  });
-
-  hashmap_string_free(dispatch_table);
+  hashmap_free(string, dispatch_info)(dispatch_table);
+  hashmap_free(uint64_t, ptr_t)(callids);
 
   return (0);
 }
@@ -313,44 +267,21 @@ int dispatch_table_free(void)
 
 int dispatch_table_init(void)
 {
-
-  struct dispatch_info *register_info, *run_info;
+  dispatch_info register_info = {.func = handle_register, .async = true,
+      .name = (string) {.str = "register", .length = sizeof("register") - 1,}};
+  dispatch_info run_info = {.func = handle_run, .async = true,
+      .name = (string) {.str = "run", .length = sizeof("run") - 1,}};
 
   msgpack_sbuffer_init(&sbuf);
 
-  connections = hashmap_string_new();
-  dispatch_table = hashmap_string_new();
-  callids = hashmap_uint64_new();
+  dispatch_table = hashmap_new(string, dispatch_info)();
+  callids = hashmap_new(uint64_t, ptr_t)();
 
-  if (!connections)
+  if (!dispatch_table || !callids)
     return (-1);
 
-  if (!dispatch_table)
-    return (-1);
-
-  /* register */
-  register_info = MALLOC(struct dispatch_info);
-
-  if (!register_info)
-    return (-1);
-
-  register_info->func = handle_register;
-  register_info->async = true;
-  register_info->name = cstring_copy_string("register");
-
-  dispatch_table_put(register_info->name, register_info);
-
-  /* run */
-  run_info = MALLOC(struct dispatch_info);
-
-  if (!run_info)
-    return (-1);
-
-  run_info->func = handle_run;
-  run_info->async = false;
-  run_info->name = cstring_copy_string("run");
-
-  dispatch_table_put(run_info->name, run_info);
+  dispatch_table_put(register_info.name, register_info);
+  dispatch_table_put(run_info.name, run_info);
 
   return (0);
 }

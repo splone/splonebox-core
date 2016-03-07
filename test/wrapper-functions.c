@@ -15,6 +15,7 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
   msgpack_object_print(stdout, deserialized);
   LOG("\n");
   check_expected(&deserialized);
+  msgpack_zone_destroy(&mempool);
 
   return (0);
 }
