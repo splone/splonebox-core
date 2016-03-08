@@ -158,27 +158,26 @@ struct message_request *message_deserialize_request(msgpack_object *obj,
   }
 
   /* type */
-  if (obj->via.array.ptr[0].type == MSGPACK_OBJECT_POSITIVE_INTEGER) {
-    type = &obj->via.array.ptr[0];
-
-    if (type) {
-      tmp_type = unpack_uint(type);
-
-      if ((tmp_type == MESSAGE_TYPE_REQUEST) ||
-          (tmp_type == MESSAGE_TYPE_RESPONSE))
-        req->type = (uint8_t)tmp_type;
-      else {
-        error_set(api_error, API_ERROR_TYPE_VALIDATION, "type must be 0 or 1");
-        return (NULL);
-      }
-    } else {
-      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack type failed");
-      return (NULL);
-    }
-  } else {
+  if (obj->via.array.ptr[0].type != MSGPACK_OBJECT_POSITIVE_INTEGER) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "type field has wrong type");
     return (NULL);
   }
+
+  type = &obj->via.array.ptr[0];
+  if (!type) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack type failed");
+    return (NULL);
+  }
+
+  tmp_type = unpack_uint(type);
+
+  if ((tmp_type != MESSAGE_TYPE_REQUEST) &&
+      (tmp_type != MESSAGE_TYPE_RESPONSE)) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "type must be 0 or 1");
+    return (NULL);
+  }
+
+  req->type = (uint8_t)tmp_type;
 
   /* message id */
   msgid = &obj->via.array.ptr[1];
@@ -198,40 +197,40 @@ struct message_request *message_deserialize_request(msgpack_object *obj,
   req->msgid = (uint32_t)tmp_msgid;
 
   /* method */
-  if (obj->via.array.ptr[2].type == MSGPACK_OBJECT_STR) {
-    method = &obj->via.array.ptr[2];
-
-    if (method) {
-      req->method = unpack_string(method);
-
-      if (!req->method.str) {
-        error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error unpacking method");
-        return (NULL);
-      }
-    } else {
-      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack method failed");
-      return (NULL);
-    }
-  } else {
+  if (obj->via.array.ptr[2].type != MSGPACK_OBJECT_STR) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "method field has wrong type");
     return (NULL);
   }
 
-  /* params */
-  if (obj->via.array.ptr[3].type == MSGPACK_OBJECT_ARRAY) {
-    params = &obj->via.array.ptr[3];
+  method = &obj->via.array.ptr[2];
 
-    if (params) {
-      if (unpack_params(params, &req->params) == -1) {
-        error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error unpacking params");
-        return (NULL);
-      }
-    } else {
-      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack params failed");
-      return (NULL);
-    }
-  } else {
+  if (!method) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack method failed");
+    return (NULL);
+  }
+
+  req->method = unpack_string(method);
+
+  if (!req->method.str) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error unpacking method");
+    return (NULL);
+  }
+
+  /* params */
+  if (obj->via.array.ptr[3].type != MSGPACK_OBJECT_ARRAY) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "params field has wrong type");
+    return (NULL);
+  }
+
+  params = &obj->via.array.ptr[3];
+
+  if (!params) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack params failed");
+    return (NULL);
+  }
+
+  if (unpack_params(params, &req->params) == -1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error unpacking params");
     return (NULL);
   }
 
@@ -264,19 +263,19 @@ struct message_response *message_deserialize_response(msgpack_object *obj,
 
   /* type */
   if (obj->via.array.ptr[0].type == MSGPACK_OBJECT_POSITIVE_INTEGER) {
-    type = &obj->via.array.ptr[0];
-
-    if (type) {
-      if (unpack_uint(type) != MESSAGE_TYPE_RESPONSE) {
-        error_set(api_error, API_ERROR_TYPE_VALIDATION, "type must be 1");
-        return (NULL);
-      }
-    } else {
-      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack type failed");
-      return (NULL);
-    }
-  } else {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "type field has wrong type");
+    return (NULL);
+  }
+
+  type = &obj->via.array.ptr[0];
+
+  if (!type) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack type failed");
+    return (NULL);
+  }
+
+  if (unpack_uint(type) != MESSAGE_TYPE_RESPONSE) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "type must be 1");
     return (NULL);
   }
 
@@ -304,20 +303,20 @@ struct message_response *message_deserialize_response(msgpack_object *obj,
   }
 
   /* params */
-  if (obj->via.array.ptr[3].type == MSGPACK_OBJECT_ARRAY) {
-    params = &obj->via.array.ptr[3];
-
-    if (params) {
-      if (unpack_params(params, &res->params) == -1) {
-        error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error unpacking params");
-        return (NULL);
-      }
-    } else {
-      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack params failed");
-      return (NULL);
-    }
-  } else {
+  if (obj->via.array.ptr[3].type != MSGPACK_OBJECT_ARRAY) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "params field has wrong type");
+    return (NULL);
+  }
+
+  params = &obj->via.array.ptr[3];
+
+  if (!params) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack params failed");
+    return (NULL);
+  }
+
+  if (unpack_params(params, &res->params) == -1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error unpacking params");
     return (NULL);
   }
 
@@ -339,20 +338,20 @@ struct message_response *message_deserialize_error_response(msgpack_object *obj,
   }
 
   /* type */
-  if (obj->via.array.ptr[0].type == MSGPACK_OBJECT_POSITIVE_INTEGER) {
-    type = &obj->via.array.ptr[0];
-
-    if (type) {
-      if (unpack_uint(type) != MESSAGE_TYPE_RESPONSE) {
-        error_set(api_error, API_ERROR_TYPE_VALIDATION, "type must be 1");
-        return (NULL);
-      }
-    } else {
-      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack type failed");
-      return (NULL);
-    }
-  } else {
+  if (obj->via.array.ptr[0].type != MSGPACK_OBJECT_POSITIVE_INTEGER) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "type field has wrong type");
+    return (NULL);
+  }
+
+  type = &obj->via.array.ptr[0];
+
+  if (!type) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack type failed");
+    return (NULL);
+  }
+
+  if (unpack_uint(type) != MESSAGE_TYPE_RESPONSE) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "type must be 1");
     return (NULL);
   }
 
@@ -374,20 +373,20 @@ struct message_response *message_deserialize_error_response(msgpack_object *obj,
   res->msgid = (uint32_t)tmp_msgid;
 
   /* params */
-  if (obj->via.array.ptr[2].type == MSGPACK_OBJECT_ARRAY) {
-    params = &obj->via.array.ptr[2];
-
-    if (params) {
-      if (unpack_params(params, &res->params) == -1) {
-        error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error unpacking params");
-        return (NULL);
-      }
-    } else {
-      error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack params failed");
-      return (NULL);
-    }
-  } else {
+  if (obj->via.array.ptr[2].type != MSGPACK_OBJECT_ARRAY) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "params field has wrong type");
+    return (NULL);
+  }
+
+  params = &obj->via.array.ptr[2];
+
+  if (!params) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "unpack params failed");
+    return (NULL);
+  }
+
+  if (unpack_params(params, &res->params) == -1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error unpacking params");
     return (NULL);
   }
 
