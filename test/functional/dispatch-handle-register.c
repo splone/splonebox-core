@@ -28,7 +28,7 @@ int validate_register_response(const unsigned long data1, UNUSED(const unsigned 
 {
   struct msgpack_object *deserialized = (struct msgpack_object *) data1;
   struct message_object request;
-  struct message_params_object params;
+  array params;
 
   assert_int_equal(0, unpack_params(deserialized, &params));
 
@@ -47,6 +47,8 @@ int validate_register_response(const unsigned long data1, UNUSED(const unsigned 
   assert_true(request.type == OBJECT_TYPE_ARRAY);
   assert_int_equal(0, request.data.params.size);
 
+  free_params(params);
+
   return (1);
 }
 
@@ -55,7 +57,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
 {
   connection_request_event_info info;
   struct message_request *request;
-  struct message_params_object *meta, *functions, *func1, *func2, *args;
+  array *meta, *functions, *func1, *func2, *args;
   struct api_error *err = MALLOC(struct api_error);
 
   string apikey = cstring_copy_string(
@@ -66,13 +68,18 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   string license = cstring_copy_string("none");
 
   info.request = MALLOC(struct message_request);
+  info.request->msgid = 1;
+
   request = info.request;
   assert_non_null(request);
 
   info.api_error = *err;
   assert_non_null(err);
 
+  info.api_error.isset = false;
+
   info.con = MALLOC(struct connection);
+  info.con->closed = true;
   assert_non_null(info.con);
 
   connect_and_create(apikey);
@@ -250,17 +257,9 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   info.api_error.isset = false;
   functions->size = 2;
 
-  /* registering with wrong function count must fail */
-  functions->size = 99;
-  assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_register(&info));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-  functions->size = 2;
-
   free_params(request->params);
-  FREE(info.con);
+  connection_teardown();
   FREE(request);
   FREE(err);
+  db_close();
 }

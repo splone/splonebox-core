@@ -63,7 +63,7 @@ void init_unpack_array(msgpack_object_type type)
 
 void unit_unpack_array(UNUSED(void **state))
 {
-  struct message_params_object params;
+  array params;
 
   init_unpack_array(MSGPACK_OBJECT_NIL);
   assert_int_equal(0, unpack_params(&deserialized, &params));

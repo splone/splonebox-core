@@ -27,8 +27,8 @@ void unit_dispatch_table_get(UNUSED(void **state))
 
   string reg = cstring_copy_string("register");
 
-  assert_non_null(dispatch_table_get(reg));
-  dispatch_table_free();
+  dispatch_table_get(reg);
+  dispatch_teardown();
 
   free_string(reg);
 }

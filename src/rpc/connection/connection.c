@@ -53,15 +53,16 @@ static int connection_handle_request(struct connection *con,
 static int connection_handle_response(struct connection *con,
     msgpack_object *obj);
 static void connection_request_event(connection_request_event_info *info);
+static void connection_close(struct connection *con);
 
-static struct hashmap_string *connections = NULL;
+static hashmap(string, ptr_t) *connections = NULL;
 static msgpack_sbuffer sbuf;
 equeue *equeue_root;
 uv_loop_t loop;
 
 int connection_init(void)
 {
-  connections = hashmap_string_new();
+  connections = hashmap_new(string, ptr_t)();
 
   if (dispatch_table_init() == -1)
     return (-1);
@@ -70,6 +71,25 @@ int connection_init(void)
     return (-1);
 
   msgpack_sbuffer_init(&sbuf);
+
+  return (0);
+}
+
+int connection_teardown(void)
+{
+  if (!connections)
+    return (-1);
+
+  struct connection *con;
+
+  hashmap_foreach_value(connections, con, {
+    connection_close(con);
+    FREE(con);
+  });
+
+  hashmap_free(string, ptr_t)(connections);
+  dispatch_teardown();
+  msgpack_sbuffer_destroy(&sbuf);
 
   return (0);
 }
@@ -171,7 +191,7 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
 
 int connection_hashmap_put(string pluginlongtermpk, struct connection *con)
 {
-  hashmap_string_put(connections, pluginlongtermpk, con);
+  hashmap_put(string, ptr_t)(connections, pluginlongtermpk, con);
 
   return (0);
 }
@@ -185,30 +205,30 @@ static int connection_write(struct connection *con)
   if (data == NULL)
     return (-1);
 
-  if (outputstream_write(con->streams.write, memcpy(data, sbuf.data, sbuf.size),
-      sbuf.size) < 0)
+  if (outputstream_write(con->streams.write, sbuf.data, sbuf.size) < 0)
     return (-1);
 
-  msgpack_sbuffer_clear(&sbuf);
+  FREE(data);
 
   return (0);
 }
 
 struct callinfo * connection_send_request(string pluginlongtermpk, string method,
-    struct message_params_object *params, struct api_error *api_error)
+    array params, struct api_error *api_error)
 {
   struct connection *con;
   msgpack_packer packer;
   struct message_request request;
   struct callinfo *cinfo;
 
-  con = hashmap_string_get(connections, pluginlongtermpk);
+  con = hashmap_get(string, ptr_t)(connections, pluginlongtermpk);
 
   /*
    * if no connection is available for the key, set the connection to the
    * the initial connection from the sender.
    */
   if (!con) {
+    free_params(params);
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
     return (NULL);
   }
@@ -216,11 +236,12 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   request.type = MESSAGE_TYPE_REQUEST;
   request.msgid = con->msgid++;
   request.method = method;
-  request.params = *params;
+  request.params = params;
 
   msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
-
   message_serialize_request(&request, &packer);
+  free_params(params);
+
   /* if error is set, generate an error response message */
   if (api_error->isset)
     return (NULL);
@@ -230,11 +251,13 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
 
   cinfo = loop_wait_for_response(con, &request);
 
+  msgpack_sbuffer_clear(&sbuf);
+
   return cinfo;
 }
 
 int connection_send_response(struct connection *con, uint32_t msgid,
-    struct message_params_object *params, struct api_error *api_error)
+    array params, struct api_error *api_error)
 {
   msgpack_packer packer;
   struct message_response response;
@@ -249,16 +272,19 @@ int connection_send_response(struct connection *con, uint32_t msgid,
   }
 
   response.msgid = msgid;
-  response.params = *params;
+  response.params = params;
 
   msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
   message_serialize_response(&response, &packer);
+  free_params(params);
 
   if (api_error->isset)
     return (-1);
 
   if (connection_write(con) < 0)
     return (-1);
+
+  msgpack_sbuffer_clear(&sbuf);
 
   return 0;
 }
@@ -267,8 +293,8 @@ int connection_send_response(struct connection *con, uint32_t msgid,
 static int connection_handle_request(struct connection *con,
     msgpack_object *obj)
 {
-  struct dispatch_info *dispatcher = NULL;
-  struct api_error api_error = { .isset = false };
+  dispatch_info dispatcher;
+  struct api_error api_error = ERROR_INIT;
   connection_request_event_info eventinfo;
   api_event event;
 
@@ -285,11 +311,10 @@ static int connection_handle_request(struct connection *con,
     dispatcher = dispatch_table_get(eventinfo.request->method);
   }
 
-  if (!dispatcher) {
+  if (dispatcher.func == NULL) {
     error_set(&api_error, API_ERROR_TYPE_VALIDATION, "could not dispatch method");
-    dispatcher = MALLOC(struct dispatch_info);
-    dispatcher->func = handle_error;
-    dispatcher->async = true;
+    dispatcher.func = handle_error;
+    dispatcher.async = true;
   }
 
   LOG_VERBOSE(VERBOSE_LEVEL_0, "received request: method = %s\n",
@@ -299,7 +324,7 @@ static int connection_handle_request(struct connection *con,
   eventinfo.api_error = api_error;
   eventinfo.dispatcher = dispatcher;
 
-  if (dispatcher->async)
+  if (dispatcher.async)
     connection_request_event(&eventinfo);
   else {
     event.handler = connection_request_event;
@@ -318,7 +343,7 @@ static void connection_request_event(connection_request_event_info *eventinfo)
   char *data;
   msgpack_packer packer;
 
-  eventinfo->dispatcher->func(eventinfo);
+  eventinfo->dispatcher.func(eventinfo);
 
   if (eventinfo->api_error.isset) {
     msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
@@ -332,6 +357,7 @@ static void connection_request_event(connection_request_event_info *eventinfo)
         sbuf.size), sbuf.size);
 
     msgpack_sbuffer_clear(&sbuf);
+    FREE(data);
   }
 
   FREE(eventinfo->request);
