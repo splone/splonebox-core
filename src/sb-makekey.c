@@ -43,13 +43,18 @@ int main(int argc, char **argv)
   if (mkdir(".keys",0700) == -1)
     LOG_ERROR("unable to create .keys directory\n");
 
+  /* generate server ephemeral keys */
+  if (crypto_box_keypair(pk, sk) != 0) {
+    LOG_ERROR("unable to create keypair\n");
+  }
+
   if (filesystem_save_sync(".keys/server-long-term.pub", pk, sizeof(pk))) {
     LOG_ERROR("unable to create key file .keys/server-long-term.pub\n");
   }
 
   umask(077);
 
-  if (filesystem_save_sync(".keys/server-long-term", pk, sizeof(pk))) {
+  if (filesystem_save_sync(".keys/server-long-term", sk, sizeof(sk))) {
     LOG_ERROR("unable to create key file .keys/server-long-term.pub\n");
   }
 
