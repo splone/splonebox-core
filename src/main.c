@@ -33,6 +33,8 @@ int main(int argc, char **argv)
 
   uv_loop_init(&loop);
 
+  crypto_init();
+
   /* initialize signal handler */
   if (signal_init() == -1) {
     LOG_ERROR("Failed to initialize signal handler.");

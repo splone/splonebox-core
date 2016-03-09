@@ -111,7 +111,7 @@ unsigned char *inputstream_get_read(inputstream *istream, size_t *read_count)
 }
 
 
-size_t inputstream_read(inputstream *istream, char *buf, size_t count)
+size_t inputstream_read(inputstream *istream, unsigned char *buf, size_t count)
 {
   size_t dst_size = count;
   size_t size = dst_size;

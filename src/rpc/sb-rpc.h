@@ -61,6 +61,7 @@ typedef struct connection_request_event_info connection_request_event_info;
 #define ARRAY_INIT {.size = 0, .capacity = 0, .obj = NULL}
 #define ERROR_INIT {.isset = false}
 
+#define STREAM_BUFFER_SIZE 0xffff
 
 
 /*
@@ -140,6 +141,7 @@ struct connection {
   uint32_t pendingcalls;
   msgpack_unpacker *mpac;
   msgpack_sbuffer *sbuf;
+  char *unpackbuf;
   bool closed;
   equeue *queue;
   struct {
@@ -148,6 +150,13 @@ struct connection {
     uv_stream_t *uv;
   } streams;
   kvec_t(struct callinfo *) callvector;
+  struct crypto_context cc;
+  struct {
+    uint64_t start;
+    uint64_t end;
+    uint64_t pos;
+    unsigned char *data;
+  } packet;
 };
 
 struct callinfo {
@@ -352,7 +361,8 @@ unsigned char *inputstream_get_read(inputstream *istream, size_t *read_count);
  * @param count The number of bytes to copy
  * @return The number of bytes copied
  */
-size_t inputstream_read(inputstream *inputstream, char *buf, size_t count);
+size_t inputstream_read(inputstream *inputstream, unsigned char *buf,
+    size_t count);
 
 /**
  * Initialize a Server Instance

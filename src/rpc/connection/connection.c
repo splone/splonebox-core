@@ -107,9 +107,15 @@ int connection_create(uv_stream_t *stream)
   con->mpac = msgpack_unpacker_new(MSGPACK_UNPACKER_INIT_BUFFER_SIZE);
   con->closed = false;
   con->queue = equeue_new(equeue_root);
-  con->streams.read = inputstream_new(parse_cb, 1024, con);
+  con->streams.read = inputstream_new(parse_cb, STREAM_BUFFER_SIZE, con);
   con->streams.write = outputstream_new(1024 * 1024);
   con->streams.uv = stream;
+  con->cc.nonce = (uint64_t) randommod(281474976710656LL);
+  con->cc.receivednonce = 0;
+  con->cc.state = TUNNEL_INITIAL;
+  con->packet.start = 0;
+  con->packet.end = 0;
+  con->packet.pos = 0;
 
   kv_init(con->callvector);
 
@@ -149,11 +155,31 @@ static void close_cb(uv_handle_t *handle)
   FREE(handle);
 }
 
+static void reset_packet(struct connection *con)
+{
+  con->packet.start = 0;
+  con->packet.end = 0;
+  con->packet.pos = 0;
+}
+
+static void reset_parser(struct connection *con)
+{
+  FREE(con->packet.data);
+  msgpack_unpacker_free(con->mpac);
+  reset_packet(con);
+}
 
 static void parse_cb(inputstream *istream, void *data, bool eof)
 {
+  unsigned char *tunnelpacket;
+  unsigned char *packet;
   struct connection *con = data;
+  size_t read = 0;
+  size_t pending;
   size_t size;
+  uint64_t plaintextlen;
+  uint64_t consumedlen = 0;
+  uint64_t dummylen = 0;
   msgpack_unpacked result;
 
   if (eof) {
@@ -161,16 +187,77 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
     return;
   }
 
-  size = inputstream_pending(istream);
+  pending = inputstream_pending(istream);
 
-  /* reserve space for internal msgpack buffer */
-  msgpack_unpacker_reserve_buffer(con->mpac, size);
-  /* fill internal msgpack buffer by size byte */
-  inputstream_read(istream, msgpack_unpacker_buffer(con->mpac), size);
-  /* notify deserializer that the internal mspack buffer is filled */
-  msgpack_unpacker_buffer_consumed(con->mpac, size);
+  if (con->cc.state == TUNNEL_INITIAL) {
+    tunnelpacket = MALLOC_ARRAY(pending, unsigned char);
+    size = inputstream_read(istream, tunnelpacket, pending);
+    if (crypto_tunnel(&con->cc, tunnelpacket, con->streams.write) != 0)
+      LOG_WARNING("establishing crypto tunnel failed");
+    FREE(tunnelpacket);
+    return;
+  }
 
-  /* initialize msgpack object */
+  if (con->packet.end <= 0) {
+    packet = inputstream_get_read(istream, &read);
+
+    /* read the packet length */
+    if (crypto_verify_header(packet, &con->packet.end)) {
+      reset_packet(con);
+      return;
+    }
+
+    con->packet.data = MALLOC_ARRAY(MAX(con->packet.end, read), unsigned char);
+    msgpack_unpacker_reserve_buffer(con->mpac, MAX(read, con->packet.end));
+    /* get decrypted message start position */
+    con->unpackbuf = msgpack_unpacker_buffer(con->mpac);
+  }
+
+  while(read > 0) {
+    con->packet.start = inputstream_read(istream, con->packet.data + con->packet.pos,
+        con->packet.end);
+    con->packet.pos += con->packet.start;
+    con->packet.end -= con->packet.start;
+    read -= con->packet.start;
+
+    if (read > 0 && con->packet.end == 0) {
+      if (crypto_unbox_data(&con->cc, con->packet.data, con->unpackbuf +
+          consumedlen, con->packet.end, &plaintextlen) != 0) {
+        reset_parser(con);
+        return;
+      }
+
+      consumedlen += plaintextlen;
+      packet = inputstream_get_read(istream, &dummylen);
+
+      if (packet == NULL) {
+        reset_parser(con);
+        return;
+      }
+
+      if (crypto_verify_header(packet, &con->packet.end)) {
+        reset_parser(con);
+        return;
+      }
+
+      continue;
+    }
+
+    if (con->packet.end > 0 && read == 0)
+      return;
+
+    if (crypto_unbox_data(&con->cc, con->packet.data, con->unpackbuf +
+        consumedlen, con->packet.end, &plaintextlen) != 0) {
+      reset_parser(con);
+      return;
+    }
+
+    consumedlen += plaintextlen;
+    reset_packet(con);
+    FREE(con->packet.data);
+  }
+
+  msgpack_unpacker_buffer_consumed(con->mpac, consumedlen);
   msgpack_unpacked_init(&result);
   msgpack_unpack_return ret;
 
@@ -184,7 +271,8 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
         break;
       }
     } else {
-      /* invalid message, send response with error */
+      LOG_WARNING("invalid msgpack object");
+      msgpack_object_print(stdout, result.data);
     }
   }
 }
@@ -192,23 +280,6 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
 int connection_hashmap_put(string pluginlongtermpk, struct connection *con)
 {
   hashmap_put(string, ptr_t)(connections, pluginlongtermpk, con);
-
-  return (0);
-}
-
-static int connection_write(struct connection *con)
-{
-  char *data;
-
-  data = MALLOC_ARRAY(sbuf.size, char);
-
-  if (data == NULL)
-    return (-1);
-
-  if (outputstream_write(con->streams.write, sbuf.data, sbuf.size) < 0)
-    return (-1);
-
-  FREE(data);
 
   return (0);
 }
@@ -246,7 +317,7 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   if (api_error->isset)
     return (NULL);
 
-  if (connection_write(con) < 0)
+  if (crypto_write(&con->cc, sbuf.data, sbuf.size, con->streams.write) != 0)
     return (NULL);
 
   cinfo = loop_wait_for_response(con, &request);
@@ -281,7 +352,7 @@ int connection_send_response(struct connection *con, uint32_t msgid,
   if (api_error->isset)
     return (-1);
 
-  if (connection_write(con) < 0)
+  if (crypto_write(&con->cc, sbuf.data, sbuf.size, con->streams.write) != 0)
     return (-1);
 
   msgpack_sbuffer_clear(&sbuf);
@@ -340,7 +411,6 @@ static int connection_handle_request(struct connection *con,
 
 static void connection_request_event(connection_request_event_info *eventinfo)
 {
-  char *data;
   msgpack_packer packer;
 
   eventinfo->dispatcher->func(eventinfo);
@@ -348,16 +418,11 @@ static void connection_request_event(connection_request_event_info *eventinfo)
   if (eventinfo->api_error.isset) {
     msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
     message_serialize_error_response(&packer, &eventinfo->api_error, eventinfo->request->msgid);
-    data = MALLOC_ARRAY(sbuf.size, char);
 
-    if (data == NULL)
-      return;
-
-    outputstream_write(eventinfo->con->streams.write, memcpy(data, sbuf.data,
-        sbuf.size), sbuf.size);
+    crypto_write(&eventinfo->con->cc, sbuf.data, sbuf.size,
+        eventinfo->con->streams.write);
 
     msgpack_sbuffer_clear(&sbuf);
-    FREE(data);
   }
 
   FREE(eventinfo->request);
