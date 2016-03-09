@@ -74,12 +74,12 @@ int message_unpack_validate_method(msgpack_object *ptr,
 int message_unpack_validate_args(msgpack_object *ptr,
     struct api_error *api_error);
 int message_unpack_args(msgpack_object *obj, struct message_request *req,
-    struct message_params_object *params, struct api_error *api_error);
+    array *params, struct api_error *api_error);
 int message_pack_apikey(msgpack_packer *pk, char *key);
 int message_pack_type(msgpack_packer *pk, uint8_t type);
 int message_pack_method(msgpack_packer *pk, char *method);
 int message_pack_params(msgpack_packer *pk,
-    struct message_params_object *params);
+    array *params);
 int message_pack_msgid(msgpack_packer *pk, uint32_t msgid);
 
 
@@ -90,7 +90,7 @@ int64_t unpack_int(msgpack_object *obj);
 uint64_t unpack_uint(msgpack_object *obj);
 bool unpack_boolean(msgpack_object *obj);
 double unpack_float(msgpack_object *obj);
-int unpack_params(msgpack_object *obj, struct message_params_object *params);
+int unpack_params(msgpack_object *obj, array *params);
 
 
 
@@ -106,4 +106,4 @@ int pack_int64(msgpack_packer *pk, int64_t integer);
 int pack_nil(msgpack_packer *pk);
 int pack_bool(msgpack_packer *pk, bool boolean);
 int pack_float(msgpack_packer *pk, double floating);
-int pack_params(msgpack_packer *pk, struct message_params_object params);
+int pack_params(msgpack_packer *pk, array params);

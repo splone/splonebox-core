@@ -57,6 +57,9 @@ typedef struct connection_request_event_info connection_request_event_info;
 #define MESSAGE_RESPONSE_UNKNOWN UINT32_MAX
 #define MESSAGE_APIKEY_LENGTH 64
 
+#define ARRAY_INIT {.size = 0, .capacity = 0, .obj = NULL}
+#define ERROR_INIT {.isset = false}
+
 
 
 /*
@@ -83,10 +86,11 @@ typedef enum {
 
 /* Structs */
 
-struct message_params_object {
+typedef struct {
   message_object *obj;
   size_t size;
-};
+  size_t capacity;
+} array;
 
 struct message_object {
   message_object_type type;
@@ -97,7 +101,7 @@ struct message_object {
     char *bin;
     bool boolean;
     double floating;
-    struct message_params_object params;
+    array params;
   } data;
 };
 
@@ -105,12 +109,12 @@ struct message_request {
   uint8_t type;
   uint32_t msgid;
   string method;
-  struct message_params_object params;
+  array params;
 };
 
 struct message_response {
   uint32_t msgid;
-  struct message_params_object params;
+  array params;
 };
 
 struct connection {
@@ -135,13 +139,13 @@ struct callinfo {
   struct message_response *response;
 };
 
-struct dispatch_info {
+typedef struct {
   int (*func)(
     connection_request_event_info *info
     );
   bool async;
   string name;
-};
+} dispatch_info;
 
 struct outputstream {
   uv_stream_t *stream;
@@ -171,7 +175,7 @@ struct inputstream {
 struct connection_request_event_info {
   struct connection *con;
   struct message_request *request;
-  struct dispatch_info *dispatcher;
+  dispatch_info dispatcher;
   struct api_error api_error;
 };
 
@@ -200,6 +204,11 @@ struct queue_entry {
   TAILQ_ENTRY(queue_entry) node;
 };
 
+/* hashmap declarations */
+MAP_DECLS(uint64_t, ptr_t)
+MAP_DECLS(string, ptr_t)
+MAP_DECLS(string, dispatch_info)
+
 /* define global root event queue */
 extern equeue *equeue_root;
 
@@ -223,12 +232,13 @@ int connection_init(void);
 int connection_create(uv_stream_t *stream);
 
 struct callinfo * connection_send_request(string pluginlongtermpk, string method,
-    struct message_params_object *params, struct api_error *api_error);
+    array params, struct api_error *api_error);
 int connection_send_response(struct connection *con, uint32_t msgid,
-    struct message_params_object *params, struct api_error *api_error);
+    array params, struct api_error *api_error);
 int connection_hashmap_put(string pluginlongtermpk, struct connection *con);
 struct callinfo *loop_wait_for_response(struct connection *con,
     struct message_request *request);
+int connection_teardown(void);
 
 /**
  * Create a new `outputstream` instance. A `outputstream` instance contains the
@@ -417,16 +427,16 @@ inputstream * streamhandle_get_inputstream(uv_handle_t *handle);
 
 
 int dispatch_table_init(void);
-int dispatch_table_free(void);
-struct dispatch_info *dispatch_table_get(string method);
-void dispatch_table_put(string method, struct dispatch_info *info);
+int dispatch_teardown(void);
+dispatch_info dispatch_table_get(string method);
+void dispatch_table_put(string method, dispatch_info info);
 int handle_run(connection_request_event_info *info);
 int handle_register(connection_request_event_info *info);
 int handle_error(connection_request_event_info *info);
 
 
 /* Message Functions */
-void free_params(struct message_params_object params);
+void free_params(array params);
 bool message_is_request(msgpack_object *obj);
 bool message_is_response(msgpack_object *obj);
 int message_serialize_error_response(msgpack_packer *pk, struct api_error *err,
@@ -443,6 +453,7 @@ int message_serialize_request(struct message_request *req, msgpack_packer *pk);
 void message_dispatch(msgpack_object *req, msgpack_packer *res);
 uint64_t message_get_id(msgpack_object *obj);
 bool message_is_error_response(msgpack_object *obj);
+struct message_object message_object_copy(struct message_object obj);
 
 
 /* DB functions */
@@ -469,7 +480,7 @@ extern void db_close(void);
  * @param[in] func    array of functions to actually store
  * @return 0 on success otherwise -1
  */
-extern int db_function_add(string apikey, struct message_params_object *func);
+extern int db_function_add(string apikey, array *func);
 
 /**
  * Verifies whether the corresponding function is called correctly. To
@@ -481,7 +492,7 @@ extern int db_function_add(string apikey, struct message_params_object *func);
  * @return 0 if call is valid, otherwise -1
  */
 extern int db_function_verify(string apikey, string name,
-  struct message_params_object *args);
+  array *args);
 
 /**
  * Creates a plugin entry in the database and uses the API key as key.

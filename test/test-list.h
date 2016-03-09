@@ -32,6 +32,7 @@ void unit_event_queue_put(void **state);
 void unit_event_queue_get(void **state);
 void unit_regression_issue_60(void **state);
 
+
 void functional_client_connect(void **state);
 void functional_db_connect(void **state);
 void functional_db_plugin_add(void **state);

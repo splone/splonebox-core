@@ -33,9 +33,9 @@
  * @param[in] funcs   the actual functions to register
  * @return 0 in case of success otherwise 1
  */
-int api_register(string api_key, string name, string desc, string author,
-    string license, struct message_params_object functions,
-    struct api_error *api_error);
+ int api_register(string pluginlongtermpk, string name, string desc,
+     string author, string license, array functions, struct connection *con,
+     uint32_t msgid, struct api_error *api_error);
 
 /**
  * Run a plugin function
@@ -46,12 +46,9 @@ int api_register(string api_key, string name, string desc, string author,
  * @param[in] api_error   api_error instance
  * @return 0 in case of success otherwise -1
  */
- struct message_params_object * api_run(string pluginlongtermpk,
-    string function_name, uint64_t callid, struct message_params_object args,
-    struct api_error *api_error);
-
-struct message_params_object * api_run_response(string pluginlongtermpk,
-    uint64_t callid, struct api_error *api_error);
+int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
+    struct message_object args, struct connection *con,
+    uint32_t msgid, struct api_error *api_error);
 
 /**
  * Generates an API key using /dev/urandom. The length of the key
@@ -60,6 +57,3 @@ struct message_params_object * api_run_response(string pluginlongtermpk,
  * @return 0 in case of success otherwise -1
  */
 int api_get_key(string key);
-
-struct message_params_object * api_register_response(
-    struct api_error *api_error);

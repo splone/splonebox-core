@@ -56,7 +56,7 @@ void functional_db_function_flush_args(UNUSED(void **state))
   string name = cstring_copy_string("name of function");
   string desc = cstring_copy_string(
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
-  struct message_params_object params, *args;
+  array params, *args;
   ssize_t argc = 0;
 
   params.size = 4;

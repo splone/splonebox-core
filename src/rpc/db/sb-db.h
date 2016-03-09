@@ -47,7 +47,7 @@ extern void db_close(void);
  * @param[in] func    array of functions to actually store
  * @return 0 on success otherwise -1
  */
-extern int db_function_add(string apikey, struct message_params_object *func);
+extern int db_function_add(string apikey, array *func);
 
 /**
  * Verifies whether the corresponding function is called correctly. To
@@ -59,7 +59,7 @@ extern int db_function_add(string apikey, struct message_params_object *func);
  * @return 0 if call is valid, otherwise -1
  */
 extern int db_function_verify(string apikey, string name,
-  struct message_params_object *args);
+  array *args);
 
 /**
  * Creates a plugin entry in the database and uses the API key as key.
