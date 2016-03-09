@@ -225,6 +225,7 @@ set(TEST-SOURCES
   test/functional/filesystem-save-sync.c
   test/functional/dispatch-handle-register.c
   test/functional/dispatch-handle-run.c
+  test/functional/crypto-tunnel.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
@@ -256,7 +257,7 @@ target_link_libraries(sb-makekey ${BSD_LIBRARIES})
 add_executable(sb-test ${TEST-SOURCES})
 
 # wrap some functions for testing
-set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response ")
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response,--wrap=crypto_write ")
 
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}
