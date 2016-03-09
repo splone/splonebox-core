@@ -32,6 +32,8 @@ int db_plugin_add(string apikey, string name, string desc, string author,
 {
   redisReply *reply;
 
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "adding plugin..");
+
   if (!rc)
     return (-1);
 
@@ -50,6 +52,7 @@ int db_plugin_add(string apikey, string name, string desc, string author,
   }
 
   freeReplyObject(reply);
+  LOG_VERBOSE(VERBOSE_LEVEL_0, ANSI_COLOR_GREEN "done\n" ANSI_COLOR_RESET);
   return (0);
 }
 
