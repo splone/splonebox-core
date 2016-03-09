@@ -364,7 +364,7 @@ int connection_send_response(struct connection *con, uint32_t msgid,
 static int connection_handle_request(struct connection *con,
     msgpack_object *obj)
 {
-  dispatch_info dispatcher;;
+  dispatch_info dispatcher;
   struct api_error api_error = ERROR_INIT;
   connection_request_event_info eventinfo;
   api_event event;
@@ -393,7 +393,7 @@ static int connection_handle_request(struct connection *con,
 
   eventinfo.con = con;
   eventinfo.api_error = api_error;
-  eventinfo.dispatcher = &dispatcher;
+  eventinfo.dispatcher = dispatcher;
 
   if (dispatcher.async)
     connection_request_event(&eventinfo);
@@ -413,7 +413,7 @@ static void connection_request_event(connection_request_event_info *eventinfo)
 {
   msgpack_packer packer;
 
-  eventinfo->dispatcher->func(eventinfo);
+  eventinfo->dispatcher.func(eventinfo);
 
   if (eventinfo->api_error.isset) {
     msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);

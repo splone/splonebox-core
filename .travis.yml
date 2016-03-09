@@ -19,9 +19,9 @@ before_install:
   - (cd libuv-1.8.0 && ./autogen.sh && ./configure --prefix=/usr && make && sudo make install)
   - rm -rf libuv-1.8.0
   # msgpack-c
-  - curl -L https://github.com/msgpack/msgpack-c/archive/cpp-1.4.0.tar.gz | tar xzf -
-  - (cd msgpack-c-cpp-1.4.0 && ./bootstrap && ./configure --prefix=/usr && make && sudo make install)
-  - rm -rf msgpack-c-cpp-1.4.0
+  - curl -L https://github.com/msgpack/msgpack-c/archive/cpp-1.4.1.tar.gz | tar xzf -
+  - (cd msgpack-c-cpp-1.4.1 && ./bootstrap && ./configure --prefix=/usr && make && sudo make install)
+  - rm -rf msgpack-c-cpp-1.4.1
   # coveralls
   - pip install --user cpp-coveralls
 

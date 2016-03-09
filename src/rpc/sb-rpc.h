@@ -202,7 +202,7 @@ struct inputstream {
 struct connection_request_event_info {
   struct connection *con;
   struct message_request *request;
-  dispatch_info *dispatcher;
+  dispatch_info dispatcher;
   struct api_error api_error;
 };
 
