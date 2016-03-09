@@ -124,6 +124,7 @@ set(SPLONEBOX-SOURCES
   src/rpc/connection/loop.c
   src/rpc/connection/connection.c
   src/rpc/connection/dispatch.c
+  src/rpc/connection/crypto.c
   src/rpc/msgpack/sb-msgpack-rpc.h
   src/rpc/msgpack/message.c
   src/rpc/msgpack/pack.c
@@ -185,6 +186,7 @@ set(TEST-SOURCES
   src/rpc/connection/server.c
   src/rpc/connection/connection.c
   src/rpc/connection/dispatch.c
+  src/rpc/connection/crypto.c
   src/rpc/msgpack/sb-msgpack-rpc.h
   src/rpc/msgpack/message.c
   src/rpc/msgpack/pack.c

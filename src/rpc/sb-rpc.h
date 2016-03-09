@@ -38,6 +38,7 @@
 #include <hiredis/hiredis.h>
 
 #include "sb-common.h"
+#include "tweetnacl.h"
 
 /* Typedefs */
 typedef struct outputstream   outputstream;
@@ -84,6 +85,11 @@ typedef enum {
   OBJECT_TYPE_ARRAY,
 } message_object_type;
 
+typedef enum {
+  TUNNEL_INITIAL,
+  TUNNEL_ESTABLISHED
+} crypto_state;
+
 /* Structs */
 
 typedef struct {
@@ -115,6 +121,18 @@ struct message_request {
 struct message_response {
   uint32_t msgid;
   array params;
+};
+
+/*****************************************************************************
+ * The following crypto_context structure should be considered PRIVATE to    *
+ * the rpc connection layer. No non-rpc connection layer code should be      *
+ * using this structure in any way.                                          *
+ *****************************************************************************/
+struct crypto_context {
+  crypto_state state;
+  uint64_t nonce;
+  uint64_t receivednonce;
+  unsigned char clientshortservershort[32];
 };
 
 struct connection {
@@ -519,3 +537,15 @@ extern int db_apikey_verify(string apikey);
  * returns 0 on success otherwise -1
  */
 extern int db_apikey_add(string apikey);
+
+int crypto_init(void);
+int crypto_verify_header(unsigned char *data, uint64_t *length);
+int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
+    outputstream *out);
+int crypto_unbox_data(struct crypto_context *cc, unsigned char *in, char *out,
+    uint64_t length, uint64_t *plaintextlen);
+void uint64_pack(unsigned char *y, uint64_t x);
+int crypto_write(struct crypto_context *cc, char *data,
+    size_t length, outputstream *out);
+uint64_t uint64_unpack(const unsigned char *x);
+int byte_isequal(const void *yv, long long ylen, const void *xv);
