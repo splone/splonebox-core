@@ -175,7 +175,7 @@ define UNUSED(x) x
 
 #define LOG_VERBOSE(level, ...)                       \
   do {                                                \
-    if (level >= verbose_level) {                     \
+    if (level <= verbose_level) {                     \
       LOG(__VA_ARGS__);                               \
     }                                                 \
   } while (0)
