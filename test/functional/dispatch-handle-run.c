@@ -224,7 +224,7 @@ static void register_test_function(void)
 
   /* before running function, it must be registered successfully */
   info.api_error.isset = false;
-  expect_check(__wrap_outputstream_write, &deserialized, validate_register_response, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
   assert_int_equal(0, handle_register(&info));
   assert_false(info.api_error.isset);
 }
@@ -288,10 +288,8 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   key = cstring_copy_string(KEY);
   functionname = cstring_copy_string(FUNC);
 
-  expect_check(__wrap_outputstream_write, &deserialized,
-    validate_run_request, NULL);
-  expect_check(__wrap_outputstream_write, &deserialized,
-    validate_run_response, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_run_request, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_run_response, NULL);
 
   /*
    * The following asserts verifies a legitim run call. In detail, it
