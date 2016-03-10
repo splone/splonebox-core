@@ -32,11 +32,13 @@ int db_plugin_add(string apikey, string name, string desc, string author,
 {
   redisReply *reply;
 
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "adding plugin..");
+
   if (!rc)
     return (-1);
 
   if (name.length < MIN_LEN_NAME) {
-    LOG_WARNING("Name length should be greater than %d.", MIN_LEN_NAME);
+    LOG_WARNING("Name length should be greater than %d.\n", MIN_LEN_NAME);
     return (-1);
   }
 
@@ -44,12 +46,13 @@ int db_plugin_add(string apikey, string name, string desc, string author,
           apikey.str, name.str, desc.str, author.str, license.str);
 
   if (reply->type == REDIS_REPLY_ERROR) {
-    LOG_WARNING("Redis failed to add string value to plugin: %s", reply->str);
+    LOG_WARNING("Redis failed to add string value to plugin: %s\n", reply->str);
     freeReplyObject(reply);
     return (-1);
   }
 
   freeReplyObject(reply);
+  LOG_VERBOSE(VERBOSE_LEVEL_0, ANSI_COLOR_GREEN "done\n" ANSI_COLOR_RESET);
   return (0);
 }
 
