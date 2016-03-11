@@ -225,7 +225,7 @@ set(TEST-SOURCES
   test/functional/filesystem-save-sync.c
   test/functional/dispatch-handle-register.c
   test/functional/dispatch-handle-run.c
-  test/functional/crypto-tunnel.c
+  test/functional/crypto.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
