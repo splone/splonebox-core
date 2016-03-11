@@ -137,8 +137,11 @@ int handle_register(connection_request_event_info *info)
 
   if (api_register(pluginlongtermpk, name, description, author, license,
       functions, info->con, info->request->msgid, api_error) == -1) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error running register API request.");
+
+    if (!api_error->isset)
+      error_set(api_error, API_ERROR_TYPE_VALIDATION,
+         "Error running register API request.");
+
     return (-1);
   }
 

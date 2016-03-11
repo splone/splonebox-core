@@ -262,7 +262,7 @@ struct message_response *message_deserialize_response(msgpack_object *obj,
   }
 
   /* type */
-  if (obj->via.array.ptr[0].type == MSGPACK_OBJECT_POSITIVE_INTEGER) {
+  if (obj->via.array.ptr[0].type != MSGPACK_OBJECT_POSITIVE_INTEGER) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "type field has wrong type");
     return (NULL);
   }
