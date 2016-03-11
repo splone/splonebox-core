@@ -220,7 +220,7 @@ int crypto_write(struct crypto_context *cc, char *data,
   return (0);
 }
 
-int crypto_unbox_data(struct crypto_context *cc, unsigned char *in, char *out,
+int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
     uint64_t length, uint64_t *plaintextlen)
 {
   unsigned char *block;

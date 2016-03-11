@@ -202,11 +202,12 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
     packet = inputstream_get_read(istream, &read);
 
     /* read the packet length */
-    if (crypto_verify_header(packet, &con->packet.end)) {
+    if (crypto_verify_header(packet, &con->packet.length)) {
       reset_packet(con);
       return;
     }
 
+    con->packet.end = con->packet.length;
     con->packet.data = MALLOC_ARRAY(MAX(con->packet.end, read), unsigned char);
     msgpack_unpacker_reserve_buffer(con->mpac, MAX(read, con->packet.end));
     /* get decrypted message start position */
@@ -221,8 +222,8 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
     read -= con->packet.start;
 
     if (read > 0 && con->packet.end == 0) {
-      if (crypto_unbox_data(&con->cc, con->packet.data, con->unpackbuf +
-          consumedlen, con->packet.end, &plaintextlen) != 0) {
+      if (crypto_read(&con->cc, con->packet.data, con->unpackbuf +
+          consumedlen, con->packet.length, &plaintextlen) != 0) {
         reset_parser(con);
         return;
       }
@@ -235,10 +236,12 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
         return;
       }
 
-      if (crypto_verify_header(packet, &con->packet.end)) {
+      if (crypto_verify_header(packet, &con->packet.length)) {
         reset_parser(con);
         return;
       }
+
+      con->packet.end = con->packet.length;
 
       continue;
     }
@@ -246,8 +249,8 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
     if (con->packet.end > 0 && read == 0)
       return;
 
-    if (crypto_unbox_data(&con->cc, con->packet.data, con->unpackbuf +
-        consumedlen, con->packet.end, &plaintextlen) != 0) {
+    if (crypto_read(&con->cc, con->packet.data, con->unpackbuf +
+        consumedlen, con->packet.length, &plaintextlen) != 0) {
       reset_parser(con);
       return;
     }

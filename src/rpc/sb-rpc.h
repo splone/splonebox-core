@@ -155,6 +155,7 @@ struct connection {
     uint64_t start;
     uint64_t end;
     uint64_t pos;
+    uint64_t length;
     unsigned char *data;
   } packet;
 };
@@ -552,7 +553,7 @@ int crypto_init(void);
 int crypto_verify_header(unsigned char *data, uint64_t *length);
 int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
     outputstream *out);
-int crypto_unbox_data(struct crypto_context *cc, unsigned char *in, char *out,
+int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
     uint64_t length, uint64_t *plaintextlen);
 void uint64_pack(unsigned char *y, uint64_t x);
 int crypto_write(struct crypto_context *cc, char *data,
