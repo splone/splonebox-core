@@ -4,15 +4,15 @@
 #include "tweetnacl.h"
 
 /* server security */
-unsigned char serverlongtermsk[32];
-unsigned char servershorttermpk[32];
-unsigned char servershorttermsk[32];
+static unsigned char serverlongtermsk[32];
+static unsigned char servershorttermpk[32];
+static unsigned char servershorttermsk[32];
 
 /* client security */
-unsigned char clientshorttermpk[32];
+static unsigned char clientshorttermpk[32];
 
 /* shared secrets */
-unsigned char clientshortserverlong[32];
+static unsigned char clientshortserverlong[32];
 
 int crypto_init(void)
 {
