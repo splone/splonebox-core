@@ -3,18 +3,25 @@
 #include <msgpack/object.h>
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
+#include "helper-all.h"
 
-int __wrap_crypto_write(UNUSED(struct crypto_context *cc), char *buffer,
-    size_t len, UNUSED(outputstream *ostream))
+bool wrap_crypto_write = true;
+
+int __real_crypto_write(struct crypto_context *cc, char *data,
+    size_t length, outputstream *out);
+
+int __wrap_crypto_write(struct crypto_context *cc, char *buffer,
+    size_t len, outputstream *ostream)
 {
+  if (!wrap_crypto_write) {
+    return __real_crypto_write(cc, buffer, len, ostream);
+  }
+
   msgpack_object deserialized;
   msgpack_zone mempool;
   msgpack_zone_init(&mempool, 2048);
 
   msgpack_unpack(buffer, len, NULL, &mempool, &deserialized);
-  LOG("server sends: ");
-  msgpack_object_print(stdout, deserialized);
-  LOG("\n");
   check_expected(&deserialized);
   msgpack_zone_destroy(&mempool);
 
@@ -29,12 +36,12 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
 
   /* tunnel packet */
   if (buffer[7] == 'T') {
-
+    assert_int_equal(0, validate_crypto_tunnel(buffer, len));
   }
 
   /* message packet */
   if (buffer[7] == 'M') {
-
+    assert_int_equal(0, validate_crypto_write(buffer, len));
   }
 
   return (0);

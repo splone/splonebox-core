@@ -31,6 +31,8 @@ int validate_register_response(const unsigned long data1,
   struct message_object request;
   array params;
 
+  wrap_crypto_write = true;
+
   assert_int_equal(0, unpack_params(deserialized, &params));
 
   /* msgpack request needs to be 1 */

@@ -42,6 +42,8 @@ int validate_run_response(const unsigned long data1,
   struct message_object response;
   array params;
 
+  wrap_crypto_write = true;
+
   assert_int_equal(0, unpack_params(deserialized, &params));
 
   /* msgpack response needs to be 1 */
