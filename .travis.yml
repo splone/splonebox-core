@@ -48,7 +48,7 @@ addons:
       - pkg-config
       - libbsd-dev
       - libhiredis-dev
-  
+
 before_script: redis-server redis-test.conf
-script: make sb && make test && ./out/bin/sb-test
+script: make sb && make test && make sb-makekey && ./out/bin/sb-makekey && ./out/bin/sb-test
 after_success: coveralls -e test -e out/CMakeFiles/CompilerIdC/CMakeCCompilerId.c -e out/CMakeFiles/CompilerIdCXX/CMakeCXXCompilerId.cpp --gcov "$(which "${GCOV}")" --encoding iso-8859-1 -b out

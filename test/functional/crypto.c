@@ -117,10 +117,8 @@ void functional_crypto(UNUSED(void **state))
 
   wrap_crypto_write = false;
 
-  if (filesystem_load(".keys/server-long-term.pub", serverlongtermpk,
-      sizeof serverlongtermpk) == -1) {
-    return;
-  }
+  assert_int_equal(0, filesystem_load(".keys/server-long-term.pub",
+      serverlongtermpk, sizeof serverlongtermpk));
 
   cc.nonce = (uint64_t) randommod(281474976710656LL);
   cc.receivednonce = 0;
