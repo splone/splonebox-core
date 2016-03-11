@@ -170,13 +170,13 @@ int crypto_write(struct crypto_context *cc, char *data,
   unsigned long long packetlen;
   unsigned char *packet;
   unsigned char *block;
+  unsigned char *ciphertext;
   unsigned char nonce[crypto_box_NONCEBYTES];
   uint64_t blocklen;
 
   /*
    * add 8 byte each for identifier, length and for compressed nonce. nacl api
-   * also requires 32 byte zero-padding (crypto_box_ZEROBYTES) -
-   * 16 byte (crypto_box_BOXZEROBYTES) ciphertext padding
+   * also requires 32 byte zero-padding (crypto_box_ZEROBYTES)
    */
   packetlen = length + 40;
   packet = MALLOC_ARRAY(packetlen, unsigned char);
@@ -190,30 +190,36 @@ int crypto_write(struct crypto_context *cc, char *data,
   memcpy(packet, "rZQTd2nM", 8);
   uint64_pack(packet + 8, packetlen);
 
-  /* pack compressed nonce */
-  memcpy(packet + 16, nonce + 16, 8);
   /* set nonce expansion prefix and compressed nonce (little-endian) */
   memcpy(nonce, "splonebox-server", 16);
   uint64_pack(nonce + 16, cc->nonce);
+  /* pack compressed nonce */
+  memcpy(packet + 16, nonce + 16, 8);
 
-  blocklen = crypto_box_ZEROBYTES + length;
+  blocklen = length + 32;
   block = CALLOC(blocklen, unsigned char);
+  ciphertext = MALLOC_ARRAY(blocklen, unsigned char);
 
   memcpy(block + 32, data, length);
 
-  if (crypto_box_afternm(packet + 24, block, blocklen, nonce,
+  if (crypto_box_afternm(ciphertext, block, blocklen, nonce,
       cc->clientshortservershort) != 0) {
     FREE(block);
     FREE(packet);
+    FREE(ciphertext);
     return (-1);
   }
+
+  memcpy(packet + 24, ciphertext + 16, blocklen - 16);
 
   if (outputstream_write(out, (char*)packet, packetlen) < 0) {
     FREE(block);
     FREE(packet);
+    FREE(ciphertext);
     return (-1);
   }
 
+  FREE(ciphertext);
   FREE(block);
   FREE(packet);
 
@@ -248,7 +254,7 @@ int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
   /* ciphertextlen = length - 8 (id) - 8 (length) - 8 (nonce) + 16 (padding) */
   ciphertextlen = length - 8;
 
-  block = MALLOC_ARRAY(blocklen, unsigned char);
+  block = MALLOC_ARRAY(ciphertextlen, unsigned char);
   ciphertextpadded = CALLOC(ciphertextlen, unsigned char);
 
   if (block == NULL || ciphertextpadded == NULL)
@@ -257,13 +263,13 @@ int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
   memcpy(ciphertextpadded + 16, in + 24, blocklen);
 
   if (crypto_box_open_afternm(block, ciphertextpadded, ciphertextlen, nonce,
-      cc->clientshortservershort)) {
+      cc->clientshortservershort) != 0) {
     FREE(block);
     FREE(ciphertextpadded);
     return (-1);
   }
 
-  *plaintextlen = length - 56;
+  *plaintextlen = length - 40;
   memcpy(out, block + 32, *plaintextlen);
 
   cc->receivednonce = packetnonce;
