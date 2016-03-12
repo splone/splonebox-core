@@ -549,14 +549,80 @@ extern int db_apikey_verify(string apikey);
  */
 extern int db_apikey_add(string apikey);
 
+/**
+ * Currently only loads the server private key.
+ *
+ * @return 0 on success otherwise -1
+ */
 int crypto_init(void);
+
+/**
+ * Verfify if data has a message packet identifier and get the packet length
+ *
+ * @param data Buffer containing a packet
+ * @param[out] length The packet length
+ * returns -1 in case of error otherwise 0
+ */
 int crypto_verify_header(unsigned char *data, uint64_t *length);
+
+/**
+ * Handle a client tunnel packet and send a server tunnel packet as response
+ *
+ * @param cc The crypto_context connection crypto information (nonce etc.)
+ * @param data Buffer containing a client tunnel packet
+ * @param out The outputstream ready to write data
+ * returns -1 in case of error otherwise 0
+ */
 int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
     outputstream *out);
+
+/**
+ * Handle a client message packet and unbox it's data
+ *
+ * @param cc The crypto_context connection crypto information (nonce etc.)
+ * @param in Buffer containing a client message packet
+ * @param[out] out Buffer for unboxed data
+ * @param length The 'in' buffer length
+ * @param[out] plaintextlen The packet length
+ * returns -1 in case of error otherwise 0
+ */
 int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
     uint64_t length, uint64_t *plaintextlen);
-void uint64_pack(unsigned char *y, uint64_t x);
+
+/**
+ * Box data into a server message packet send it
+ *
+ * @param cc The crypto_context connection crypto information (nonce etc.)
+ * @param data Buffer containing data
+ * @param length The 'data' buffer length
+ * @param out The outputstream ready to write data
+ * returns -1 in case of error otherwise 0
+ */
 int crypto_write(struct crypto_context *cc, char *data,
     size_t length, outputstream *out);
+
+/**
+ * Pack uint64_t into 8 byte
+ *
+ * @param y Buffer position
+ * @param x The number
+ */
+void uint64_pack(unsigned char *y, uint64_t x);
+
+/**
+ * Unpack uint64_t from 8 byte
+ *
+ * @param x Buffer position
+ * returns The unpacked number
+ */
 uint64_t uint64_unpack(const unsigned char *x);
+
+/**
+ * Check if bytes are equal (a == b)
+ *
+ * @param yv Buffer position a
+ * @param ylen The length of a
+ * @param xv Buffer position b
+ * returns -1 in case of error otherwise 0
+ */
 int byte_isequal(const void *yv, long long ylen, const void *xv);
