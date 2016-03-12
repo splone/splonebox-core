@@ -175,13 +175,21 @@ define UNUSED(x) x
 
 #define LOG_VERBOSE(level, ...)                       \
   do {                                                \
-    if (level >= verbose_level) {                     \
+    if (level <= verbose_level) {                     \
       LOG(__VA_ARGS__);                               \
     }                                                 \
   } while (0)
 
 #define VERBOSE_OFF                 -1
 #define VERBOSE_LEVEL_0             0
+#define VERBOSE_LEVEL_1             1
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
 
 /* Functions */
 void *reallocarray(void *optr, size_t nmemb, size_t size);

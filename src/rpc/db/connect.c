@@ -27,6 +27,7 @@ redisContext *rc;
 int db_connect(string ip, int port, const struct timeval tv, string password)
 {
   redisReply *reply;
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "Connection to database at port %d.\n", port);
 
   rc = redisConnectWithTimeout(ip.str, port, tv);
 

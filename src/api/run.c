@@ -95,9 +95,10 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
       return (-1);
   }
 
-  if (cinfo->response->params.size != 1) {
+  if (cinfo->response == NULL || cinfo->response->params.size != 1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API response. Invalid params size");
+        "Error dispatching run API response. Either response is broken "
+        "or it just has wrong params size.");
     return (-1);
   }
 
