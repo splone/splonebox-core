@@ -32,7 +32,6 @@ static string pluginname;
 static string description;
 static string author;
 static string license;
-static struct message_request *register_request;
 
 
 int validate_run_response(const unsigned long data1,
@@ -145,19 +144,19 @@ int validate_run_request(const unsigned long data1,
 static void register_test_function(void)
 {
   connection_request_event_info info;
+  struct message_request *register_request;
   array *meta, *functions, *func1, *args;
   struct api_error err = ERROR_INIT;
-  const char *key = "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2";
 
-  apikey = cstring_copy_string(key);
-  pluginname = cstring_copy_string("plugin name");
-  description = cstring_copy_string("register a plugin");
-  author = cstring_copy_string("test");
-  license = cstring_copy_string("none");
+  apikey = (string) {.str = "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2",
+    .length = sizeof("vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2") - 1};
+  pluginname = (string) {.str = "plugin name", .length = sizeof("plugin name") - 1};
+  description = (string) {.str = "register a plugin", .length = sizeof("register a plugin") - 1};
+  author = (string) {.str = "test", .length = sizeof("test") - 1};
+  license = (string) {.str = "none", .length = sizeof("none") - 1};
 
-  info.request = MALLOC(struct message_request);
-  info.request->msgid = 1;
-  register_request = info.request;
+  info.request.msgid = 1;
+  register_request = &info.request;
   assert_non_null(register_request);
 
   info.api_error = err;
@@ -210,9 +209,11 @@ static void register_test_function(void)
   func1->size = 3;
   func1->obj = CALLOC(3, struct message_object);
   func1->obj[0].type = OBJECT_TYPE_STR;
-  func1->obj[0].data.string = cstring_copy_string(FUNC);
+  func1->obj[0].data.string = (string) {.str = "test_function",
+      .length = sizeof("test_function") - 1};
   func1->obj[1].type = OBJECT_TYPE_STR;
-  func1->obj[1].data.string = cstring_copy_string("my function description");
+  func1->obj[1].data.string = (string) {.str = "test_function desc",
+      .length = sizeof("test_function desc") - 1};
   func1->obj[2].type = OBJECT_TYPE_ARRAY;
 
   /* function arguments */
@@ -220,18 +221,26 @@ static void register_test_function(void)
   args->size = 2;
   args->obj = CALLOC(2, struct message_object);
   args->obj[0].type = OBJECT_TYPE_STR;
-  args->obj[0].data.string = cstring_copy_string(ARG1);
+  args->obj[0].data.string = (string) {.str = "test arg1",
+      .length = sizeof("test arg1") - 1};
   args->obj[1].type = OBJECT_TYPE_STR;
-  args->obj[1].data.string = cstring_copy_string(ARG2);
+  args->obj[1].data.string = (string) {.str = "test arg2",
+      .length = sizeof("test arg2") - 1};
 
   /* before running function, it must be registered successfully */
   info.api_error.isset = false;
   expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
   assert_int_equal(0, handle_register(&info));
   assert_false(info.api_error.isset);
+
+  FREE(args->obj);
+  FREE(func1->obj);
+  FREE(functions->obj);
+  FREE(meta->obj);
+  FREE(register_request->params.obj);
 }
 
-static struct message_request * run_request_helper(string key,
+void run_request_helper(struct message_request *rr, string key,
     string function_name, message_object_type metaarraytype,
     message_object_type functionnametype, message_object_type argstype,
     size_t metasize, message_object_type metaclientidtype,
@@ -239,10 +248,6 @@ static struct message_request * run_request_helper(string key,
 {
   array argsarray = ARRAY_INIT;
   array *meta;
-  struct message_request *rr;
-
-  rr = MALLOC(struct message_request);
-  assert_non_null(rr);
 
   rr->msgid = 1;
 
@@ -269,8 +274,6 @@ static struct message_request * run_request_helper(string key,
   argsarray.obj[1].data.string = cstring_copy_string(ARG2);
 
   rr->params.obj[2].data.params = argsarray;
-
-  return (rr);
 }
 
 void functional_dispatch_handle_run(UNUSED(void **state))
@@ -298,13 +301,12 @@ void functional_dispatch_handle_run(UNUSED(void **state))
    * verifies, that the forwarded run request by the server is of proper
    * format.
    * */
-  info.request = run_request_helper(key, functionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
 
   assert_int_equal(0, handle_run(&info));
 
-  free_params(info.request->params);
-  FREE(info.request);
+  free_params(info.request.params);
 
   /*
    * The following asserts verify, that the handle_run method cancels
@@ -314,7 +316,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
 
   /* calling not registered function should fail */
   invalidfunctionname = cstring_copy_string("invalid func name");
-  info.request = run_request_helper(key, invalidfunctionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, key, invalidfunctionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
 
   assert_false(info.api_error.isset);
@@ -323,11 +325,10 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
 
-  free_params(info.request->params);
-  FREE(info.request);
+  free_params(info.request.params);
 
   /* object has wrong type */
-  info.request = run_request_helper(key, functionname, OBJECT_TYPE_STR,
+  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_STR,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
@@ -336,12 +337,11 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   info.api_error.isset = false;
 
   /* need to free key string manually, because type is wrong */
-  free_string(info.request->params.obj[0].data.params.obj[0].data.string);
-  free_params(info.request->params);
-  FREE(info.request);
+  free_string(info.request.params.obj[0].data.params.obj[0].data.string);
+  free_params(info.request.params);
 
   /* meta has wrong size */
-  info.request = run_request_helper(key, functionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 3, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
@@ -349,11 +349,10 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
 
-  free_params(info.request->params);
-  FREE(info.request);
+  free_params(info.request.params);
 
   /* client2_id has wrong type */
-  info.request = run_request_helper(key, functionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_BIN, OBJECT_TYPE_NIL);
 
   assert_false(info.api_error.isset);
@@ -362,11 +361,10 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
 
-  free_params(info.request->params);
-  FREE(info.request);
+  free_params(info.request.params);
 
   /* call_id has wrong type */
-  info.request = run_request_helper(key, functionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_BIN, OBJECT_TYPE_BIN);
 
   assert_false(info.api_error.isset);
@@ -374,14 +372,11 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
 
-  free_params(info.request->params);
-  FREE(info.request);
+  free_params(info.request.params);
 
   free_string(invalidfunctionname);
   free_string(key);
   free_string(functionname);
-  free_params(register_request->params);
-  FREE(register_request);
   FREE(info.con);
   connection_teardown();
   db_close();

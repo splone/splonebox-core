@@ -375,24 +375,23 @@ static int connection_handle_request(struct connection *con,
   if (!obj || !con)
     return (-1);
 
-  eventinfo.request = message_deserialize_request(obj, &api_error);
-
-  /* request wasn't parsed correctly, send error with pseudo RESPONSE ID*/
-  if (!eventinfo.request) {
-    eventinfo.request = CALLOC(1, struct message_request);
-    eventinfo.request->msgid = MESSAGE_RESPONSE_UNKNOWN;
-  } else {
-    dispatcher = dispatch_table_get(eventinfo.request->method);
+  if (message_deserialize_request(&eventinfo.request, obj, &api_error) != 0) {
+    /* request wasn't parsed correctly, send error with pseudo RESPONSE ID*/
+    eventinfo.request.msgid = MESSAGE_RESPONSE_UNKNOWN;
+    eventinfo.request.method = (string) {.str = "error",
+        .length = sizeof("error") - 1};
   }
+
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "received request: method = %s\n",
+      eventinfo.request.method.str);
+
+  dispatcher = dispatch_table_get(eventinfo.request.method);
 
   if (dispatcher.func == NULL) {
     error_set(&api_error, API_ERROR_TYPE_VALIDATION, "could not dispatch method");
     dispatcher.func = handle_error;
     dispatcher.async = true;
   }
-
-  LOG_VERBOSE(VERBOSE_LEVEL_0, "received request: method = %s\n",
-      eventinfo.request->method.str);
 
   eventinfo.con = con;
   eventinfo.api_error = api_error;
@@ -420,15 +419,14 @@ static void connection_request_event(connection_request_event_info *eventinfo)
 
   if (eventinfo->api_error.isset) {
     msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
-    message_serialize_error_response(&packer, &eventinfo->api_error, eventinfo->request->msgid);
+    message_serialize_error_response(&packer, &eventinfo->api_error,
+        eventinfo->request.msgid);
 
     crypto_write(&eventinfo->con->cc, sbuf.data, sbuf.size,
         eventinfo->con->streams.write);
 
     msgpack_sbuffer_clear(&sbuf);
   }
-
-  FREE(eventinfo->request);
 }
 
 
@@ -449,7 +447,6 @@ static int connection_handle_response(struct connection *con,
     for (i = 0; i < csize; i++) {
       cinfo = kv_A(con->callvector, i);
       cinfo->errorresponse = true;
-      cinfo->response = NULL;
       cinfo->hasresponse = true;
     }
 
@@ -461,9 +458,9 @@ static int connection_handle_response(struct connection *con,
   cinfo->errorresponse = message_is_error_response(obj);
 
   if (cinfo->errorresponse) {
-    cinfo->response = message_deserialize_error_response(obj, &api_error);
+    message_deserialize_error_response(&cinfo->response, obj, &api_error);
   } else {
-    cinfo->response = message_deserialize_response(obj, &api_error);
+    message_deserialize_response(&cinfo->response, obj, &api_error);
   }
 
   /* unblock */
