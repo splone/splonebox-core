@@ -85,7 +85,7 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
   data->data.params = message_object_copy(args).data.params;
 
   /* send request */
-  run = (string) {.str = "run", .length = sizeof("run") - 1,};
+  run = (string) {.str = "run", .length = sizeof("run") - 1};
   cinfo = connection_send_request(pluginlongtermpk, run, run_params,
       api_error);
 

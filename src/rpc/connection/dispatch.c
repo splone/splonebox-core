@@ -271,7 +271,7 @@ int dispatch_teardown(void)
 int dispatch_table_init(void)
 {
   dispatch_info register_info = {.func = handle_register, .async = true,
-      .name = (string) {.str = "register", .length = sizeof("register") - 1,}};
+      .name = (string) {.str = "register", .length = sizeof("register") - 1}};
   dispatch_info run_info = {.func = handle_run, .async = true,
       .name = (string) {.str = "run", .length = sizeof("run") - 1}};
   dispatch_info error_info = {.func = handle_error, .async = true,
