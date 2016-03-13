@@ -216,6 +216,7 @@ set(TEST-SOURCES
   test/unit/event-queue-get.c
   test/unit/message-deserialize-request.c
   test/unit/message-deserialize-response.c
+  test/unit/message-deserialize-error-response.c
   test/functional/db-connect.c
   test/functional/db-plugin-add.c
   test/functional/db-apikey-verify.c

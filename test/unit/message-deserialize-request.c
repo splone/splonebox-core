@@ -52,6 +52,20 @@ void unit_message_deserialize_request(UNUSED(void **state))
   free_string(request.method);
   free_params(request.params);
 
+  /* wrong type type*/
+  msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+  msgpack_pack_array(&pk, 4);
+  msgpack_pack_nil(&pk);
+  msgpack_pack_uint32(&pk, 1234);
+  msgpack_pack_str(&pk, 4);
+  msgpack_pack_str_body(&pk, "test", 4);
+  msgpack_pack_array(&pk, 1);
+  msgpack_pack_uint8(&pk, 0);
+  msgpack_unpack(sbuf.data, sbuf.size, NULL, &mempool, &deserialized);
+
+  assert_int_not_equal(0, message_deserialize_request(&request, &deserialized,
+      &error));
+
   /* wrong type */
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
   msgpack_pack_array(&pk, 4);
@@ -73,6 +87,22 @@ void unit_message_deserialize_request(UNUSED(void **state))
   msgpack_pack_array(&pk, 4);
   msgpack_pack_uint8(&pk, 0);
   msgpack_pack_int(&pk, -1234);
+  msgpack_pack_str(&pk, 4);
+  msgpack_pack_str_body(&pk, "test", 4);
+  msgpack_pack_array(&pk, 1);
+  msgpack_pack_uint8(&pk, 0);
+  msgpack_unpack(sbuf.data, sbuf.size, NULL, &mempool, &deserialized);
+
+  assert_int_not_equal(0, message_deserialize_request(&request, &deserialized,
+      &error));
+
+  msgpack_sbuffer_clear(&sbuf);
+
+  /* wrong msgid value*/
+  msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+  msgpack_pack_array(&pk, 4);
+  msgpack_pack_uint8(&pk, 0);
+  msgpack_pack_uint32(&pk, UINT32_MAX);
   msgpack_pack_str(&pk, 4);
   msgpack_pack_str_body(&pk, "test", 4);
   msgpack_pack_array(&pk, 1);
@@ -113,6 +143,14 @@ void unit_message_deserialize_request(UNUSED(void **state))
       &error));
 
   msgpack_sbuffer_clear(&sbuf);
+
+  /* null input params */
+  assert_int_not_equal(0, message_deserialize_request(&request, &deserialized,
+      NULL));
+  assert_int_not_equal(0, message_deserialize_request(&request, NULL,
+      &error));
+  assert_int_not_equal(0, message_deserialize_request(NULL, &deserialized,
+      &error));
 
   msgpack_zone_destroy(&mempool);
   msgpack_sbuffer_destroy(&sbuf);

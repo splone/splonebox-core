@@ -149,7 +149,10 @@ int message_deserialize_request(struct message_request *req,
   uint64_t tmp_type;
   uint64_t tmp_msgid;
 
-  if (!req || !obj || !api_error) {
+  if (!api_error)
+    return (-1);
+
+  if (!req || !obj) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error");
     return (-1);
   }
@@ -252,7 +255,10 @@ int message_deserialize_response(struct message_response *res,
   msgpack_object *type, *msgid, *params;
   uint64_t tmp_msgid;
 
-  if (!obj || !res || !api_error) {
+  if (!api_error)
+    return (-1);
+
+  if (!res || !obj) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error");
     return (-1);
   }
@@ -325,7 +331,10 @@ int message_deserialize_error_response(struct message_response *res,
   msgpack_object *type, *msgid, *params;
   uint64_t tmp_msgid;
 
-  if (!obj || !res || !api_error) {
+  if (!api_error)
+    return (-1);
+
+  if (!res || !obj) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "Error");
     return (-1);
   }
@@ -385,9 +394,12 @@ int message_deserialize_error_response(struct message_response *res,
 
   /* nil */
   if (obj->via.array.ptr[3].type != MSGPACK_OBJECT_NIL) {
+    free_params(res->params);
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "nil field has wrong type");
     return (-1);
   }
+
+  return (0);
 }
 
 
