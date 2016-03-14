@@ -108,11 +108,8 @@ int message_serialize_response(struct message_response *res,
   if (pack_uint8(pk, MESSAGE_TYPE_RESPONSE) == -1)
     return (-1);
 
-  if (pack_uint32(pk, res->msgid) == -1)
-    return (-1);
-
-  if (pack_nil(pk) == -1)
-    return (-1);
+  pack_uint32(pk, res->msgid);
+  pack_nil(pk);
 
   if (pack_params(pk, res->params) == -1)
     return (-1);
@@ -134,7 +131,7 @@ int message_serialize_request(struct message_request *req,
   if (req->method.str == NULL || (pack_string(pk, req->method) == -1))
     return (-1);
 
-  if (req->params.obj == NULL || (pack_params(pk, req->params) == -1))
+  if (pack_params(pk, req->params) == -1)
     return (-1);
 
   return (0);
@@ -174,8 +171,6 @@ int message_deserialize_request(struct message_request *req,
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "type must be 0 or 1");
     return (-1);
   }
-
-  req->type = (uint8_t)tmp_type;
 
   /* message id */
   msgid = &obj->via.array.ptr[1];

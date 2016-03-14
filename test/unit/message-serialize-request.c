@@ -37,7 +37,6 @@ void unit_message_serialize_request(UNUSED(void **state))
 
   /* positiv test */
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-  request.type = MESSAGE_TYPE_REQUEST;
   request.msgid = 1234;
   request.method = (string) {.str = "test method",
       .length = sizeof("test method") - 1};
@@ -47,7 +46,6 @@ void unit_message_serialize_request(UNUSED(void **state))
 
   /* no valid string */
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-  request.type = MESSAGE_TYPE_RESPONSE;
   request.msgid = 1234;
   request.method = (string) STRING_INIT;
   request.params = params;
@@ -56,15 +54,21 @@ void unit_message_serialize_request(UNUSED(void **state))
 
   free_params(request.params);
 
+  params.size = 1;
+  params.obj = CALLOC(1, struct message_object);
+  params.obj[0].type = 1000;
+  params.obj[0].data.uinteger = 1234;
+
   /* no valid params */
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-  request.type = MESSAGE_TYPE_RESPONSE;
   request.msgid = 1234;
   request.method = (string) {.str = "test method",
       .length = sizeof("test method") - 1};
-  request.params = (array) ARRAY_INIT;
+  request.params = params;
   assert_int_not_equal(0, message_serialize_request(&request, &pk));
   msgpack_sbuffer_clear(&sbuf);
+
+  free_params(request.params);
 
   msgpack_sbuffer_destroy(&sbuf);
 }
