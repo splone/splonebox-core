@@ -219,6 +219,7 @@ set(TEST-SOURCES
   test/unit/message-deserialize-error-response.c
   test/unit/message-serialize-request.c
   test/unit/message-serialize-response.c
+  test/unit/message-serialize-error-response.c
   test/unit/message-is-request.c
   test/unit/message-is-response.c
   test/functional/db-connect.c

@@ -61,13 +61,13 @@ int message_serialize_error_response(msgpack_packer *pk,
   struct message_object *err_data;
   array err_array;
 
+  if (!pk || !api_error || !api_error->isset)
+    return (-1);
+
   msgpack_pack_array(pk, 4);
 
-  if (pack_uint8(pk, MESSAGE_TYPE_RESPONSE) == -1)
-    return (-1);
-
-  if (pack_uint32(pk, msgid) == -1)
-    return (-1);
+  pack_uint8(pk, MESSAGE_TYPE_RESPONSE);
+  pack_uint32(pk, msgid);
 
   err_array.size = 2;
   err_array.obj = CALLOC(2, struct message_object);
@@ -93,10 +93,11 @@ int message_serialize_error_response(msgpack_packer *pk,
   if (pack_params(pk, err_array) == -1)
     return (-1);
 
-  if (pack_nil(pk) == -1)
-    return (-1);
+  pack_nil(pk);
 
-  return (true);
+  FREE(err_array.obj);
+
+  return (0);
 }
 
 
