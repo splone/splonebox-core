@@ -21,11 +21,11 @@
 #include "helper-unix.h"
 
 
-void unit_message_serialize_request(UNUSED(void **state))
+void unit_message_serialize_response(UNUSED(void **state))
 {
   msgpack_sbuffer sbuf;
   msgpack_packer pk;
-  struct message_request request;
+  struct message_response response;
   array params;
 
   params.size = 1;
@@ -37,22 +37,12 @@ void unit_message_serialize_request(UNUSED(void **state))
 
   /* positiv test */
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-  request.msgid = 1234;
-  request.method = (string) {.str = "test method",
-      .length = sizeof("test method") - 1};
-  request.params = params;
-  assert_int_equal(0, message_serialize_request(&request, &pk));
+  response.msgid = 1234;
+  response.params = params;
+  assert_int_equal(0, message_serialize_response(&response, &pk));
   msgpack_sbuffer_clear(&sbuf);
 
-  /* no valid string */
-  msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-  request.msgid = 1234;
-  request.method = (string) STRING_INIT;
-  request.params = params;
-  assert_int_not_equal(0, message_serialize_request(&request, &pk));
-  msgpack_sbuffer_clear(&sbuf);
-
-  free_params(request.params);
+  free_params(response.params);
 
   params.size = 1;
   params.obj = CALLOC(1, struct message_object);
@@ -61,14 +51,12 @@ void unit_message_serialize_request(UNUSED(void **state))
 
   /* no valid params */
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-  request.msgid = 1234;
-  request.method = (string) {.str = "test method",
-      .length = sizeof("test method") - 1};
-  request.params = params;
-  assert_int_not_equal(0, message_serialize_request(&request, &pk));
+  response.msgid = 1234;
+  response.params = params;
+  assert_int_not_equal(0, message_serialize_response(&response, &pk));
   msgpack_sbuffer_clear(&sbuf);
-
-  free_params(request.params);
+  
+  free_params(response.params);
 
   msgpack_sbuffer_destroy(&sbuf);
 }

@@ -110,7 +110,6 @@ struct message_object {
 };
 
 struct message_request {
-  uint8_t type;
   uint32_t msgid;
   string method;
   array params;

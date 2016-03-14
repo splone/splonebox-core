@@ -307,7 +307,6 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
     return (NULL);
   }
 
-  request.type = MESSAGE_TYPE_REQUEST;
   request.msgid = con->msgid++;
   request.method = method;
   request.params = params;
