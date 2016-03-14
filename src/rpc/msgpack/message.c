@@ -126,16 +126,15 @@ int message_serialize_request(struct message_request *req,
 {
   msgpack_pack_array(pk, 4);
 
-  if (pack_uint8(pk, req->type) == -1)
+  if (pack_uint8(pk, MESSAGE_TYPE_REQUEST) == -1)
     return (-1);
 
-  if (pack_uint32(pk, req->msgid) == -1)
+  pack_uint32(pk, req->msgid);
+
+  if (req->method.str == NULL || (pack_string(pk, req->method) == -1))
     return (-1);
 
-  if (pack_string(pk, req->method) == -1)
-    return (-1);
-
-  if (pack_params(pk, req->params) == -1)
+  if (req->params.obj == NULL || (pack_params(pk, req->params) == -1))
     return (-1);
 
   return (0);

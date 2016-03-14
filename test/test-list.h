@@ -34,6 +34,7 @@ void unit_regression_issue_60(void **state);
 void unit_message_deserialize_request(void **state);
 void unit_message_deserialize_response(void **state);
 void unit_message_deserialize_error_response(void **state);
+void unit_message_serialize_request(void **state);
 
 
 void functional_client_connect(void **state);
@@ -67,6 +68,7 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_message_deserialize_request),
   cmocka_unit_test(unit_message_deserialize_response),
   cmocka_unit_test(unit_message_deserialize_error_response),
+  cmocka_unit_test(unit_message_serialize_request),
   cmocka_unit_test(functional_db_connect),
   cmocka_unit_test(functional_db_plugin_add),
   cmocka_unit_test(functional_db_apikey_add),
