@@ -70,5 +70,8 @@ void unit_message_serialize_request(UNUSED(void **state))
 
   free_params(request.params);
 
+  /* null check */
+  assert_int_not_equal(0, message_serialize_request(NULL, NULL));
+
   msgpack_sbuffer_destroy(&sbuf);
 }

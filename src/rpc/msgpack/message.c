@@ -103,11 +103,11 @@ int message_serialize_error_response(msgpack_packer *pk,
 int message_serialize_response(struct message_response *res,
     msgpack_packer *pk)
 {
-  msgpack_pack_array(pk, 4);
-
-  if (pack_uint8(pk, MESSAGE_TYPE_RESPONSE) == -1)
+  if (!pk || !res)
     return (-1);
 
+  msgpack_pack_array(pk, 4);
+  pack_uint8(pk, MESSAGE_TYPE_RESPONSE);
   pack_uint32(pk, res->msgid);
   pack_nil(pk);
 
@@ -121,11 +121,11 @@ int message_serialize_response(struct message_response *res,
 int message_serialize_request(struct message_request *req,
     msgpack_packer *pk)
 {
-  msgpack_pack_array(pk, 4);
-
-  if (pack_uint8(pk, MESSAGE_TYPE_REQUEST) == -1)
+  if (!pk || !req)
     return (-1);
 
+  msgpack_pack_array(pk, 4);
+  pack_uint8(pk, MESSAGE_TYPE_REQUEST);
   pack_uint32(pk, req->msgid);
 
   if (req->method.str == NULL || (pack_string(pk, req->method) == -1))

@@ -55,8 +55,11 @@ void unit_message_serialize_response(UNUSED(void **state))
   response.params = params;
   assert_int_not_equal(0, message_serialize_response(&response, &pk));
   msgpack_sbuffer_clear(&sbuf);
-  
+
   free_params(response.params);
+
+  /* null check */
+  assert_int_not_equal(0, message_serialize_response(NULL, NULL));
 
   msgpack_sbuffer_destroy(&sbuf);
 }
