@@ -106,9 +106,8 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
   /* init clientshorttermpk */
   memcpy(clientshorttermpk, data + 24, 32);
   if (crypto_box_beforenm(clientshortserverlong, clientshorttermpk,
-      serverlongtermsk) != 0) {
+      serverlongtermsk) != 0)
     goto fail;
-  }
 
   /* read length */
   length = uint64_unpack(data + 8);
@@ -120,14 +119,12 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
 
   /* check if box can be opened (authentication) */
   if (crypto_box_open_afternm(allzeroboxed, allzeroboxed, 96, nonce,
-      clientshortserverlong)) {
+      clientshortserverlong))
     goto fail;
-  }
 
   /* generate server ephemeral keys */
-  if (crypto_box_keypair(servershorttermpk, servershorttermsk) != 0) {
+  if (crypto_box_keypair(servershorttermpk, servershorttermsk) != 0)
     goto fail;
-  }
 
   /* update nonce */
   nonce_update(cc);
@@ -139,9 +136,8 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
   /* boxing server short term public key */
   memcpy(servershorttermpk0padded + crypto_box_ZEROBYTES, servershorttermpk, 32);
   if (crypto_box_afternm(servershorttermpkboxed, servershorttermpk0padded, 64,
-      nonce, clientshortserverlong) != 0) {
+      nonce, clientshortserverlong) != 0)
     goto fail;
-  }
 
   /* pack tunnel packet */
   memcpy(packet, "rZQTd2nT", 8);
@@ -152,15 +148,13 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
   /* pack boxed server public key without crypto_box_BOXZEROBYTES padding */
   memcpy(packet + 24, servershorttermpkboxed + 16, 48);
 
-  if (outputstream_write(out, (char*)packet, 72) < 0) {
+  if (outputstream_write(out, (char*)packet, 72) < 0)
     goto fail;
-  }
 
   /* use nacl shared secret precomputation interface */
   if (crypto_box_beforenm(cc->clientshortservershort, clientshorttermpk,
-      servershorttermsk) != 0) {
+      servershorttermsk) != 0)
     goto fail;
-  }
 
   cc->state = TUNNEL_ESTABLISHED;
 
@@ -229,15 +223,13 @@ int crypto_write(struct crypto_context *cc, char *data,
   memcpy(block + 32, data, length);
 
   if (crypto_box_afternm(ciphertext, block, blocklen, nonce,
-      cc->clientshortservershort) != 0) {
+      cc->clientshortservershort) != 0)
     goto fail;
-  }
 
   memcpy(packet + 24, ciphertext + 16, blocklen - 16);
 
-  if (outputstream_write(out, (char*)packet, packetlen) < 0) {
+  if (outputstream_write(out, (char*)packet, packetlen) < 0)
     goto fail;
-  }
 
   sbmemzero(packet, sizeof packet);
   sbmemzero(block, sizeof block);
@@ -296,9 +288,8 @@ int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
   memcpy(ciphertextpadded + 16, in + 24, blocklen);
 
   if (crypto_box_open_afternm(block, ciphertextpadded, ciphertextlen, nonce,
-      cc->clientshortservershort) != 0) {
+      cc->clientshortservershort) != 0)
     goto fail;
-  }
 
   *plaintextlen = length - 40;
   memcpy(out, block + 32, *plaintextlen);
