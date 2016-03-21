@@ -82,6 +82,9 @@ int crypto_verify_header(unsigned char *data, uint64_t *length)
 
   *length = uint64_unpack(data + 8);
 
+  if (*length < 40)
+    return (-1);
+
   return (0);
 }
 
@@ -118,6 +121,9 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
 
   /* read length */
   length = uint64_unpack(data + 8);
+  if (length != 136)
+    return (-1);
+
   /* nonce is prefixed with 16-byte string "splonbox-client" */
   memcpy(nonce, CRYPTO_PREFIX_SPLONEBOXCLIENT, 16);
   memcpy(nonce + 16, data + 16, 8);
