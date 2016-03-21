@@ -197,6 +197,7 @@ void *reallocarray(void *optr, size_t nmemb, size_t size);
 string cstring_to_string(char *str);
 string cstring_copy_string(const char *str);
 void free_string(string str);
+void sbmemzero(void * const pnt, const size_t len);
 
 int64_t randommod(long long n);
 
