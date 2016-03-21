@@ -215,7 +215,8 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
       return;
     }
 
-    if (msgpack_unpacker_reserve_buffer(con->mpac, MAX(read, con->packet.end)) == false) {
+    if (msgpack_unpacker_reserve_buffer(con->mpac,
+      MAX(read, con->packet.end)) == false) {
       LOG_ERROR("Failed to reserve mem msgpack buffer.");
       return;
     };
@@ -225,8 +226,8 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
   }
 
   while(read > 0) {
-    con->packet.start = inputstream_read(istream, con->packet.data + con->packet.pos,
-        con->packet.end);
+    con->packet.start = inputstream_read(istream,
+      con->packet.data + con->packet.pos, con->packet.end);
     con->packet.pos += con->packet.start;
     con->packet.end -= con->packet.start;
     read -= con->packet.start;
