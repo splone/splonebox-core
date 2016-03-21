@@ -3,7 +3,14 @@
 #include "rpc/sb-rpc.h"
 #include "tweetnacl.h"
 
-/* server security */
+#define CRYPTO_PREFIX_SPLONEBOXCLIENT "splonebox-client"
+#define CRYPTO_PREFIX_SPLONEBOXSERVER "splonebox-server"
+
+#define CRYPTO_ID_TUNNEL_SERVER "rZQTd2nT"
+#define CRYPTO_ID_TUNNEL_CLIENT "oqQN2kaT"
+#define CRYPTO_ID_MESSAGE_SERVER "rZQTd2nM"
+#define CRYPTO_ID_MESSAGE_CLIENT "oqQN2kaM"
+
 static unsigned char serverlongtermsk[32];
 
 int crypto_init(void)
@@ -70,7 +77,7 @@ uint64_t uint64_unpack(const unsigned char *x)
 
 int crypto_verify_header(unsigned char *data, uint64_t *length)
 {
-  if (!(byte_isequal(data, 8, "oqQN2kaM")))
+  if (!(byte_isequal(data, 8, CRYPTO_ID_MESSAGE_CLIENT)))
     return (-1);
 
   *length = uint64_unpack(data + 8);
@@ -94,7 +101,7 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
   uint64_t length;
 
   /* check if first 8 byte of packet identifier are correct */
-  if (!(byte_isequal(data, 8, "oqQN2kaT")))
+  if (!(byte_isequal(data, 8, CRYPTO_ID_TUNNEL_CLIENT)))
     return (-1);
 
   /* unpack nonce and check it's validity */
@@ -112,7 +119,7 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
   /* read length */
   length = uint64_unpack(data + 8);
   /* nonce is prefixed with 16-byte string "splonbox-client" */
-  memcpy(nonce, "splonebox-client", 16);
+  memcpy(nonce, CRYPTO_PREFIX_SPLONEBOXCLIENT, 16);
   memcpy(nonce + 16, data + 16, 8);
   /* copy box and add padding */
   memcpy(allzeroboxed + 16, data + 56,  80);
@@ -130,7 +137,7 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
   nonce_update(cc);
 
   /* set nonce expansion prefix and compressed nonce (little-endian) */
-  memcpy(nonce, "splonebox-server", 16);
+  memcpy(nonce, CRYPTO_PREFIX_SPLONEBOXSERVER, 16);
   uint64_pack(nonce + 16, cc->nonce);
 
   /* boxing server short term public key */
@@ -140,7 +147,7 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
     goto fail;
 
   /* pack tunnel packet */
-  memcpy(packet, "rZQTd2nT", 8);
+  memcpy(packet, CRYPTO_ID_TUNNEL_SERVER, 8);
   /* pack length (8 id + 8 compressed nonce + 8 length + 48 server pub key) */
   uint64_pack(packet + 8, 72);
   /* pack compressed nonce */
@@ -207,11 +214,11 @@ int crypto_write(struct crypto_context *cc, char *data,
   /* update nonce */
   nonce_update(cc);
 
-  memcpy(packet, "rZQTd2nM", 8);
+  memcpy(packet, CRYPTO_ID_MESSAGE_SERVER, 8);
   uint64_pack(packet + 8, packetlen);
 
   /* set nonce expansion prefix and compressed nonce (little-endian) */
-  memcpy(nonce, "splonebox-server", 16);
+  memcpy(nonce, CRYPTO_PREFIX_SPLONEBOXSERVER, 16);
   uint64_pack(nonce + 16, cc->nonce);
   /* pack compressed nonce */
   memcpy(packet + 16, nonce + 16, 8);
@@ -271,7 +278,7 @@ int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
     return (-1);
 
   /* nonce is prefixed with 16-byte string "splonbox-client" */
-  memcpy(nonce, "splonebox-client", 16);
+  memcpy(nonce, CRYPTO_PREFIX_SPLONEBOXCLIENT, 16);
   memcpy(nonce + 16, in + 16, 8);
 
   /* blocklen = length - 8 (id) - 8 (length) - 8 (nonce) */
