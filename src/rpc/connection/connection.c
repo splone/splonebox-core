@@ -209,7 +209,16 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
 
     con->packet.end = con->packet.length;
     con->packet.data = MALLOC_ARRAY(MAX(con->packet.end, read), unsigned char);
-    msgpack_unpacker_reserve_buffer(con->mpac, MAX(read, con->packet.end));
+    if (!con->packet.data) {
+      LOG_ERROR("Failed to alloc mem for con packet.");
+      return;
+    }
+
+    if (msgpack_unpacker_reserve_buffer(con->mpac, MAX(read, con->packet.end)) == false) {
+      LOG_ERROR("Failed to reserve mem msgpack buffer.");
+      return;
+    };
+
     /* get decrypted message start position */
     con->unpackbuf = msgpack_unpacker_buffer(con->mpac);
   }
