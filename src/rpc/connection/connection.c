@@ -171,7 +171,7 @@ static void reset_parser(struct connection *con)
 
 static void parse_cb(inputstream *istream, void *data, bool eof)
 {
-  unsigned char *tunnelpacket;
+//  unsigned char *tunnelpacket;
   unsigned char *packet;
   struct connection *con = data;
   size_t read = 0;
@@ -190,11 +190,12 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
   pending = inputstream_pending(istream);
 
   if (con->cc.state == TUNNEL_INITIAL) {
-    tunnelpacket = MALLOC_ARRAY(pending, unsigned char);
-    size = inputstream_read(istream, tunnelpacket, pending);
+    unsigned char tunnelpacket[pending];
+//    tunnelpacket = MALLOC_ARRAY(pending, unsigned char);
+    size = inputstream_read(istream, &tunnelpacket, pending);
     if (crypto_tunnel(&con->cc, tunnelpacket, con->streams.write) != 0)
       LOG_WARNING("establishing crypto tunnel failed");
-    FREE(tunnelpacket);
+//    FREE(tunnelpacket);
     return;
   }
 
