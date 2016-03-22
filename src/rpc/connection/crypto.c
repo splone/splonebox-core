@@ -115,9 +115,8 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
 
   /* init clientshorttermpk */
   memcpy(clientshorttermpk, data + 24, 32);
-  if (crypto_box_beforenm(clientshortserverlong, clientshorttermpk,
-      serverlongtermsk) != 0)
-    goto fail;
+  crypto_box_beforenm(clientshortserverlong, clientshorttermpk,
+      serverlongtermsk);
 
   /* read length */
   length = uint64_unpack(data + 8);
@@ -165,9 +164,8 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
     goto fail;
 
   /* use nacl shared secret precomputation interface */
-  if (crypto_box_beforenm(cc->clientshortservershort, clientshorttermpk,
-      servershorttermsk) != 0)
-    goto fail;
+  crypto_box_beforenm(cc->clientshortservershort, clientshorttermpk,
+      servershorttermsk);
 
   cc->state = TUNNEL_ESTABLISHED;
 
