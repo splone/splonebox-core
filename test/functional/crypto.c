@@ -121,6 +121,11 @@ void functional_crypto(UNUSED(void **state))
       serverlongtermpk, sizeof serverlongtermpk));
 
   cc.nonce = (uint64_t) randommod(281474976710656LL);
+
+  if (!ISODD(cc.nonce)) {
+    cc.nonce++;
+  }
+
   cc.receivednonce = 0;
   cc.state = TUNNEL_INITIAL;
 

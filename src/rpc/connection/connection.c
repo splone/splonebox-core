@@ -111,6 +111,11 @@ int connection_create(uv_stream_t *stream)
   con->streams.write = outputstream_new(1024 * 1024);
   con->streams.uv = stream;
   con->cc.nonce = (uint64_t) randommod(281474976710656LL);
+
+  if (ISODD(con->cc.nonce)) {
+    con->cc.nonce++;
+  }
+
   con->cc.receivednonce = 0;
   con->cc.state = TUNNEL_INITIAL;
   con->packet.start = 0;

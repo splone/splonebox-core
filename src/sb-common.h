@@ -71,6 +71,12 @@ extern int8_t verbose_level;
 /* uv loop global */
 extern uv_loop_t loop;
 
+/* check if number is odd */
+static inline int ISODD(uint64_t x)
+{
+  return x & 1;
+}
+
 /* Hashmap Functions */
 /* Must be declared before initializing KHASH */
 

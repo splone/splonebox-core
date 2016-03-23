@@ -25,7 +25,7 @@ int crypto_init(void)
 
 static void nonce_update(struct crypto_context *cc)
 {
-  ++cc->nonce;
+  cc->nonce += 2;
   if (cc->nonce)
     return;
   /* very unlikely */
@@ -110,7 +110,7 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
   /* unpack nonce and check it's validity */
   packetnonce = uint64_unpack(data + 16);
 
-  if (packetnonce <= cc->receivednonce)
+  if (packetnonce <= cc->receivednonce || !ISODD(packetnonce))
     return (-1);
 
   /* init clientshorttermpk */
@@ -278,7 +278,7 @@ int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
   /* unpack nonce and check it's validity */
   packetnonce = uint64_unpack(in + 16);
 
-  if (packetnonce <= cc->receivednonce)
+  if (packetnonce <= cc->receivednonce || !ISODD(packetnonce))
     return (-1);
 
   /* nonce is prefixed with 16-byte string "splonbox-client" */
