@@ -1,0 +1,13 @@
+## Configuration file for a typical splonebox core setup
+##
+## Last updated: 18 March 2016 by @stze
+##
+## Lines that begin with "## " try to explain what's going on. Lines
+## that begin with just "#" are disabled commands: you can enable them
+## by removing the "#" symbol.
+
+## API Listen Address
+ApiListenAddress 127.0.0.1:6666
+
+## Contact info
+ContactInfo 0xFFFFFFFF Random Person <nobody AT example dot com>

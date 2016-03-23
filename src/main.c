@@ -29,7 +29,15 @@ uv_loop_t loop;
 
 int main(int argc, char **argv)
 {
+  options *globaloptions;
+
   optparser(argc, argv);
+
+  if (options_init_from_boxrc() < 0) {
+      LOG_ERROR("Reading config failed--see warnings above. "
+              "For usage, try -h.");
+      return -1;
+  }
 
   uv_loop_init(&loop);
 
@@ -50,8 +58,10 @@ int main(int argc, char **argv)
     LOG_ERROR("Failed to initialise connections.");
   }
 
+  globaloptions = options_get();
+
   /* initialize server */
-  string env = cstring_to_string(getenv(ENV_VAR_LISTEN_ADDRESS));
+  string env = cstring_to_string(globaloptions->ApiListenAddress);
 
   if (!env.str) {
     LOG_ERROR(

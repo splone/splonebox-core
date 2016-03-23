@@ -111,6 +111,8 @@ set(SPLONEBOX-SOURCES
   src/devurandom.c
   src/tweetnacl.h
   src/tweetnacl.c
+  src/options.c
+  src/confparse.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -174,6 +176,8 @@ set(TEST-SOURCES
   src/devurandom.c
   src/tweetnacl.h
   src/tweetnacl.c
+  src/options.c
+  src/confparse.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -234,6 +238,7 @@ set(TEST-SOURCES
   test/functional/dispatch-handle-register.c
   test/functional/dispatch-handle-run.c
   test/functional/crypto.c
+  test/functional/confparse.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
