@@ -223,6 +223,14 @@ static char * load_boxrc_from_disk(void)
 
 static int options_validate(options *options)
 {
+  if (options->ApiListenAddress) {
+    // do we need additional checks here for this string?
+  }
+
+  if (options->ContactInfo) {
+    // do we need additional checks here for this string
+  }
+
   return (0);
 }
 
