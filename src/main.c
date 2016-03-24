@@ -49,25 +49,21 @@ int main(int argc, char **argv)
   /* initialize signal handler */
   if (signal_init() == -1) {
     LOG_ERROR("Failed to initialize signal handler.");
-    return EXIT_FAILURE;
   }
 
   /* initialize libsodium */
   if (sodium_init() == -1) {
     LOG_ERROR("Failed to initialize sodium.");
-    return EXIT_FAILURE;
   }
 
   /* initialize event queue */
   if (event_initialize() == -1) {
     LOG_ERROR("Failed to initialize event queue.");
-    return EXIT_FAILURE;
   }
 
   /* initialize connections */
   if (connection_init() == -1) {
     LOG_ERROR("Failed to initialise connections.");
-    return EXIT_FAILURE;
   }
 
   /* initialize server */
@@ -76,20 +72,17 @@ int main(int argc, char **argv)
   if (!env.str) {
     LOG_ERROR(
       "Environment Variable 'SPLONEBOX_LISTEN_ADDRESS' is not set, abort.");
-    return EXIT_FAILURE;
   }
 
   if (server_init() == -1) {
     LOG_ERROR("Failed to initialise server.");
-    return EXIT_FAILURE;
   }
 
   if (server_start(env) == -1) {
     LOG_ERROR("Failed to start server.");
-    return EXIT_FAILURE;
   }
 
   uv_run(&loop, UV_RUN_DEFAULT);
 
-  return EXIT_SUCCESS;
+  return (0);
 }
