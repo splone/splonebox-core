@@ -38,7 +38,7 @@
 
 static msgpack_sbuffer sbuf;
 static hashmap(string, dispatch_info) *dispatch_table = NULL;
-static hashmap(uint64_t, ptr_t) *callids = NULL;
+static hashmap(uint64_t, string) *callids = NULL;
 
 int handle_error(connection_request_event_info *info)
 {
@@ -235,7 +235,7 @@ int handle_run(connection_request_event_info *info)
 
   args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
-  hashmap_put(uint64_t, ptr_t)(callids, callid, info->con);
+  hashmap_put(uint64_t, string)(callids, callid, pluginlongtermpk);
 
   if (api_run(pluginlongtermpk, function_name, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {

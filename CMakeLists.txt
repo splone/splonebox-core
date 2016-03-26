@@ -113,6 +113,9 @@ set(SPLONEBOX-SOURCES
   src/tweetnacl.c
   src/options.c
   src/confparse.c
+  src/parse.c
+  src/util.c
+  src/address.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -178,6 +181,9 @@ set(TEST-SOURCES
   src/tweetnacl.c
   src/options.c
   src/confparse.c
+  src/parse.c
+  src/util.c
+  src/address.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c

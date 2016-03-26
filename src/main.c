@@ -60,20 +60,16 @@ int main(int argc, char **argv)
 
   globaloptions = options_get();
 
-  /* initialize server */
-  string env = cstring_to_string(globaloptions->ApiListenAddress);
-
-  if (!env.str) {
-    LOG_ERROR(
-      "Environment Variable 'SPLONEBOX_LISTEN_ADDRESS' is not set, abort.");
-  }
-
   if (server_init() == -1) {
     LOG_ERROR("Failed to initialise server.");
   }
 
-  if (server_start(env) == -1) {
-    LOG_ERROR("Failed to start server.");
+  /* initialize server */
+  if (globaloptions->apitype == SERVER_TYPE_TCP) {
+    server_start_tcp(&globaloptions->ApiTransportListenAddr,
+        globaloptions->ApiTransportListenPort);
+  } else if (globaloptions->apitype == SERVER_TYPE_PIPE) {
+    server_start_pipe(globaloptions->ApiNamedPipeListen);
   }
 
   uv_run(&loop, UV_RUN_DEFAULT);

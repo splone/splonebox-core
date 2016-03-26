@@ -229,8 +229,9 @@ struct queue_entry {
 };
 
 /* hashmap declarations */
-MAP_DECLS(uint64_t, ptr_t)
+MAP_DECLS(uint64_t, string)
 MAP_DECLS(string, ptr_t)
+MAP_DECLS(cstr_t, ptr_t)
 MAP_DECLS(string, dispatch_info)
 
 /* define global root event queue */
@@ -378,6 +379,8 @@ int server_init(void);
  * @returns 0 if successful, -1 otherwise.
  */
 int server_start(string endpoint);
+int server_start_tcp(boxaddr *addr, uint16_t port);
+int server_start_pipe(char *name);
 
 /**
  * Stop listening on the address specified by `endpoint`
@@ -386,7 +389,7 @@ int server_start(string endpoint);
  *                 pipe)
  * @return 0 if successful, -1 otherwise
  */
-int server_stop(string endpoint);
+int server_stop(char * endpoint);
 int server_close(void);
 
 int event_initialize(void);
