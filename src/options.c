@@ -79,10 +79,14 @@ static configabbrev option_abbrevs_[] = {
   VAR(#member, conftype, member, initvalue)
 /** An entry for config_vars: "The option <b>name</b> is obsolete." */
 #define OBSOLETE(name) { name, CONFIG_TYPE_OBSOLETE, 0, NULL }
+#define VPORT(member,conftype,initvalue)                                      \
+  VAR(#member, conftype, member ## _lines, initvalue)
 
 static configvar option_vars_[] = {
-  V(ApiListenAddress,            STRING, NULL),
-  V(ContactInfo,                 STRING,   NULL),
+  V(ApiTransportListen,         STRING, NULL),
+  V(ApiNamedPipeListen,         FILENAME, NULL),
+  V(RedisDatabaseListen,        STRING, NULL),
+  V(ContactInfo,                STRING,   NULL),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
 
@@ -223,8 +227,37 @@ static char * load_boxrc_from_disk(void)
 
 static int options_validate(options *options)
 {
-  if (options->ApiListenAddress) {
-    // do we need additional checks here for this string?
+  if (options->ApiTransportListen && options->ApiNamedPipeListen) {
+    LOG_WARNING("You cannot set both ApiTransportListen and ApiNamedPipeListen.\
+        ");
+    return (-1);
+  }
+
+  if (options->ApiTransportListen) {
+    if (box_addr_port_lookup(options->ApiTransportListen,
+        &options->ApiTransportListenAddr,
+        &options->ApiTransportListenPort) < 0) {
+      LOG_WARNING("ApiTransportListen failed to parse or resolve. Please fix.");
+      return (-1);
+    }
+
+    options->apitype = SERVER_TYPE_TCP;
+  }
+
+  if (options->RedisDatabaseListen) {
+    if (box_addr_port_lookup(options->RedisDatabaseListen,
+        &options->RedisDatabaseListenAddr,
+        &options->RedisDatabaseListenPort) < 0) {
+      LOG_WARNING("RedisDatabaseListen failed to parse or resolve. Please fix. \
+          ");
+      return (-1);
+    }
+
+    options->apitype = SERVER_TYPE_TCP;
+  }
+
+  if (options->ApiNamedPipeListen) {
+    options->apitype = SERVER_TYPE_PIPE;
   }
 
   if (options->ContactInfo) {

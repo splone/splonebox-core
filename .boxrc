@@ -7,7 +7,14 @@
 ## by removing the "#" symbol.
 
 ## API Listen Address
-ApiListenAddress 127.0.0.1:6666
+ApiTransportListen 127.0.0.1:6666
+
+## API named pipe (fifo)
+#ApiNamedPipeListen /tmp/foobar123
+
+## Redis Database Connection
+#RedisDatabaseListen 127.0.0.1:6378
+#RedisDatabaseAuth Foobar
 
 ## Contact info
 ContactInfo 0xFFFFFFFF Random Person <nobody AT example dot com>
