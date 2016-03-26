@@ -262,7 +262,7 @@ dispatch_info dispatch_table_get(string method)
 int dispatch_teardown(void)
 {
   hashmap_free(string, dispatch_info)(dispatch_table);
-  hashmap_free(uint64_t, ptr_t)(callids);
+  hashmap_free(uint64_t, string)(callids);
 
   return (0);
 }
@@ -280,7 +280,7 @@ int dispatch_table_init(void)
   msgpack_sbuffer_init(&sbuf);
 
   dispatch_table = hashmap_new(string, dispatch_info)();
-  callids = hashmap_new(uint64_t, ptr_t)();
+  callids = hashmap_new(uint64_t, string)();
 
   if (!dispatch_table || !callids)
     return (-1);
