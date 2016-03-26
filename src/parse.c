@@ -360,8 +360,8 @@ int parse_iso_time(const char *cp, time_t *t)
   unsigned int year=0, month=0, day=0, hour=0, minute=0, second=0;
   int n_fields;
   char extra_char;
-  n_fields = sscanf(cp, "%u-%2u-%2u %2u:%2u:%2u%c", &year, &month, &day, &hour,
-      &minute, &second, &extra_char);
+  n_fields = box_sscanf(cp, "%u-%2u-%2u %2u:%2u:%2u%c", &year, &month, &day,
+      &hour, &minute, &second, &extra_char);
   if (n_fields != 6) {
     LOG_WARNING("ISO time %s was unparseable", cp);
     return -1;

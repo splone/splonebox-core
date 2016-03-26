@@ -205,7 +205,7 @@ static int assign_line(const configformat *fmt, void *options, configline *c,
   /* Put keyword into canonical case. */
   if (strcmp(var->name, c->key)) {
     FREE(c->key);
-    c->key = strdup(var->name);
+    c->key = box_strdup(var->name);
   }
 
   if (!strlen(c->value)) {
@@ -258,8 +258,8 @@ static void reset(const configformat *fmt, void *options, const configvar *var,
     return; /* all done */
   if (var->initvalue) {
     c = CALLOC(1, configline);
-    c->key = strdup(var->name);
-    c->value = strdup(var->initvalue);
+    c->key = box_strdup(var->name);
+    c->value = box_strdup(var->initvalue);
     if (assign_value(fmt, options, c) < 0) {
       LOG_WARNING("Failed to assign default");
     }
@@ -418,8 +418,8 @@ static void line_append(configline **lst, const char *key, const char *val)
   configline *newline;
 
   newline = CALLOC(1, configline);
-  newline->key = strdup(key);
-  newline->value = strdup(val);
+  newline->key = box_strdup(key);
+  newline->value = box_strdup(val);
   newline->next = NULL;
   while (*lst)
     lst = &((*lst)->next);
@@ -522,7 +522,7 @@ static int assign_value(const configformat *fmt, void *options, configline *c)
   case CONFIG_TYPE_STRING:
   case CONFIG_TYPE_FILENAME:
     FREE(*(char **)lvalue);
-    *(char **)lvalue = strdup(c->value);
+    *(char **)lvalue = box_strdup(c->value);
     break;
 
   case CONFIG_TYPE_DOUBLE:
@@ -648,20 +648,20 @@ int confparse_get_lines(const char *string, configline **result, int extended)
       unsigned command = CONFIG_LINE_NORMAL;
       if (extended) {
         if (k[0] == '+') {
-          char *k_new = strdup(k+1);
+          char *k_new = box_strdup(k+1);
           if (!k_new)
             return (-1);
           FREE(k);
           k = k_new;
           command = CONFIG_LINE_APPEND;
         } else if (k[0] == '/') {
-          char *k_new = strdup(k+1);
+          char *k_new = box_strdup(k+1);
           if (!k_new)
             return (-1);
           FREE(k);
           k = k_new;
           FREE(v);
-          v = strdup("");
+          v = box_strdup("");
           if (!v)
             return (-1);
           command = CONFIG_LINE_CLEAR;
@@ -719,7 +719,7 @@ const char * confparse_line_from_str_verbose(const char *line,
   while (*line && !isspace(*line) && *line != '#' &&
          ! (line[0] == '\\' && line[1] == '\n'))
     ++line;
-  *key_out = strndup(key, (unsigned long)(line-key));
+  *key_out = box_strndup(key, (unsigned long)(line-key));
 
   if (!*key_out)
     return (NULL);
@@ -773,7 +773,7 @@ const char * confparse_line_from_str_verbose(const char *line,
     assert(cp >= val);
 
     /* Now copy out and decode the value. */
-    *value_out = strndup(val, (unsigned long)(cp-val));
+    *value_out = box_strndup(val, (unsigned long)(cp-val));
 
     if (!*value_out)
       return (NULL);
@@ -874,7 +874,7 @@ int confparse_assign(const configformat *fmt, void *options, configline *list,
     const char *full = confparse_expand_abbrev(fmt, p->key, 0, 1);
     if (strcmp(full,p->key)) {
       FREE(p->key);
-      p->key = strdup(full);
+      p->key = box_strdup(full);
       if (!p->key)
         return (-1);
     }
