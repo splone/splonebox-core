@@ -20,7 +20,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wconversion")
 
 add_definitions(-Wall -Wextra -pedantic -Wstrict-prototypes -std=gnu99
-    -Wvariadic-macros -Wcast-align -Wcast-qual -Wshadow
+    -Wvariadic-macros -Wcast-align -Wshadow
     -Wmissing-field-initializers -Wmissing-format-attribute -Wfloat-equal
     -Wundef -Wpointer-arith -Wstrict-overflow=5 -Wswitch-default -Wswitch-enum
     -Wunreachable-code -Wformat-security)
