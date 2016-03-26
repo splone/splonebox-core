@@ -22,12 +22,6 @@
 #include "tweetnacl.h"
 #include "rpc/sb-rpc.h"
 
-#define ENV_VAR_LISTEN_ADDRESS    "SPLONEBOX_LISTEN_ADDRESS"
-
-#define DB_IP "127.0.0.1"
-#define DB_PORT 6378
-#define DB_PASSWORD "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"
-
 int8_t verbose_level;
 uv_loop_t loop;
 
@@ -46,11 +40,14 @@ int main(int argc, char **argv)
   uv_loop_init(&loop);
 
   crypto_init();
-  string db_ip = cstring_copy_string(DB_IP);
-  string db_auth = cstring_copy_string(DB_PASSWORD);
   struct timeval timeout = { 1, 500000 };
 
-  if (db_connect(db_ip, DB_PORT, timeout, db_auth) < 0) {
+  globaloptions = options_get();
+
+  /* connect to database */
+  if (db_connect(fmt_addr(&globaloptions->RedisDatabaseListenAddr),
+      globaloptions->RedisDatabaseListenPort, timeout,
+      globaloptions->RedisDatabaseAuth) < 0) {
     LOG_ERROR("Failed to connect to database");
     return EXIT_FAILURE;
   }
@@ -70,8 +67,6 @@ int main(int argc, char **argv)
     LOG_ERROR("Failed to initialise connections.");
   }
 
-  globaloptions = options_get();
-
   if (server_init() == -1) {
     LOG_ERROR("Failed to initialise server.");
   }
@@ -85,6 +80,8 @@ int main(int argc, char **argv)
   }
 
   uv_run(&loop, UV_RUN_DEFAULT);
+
+  options_free(globaloptions);
 
   return (0);
 }

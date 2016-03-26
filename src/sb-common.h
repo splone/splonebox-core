@@ -445,6 +445,7 @@ int filesystem_load(const char *fn, void *x, size_t xlen);
 
 int options_init_from_boxrc(void);
 options * options_get(void);
+void options_free(options *options);
 
 /** If <b>key</b> is a configuration option, return the corresponding const
  * configvar.  Otherwise, if <b>key</b> is a non-standard abbreviation,

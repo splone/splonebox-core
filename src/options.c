@@ -86,6 +86,7 @@ static configvar option_vars_[] = {
   V(ApiTransportListen,         STRING, NULL),
   V(ApiNamedPipeListen,         FILENAME, NULL),
   V(RedisDatabaseListen,        STRING, NULL),
+  V(RedisDatabaseAuth,          STRING, NULL),
   V(ContactInfo,                STRING,   NULL),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
@@ -130,6 +131,12 @@ options * options_get(void)
 {
   assert(global_options);
   return global_options;
+}
+
+void options_free(options *options)
+{
+  confparse_free(&options_format, options);
+  global_options = NULL;
 }
 
 /** Load the options from the configuration in <b>cf</b>, validate
@@ -252,8 +259,6 @@ static int options_validate(options *options)
           ");
       return (-1);
     }
-
-    options->apitype = SERVER_TYPE_TCP;
   }
 
   if (options->ApiNamedPipeListen) {

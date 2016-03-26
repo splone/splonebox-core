@@ -891,8 +891,8 @@ int confparse_assign(const configformat *fmt, void *options, configline *list,
   /* pass 3: assign. */
   while (list) {
     int r;
-    if ((r=assign_line(fmt, options, list, use_defaults,
-                              clear_first, options_seen))) {
+    if ((r=assign_line(fmt, options, list, use_defaults, clear_first,
+        options_seen))) {
       bitarray_free(options_seen);
       return r;
     }
