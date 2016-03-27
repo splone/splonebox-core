@@ -205,13 +205,13 @@ static char * load_boxrc_from_disk(void)
   fd = filesystem_open_read(".boxrc");
 
   if (fstat(fd, &statbuf) < 0) {
-    return NULL;
+    return (NULL);
   }
 
   if ((uint64_t)(statbuf.st_size)+1 >= ((size_t)(SSIZE_MAX-16))) {
     close(fd);
     errno = EINVAL;
-    return NULL;
+    return (NULL);
   }
 
   string = MALLOC_ARRAY((size_t)(statbuf.st_size+1), char);
@@ -222,7 +222,7 @@ static char * load_boxrc_from_disk(void)
     FREE(string);
     close(fd);
     errno = save_errno;
-    return NULL;
+    return (NULL);
   }
 
   string[statbuf.st_size] = '\0';

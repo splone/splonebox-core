@@ -83,7 +83,7 @@ static int n_leapdays(int y1, int y2)
  err:                                                   \
   if (ok) *ok = 0;                                      \
   if (next) *next = endptr;                             \
-  return 0
+  return (0)
 
 
 /** Number of days per month in non-leap year; used by tor_timegm and
@@ -189,7 +189,7 @@ long parse_long(const char *s, int base, long min, long max, int *ok,
   if (base < 0) {
     if (ok)
       *ok = 0;
-    return 0;
+    return (0);
   }
 
   errno = 0;
@@ -207,7 +207,7 @@ unsigned long parse_ulong(const char *s, int base, unsigned long min,
   if (base < 0) {
     if (ok)
       *ok = 0;
-    return 0;
+    return (0);
   }
 
   errno = 0;
@@ -238,7 +238,7 @@ uint64_t parse_uint64(const char *s, int base, uint64_t min, uint64_t max,
   if (base < 0) {
     if (ok)
       *ok = 0;
-    return 0;
+    return (0);
   }
 
   errno = 0;
@@ -269,8 +269,10 @@ uint64_t parse_units(const char *val, struct unit_table_t *u, int *ok)
   assert(ok);
 
   v = parse_uint64(val, 10, 0, UINT64_MAX, ok, &cp);
+
   if (!*ok || (cp && *cp == '.')) {
     d = parse_double(val, 0, UINT64_MAX, ok, &cp);
+    
     if (!*ok)
       goto done;
     use_float = 1;
@@ -279,74 +281,86 @@ uint64_t parse_units(const char *val, struct unit_table_t *u, int *ok)
   if (!cp) {
     *ok = 1;
     v = use_float ? (uint64_t)(d) :  v;
+
     goto done;
   }
 
   cp = (char*) eat_whitespace(cp);
 
-  for ( ;u->unit;++u) {
+  for ( ; u->unit; ++u) {
     if (!strcasecmp(u->unit, cp)) {
       if (use_float)
         v = (uint64_t)(u->multiplier * d);
       else
         v *= u->multiplier;
       *ok = 1;
+
       goto done;
     }
   }
+
   LOG_WARNING("Unknown unit '%s'.", cp);
   *ok = 0;
- done:
+
+done:
 
   if (*ok)
-    return v;
+    return (v);
   else
-    return 0;
+    return (0);
 }
 
 /** Parse a string in the format "number unit", where unit is a unit of
  * information (byte, KB, M, etc).  On success, set *<b>ok</b> to true
  * and return the number of bytes specified.  Otherwise, set
- * *<b>ok</b> to false and return 0. */
+ * *<b>ok</b> to false and return (0). */
 uint64_t parse_memunit(const char *s, int *ok)
 {
   uint64_t u = parse_units(s, memory_units, ok);
-  return u;
+  return (u);
 }
 
 /** Parse a string in the format "number unit", where unit is a unit of
  * time in milliseconds.  On success, set *<b>ok</b> to true and return
  * the number of milliseconds in the provided interval.  Otherwise, set
- * *<b>ok</b> to 0 and return -1. */
+ * *<b>ok</b> to 0 and return (-1). */
 int parse_msec_interval(const char *s, int *ok)
 {
   uint64_t r;
   r = parse_units(s, time_msec_units, ok);
+
   if (!ok)
-    return -1;
+    return (-1);
+
   if (r > INT_MAX) {
     LOG_WARNING("Msec interval '%s' is too long", s);
     *ok = 0;
-    return -1;
+
+    return (-1);
   }
+
   return (int)r;
 }
 
 /** Parse a string in the format "number unit", where unit is a unit of time.
  * On success, set *<b>ok</b> to true and return the number of seconds in
- * the provided interval.  Otherwise, set *<b>ok</b> to 0 and return -1.
+ * the provided interval.  Otherwise, set *<b>ok</b> to 0 and return (-1).
  */
 int parse_interval(const char *s, int *ok)
 {
   uint64_t r;
   r = parse_units(s, time_units, ok);
+
   if (!ok)
-    return -1;
+    return (-1);
+
   if (r > INT_MAX) {
     LOG_WARNING("Interval '%s' is too long", s);
     *ok = 0;
-    return -1;
+
+    return (-1);
   }
+
   return (int)r;
 }
 
@@ -360,19 +374,23 @@ int parse_iso_time(const char *cp, time_t *t)
   unsigned int year=0, month=0, day=0, hour=0, minute=0, second=0;
   int n_fields;
   char extra_char;
+
   n_fields = box_sscanf(cp, "%u-%2u-%2u %2u:%2u:%2u%c", &year, &month, &day,
       &hour, &minute, &second, &extra_char);
+
   if (n_fields != 6) {
     LOG_WARNING("ISO time %s was unparseable", cp);
-    return -1;
+    return (-1);
   }
+
   if (year < 1970 || month < 1 || month > 12 || day < 1 || day > 31 ||
-          hour > 23 || minute > 59 || second > 60 || year >= INT32_MAX) {
+      hour > 23 || minute > 59 || second > 60 || year >= INT32_MAX) {
     LOG_WARNING("ISO time %s was nonsensical", cp);
-    return -1;
+    return (-1);
   }
-  st_tm.tm_year = (int)year-1900;
-  st_tm.tm_mon = (int)month-1;
+
+  st_tm.tm_year = (int)year - 1900;
+  st_tm.tm_mon = (int)month - 1;
   st_tm.tm_mday = (int)day;
   st_tm.tm_hour = (int)hour;
   st_tm.tm_min = (int)minute;
@@ -380,8 +398,9 @@ int parse_iso_time(const char *cp, time_t *t)
 
   if (st_tm.tm_year < 70) {
     LOG_WARNING("Got invalid ISO time %s. (Before 1970)", cp);
-    return -1;
+    return (-1);
   }
+
   return parse_timegm(&st_tm, t);
 }
 
@@ -395,14 +414,16 @@ int parse_timegm(const struct tm *tm, time_t *time_out)
    */
   time_t year, days, hours, minutes, seconds;
   int i, invalid_year, dpm;
+
   /* avoid int overflow on addition */
-  if (tm->tm_year < INT32_MAX-1900) {
+  if (tm->tm_year < INT32_MAX - 1900) {
     year = tm->tm_year + 1900;
   } else {
     /* clamp year */
     year = INT32_MAX;
   }
-  invalid_year = (year < 1970 || tm->tm_year >= INT32_MAX-1900);
+
+  invalid_year = (year < 1970 || tm->tm_year >= INT32_MAX - 1900);
 
   if (tm->tm_mon >= 0 && tm->tm_mon <= 11) {
     dpm = days_per_month[tm->tm_mon];
@@ -414,25 +435,29 @@ int parse_timegm(const struct tm *tm, time_t *time_out)
     dpm = 0;
   }
 
-  if (invalid_year ||
-      tm->tm_mon < 0 || tm->tm_mon > 11 ||
+  if (invalid_year || tm->tm_mon < 0 || tm->tm_mon > 11 ||
       tm->tm_mday < 1 || tm->tm_mday > dpm ||
       tm->tm_hour < 0 || tm->tm_hour > 23 ||
       tm->tm_min < 0 || tm->tm_min > 59 ||
       tm->tm_sec < 0 || tm->tm_sec > 60) {
     LOG_WARNING("Out-of-range argument to tor_timegm");
-    return -1;
+    return (-1);
   }
-  days = 365 * (year-1970) + n_leapdays(1970,(int)year);
+
+  days = 365 * (year - 1970) + n_leapdays(1970, (int)year);
+
   for (i = 0; i < tm->tm_mon; ++i)
     days += days_per_month[i];
+
   if (tm->tm_mon > 1 && IS_LEAPYEAR(year))
     ++days;
+
   days += tm->tm_mday - 1;
   hours = days*24 + tm->tm_hour;
 
   minutes = hours*60 + tm->tm_min;
   seconds = minutes*60 + tm->tm_sec;
   *time_out = seconds;
-  return 0;
+
+  return (0);
 }

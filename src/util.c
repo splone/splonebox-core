@@ -60,23 +60,24 @@ static int digit_to_num(char d)
   int num = ((int)d) - (int)'0';
   assert(num <= 9 && num >= 0);
 
-  return num;
+  return (num);
 }
 
 /** Helper: Read an unsigned int from *<b>bufp</b> of up to <b>width</b>
  * characters.  (Handle arbitrary width if <b>width</b> is less than 0.)  On
  * success, store the result in <b>out</b>, advance bufp to the next
- * character, and return 0.  On failure, return -1. */
+ * character, and return (0).  On failure, return (-1). */
 static int scan_unsigned(const char **bufp, unsigned long *out, int width,
     int base)
 {
   unsigned long result = 0;
   int scanned_so_far = 0;
   const int hex = base==16;
+
   assert(base == 10 || base == 16);
 
   if (!bufp || !*bufp || !out)
-    return -1;
+    return (-1);
   if (width<0)
     width=MAX_SCANF_WIDTH;
 
@@ -89,30 +90,30 @@ static int scan_unsigned(const char **bufp, unsigned long *out, int width,
     // result * base + digit > ULONG_MAX
     // result * base > ULONG_MAX - digit
     if (result > (ULONG_MAX - (unsigned long)digit)/ (unsigned long)base)
-      return -1; /* Processing this digit would overflow */
+      return (-1); /* Processing this digit would overflow */
     result = (result * (unsigned long)base) + (unsigned long)digit;
     ++scanned_so_far;
   }
 
   if (!scanned_so_far) /* No actual digits scanned */
-    return -1;
+    return (-1);
 
   *out = result;
 
-  return 0;
+  return (0);
 }
 
 /** Helper: Read an signed int from *<b>bufp</b> of up to <b>width</b>
  * characters.  (Handle arbitrary width if <b>width</b> is less than 0.)  On
  * success, store the result in <b>out</b>, advance bufp to the next
- * character, and return 0.  On failure, return -1. */
+ * character, and return (0).  On failure, return (-1). */
 static int scan_signed(const char **bufp, long *out, int width)
 {
   int neg = 0;
   unsigned long result = 0;
 
   if (!bufp || !*bufp || !out)
-    return -1;
+    return (-1);
   if (width<0)
     width=MAX_SCANF_WIDTH;
 
@@ -123,11 +124,11 @@ static int scan_signed(const char **bufp, long *out, int width)
   }
 
   if (scan_unsigned(bufp, &result, width, 10) < 0)
-    return -1;
+    return (-1);
 
   if (neg && result > 0) {
     if (result > ((unsigned long)LONG_MAX) + 1)
-      return -1; /* Underflow */
+      return (-1); /* Underflow */
     // Avoid overflow on the cast to signed long when result is LONG_MIN
     // by subtracting 1 from the unsigned long positive value,
     // then, after it has been cast to signed and negated,
@@ -138,17 +139,17 @@ static int scan_signed(const char **bufp, long *out, int width)
     *out = (-(long)(result - 1)) - 1;
   } else {
     if (result > LONG_MAX)
-      return -1; /* Overflow */
+      return (-1); /* Overflow */
     *out = (long)result;
   }
 
-  return 0;
+  return (0);
 }
 
 /** Helper: Read a decimal-formatted double from *<b>bufp</b> of up to
  * <b>width</b> characters.  (Handle arbitrary width if <b>width</b> is less
  * than 0.)  On success, store the result in <b>out</b>, advance bufp to the
- * next character, and return 0.  On failure, return -1. */
+ * next character, and return (0).  On failure, return (-1). */
 static int scan_double(const char **bufp, double *out, int width)
 {
   int neg = 0;
@@ -156,7 +157,7 @@ static int scan_double(const char **bufp, double *out, int width)
   int scanned_so_far = 0;
 
   if (!bufp || !*bufp || !out)
-    return -1;
+    return (-1);
   if (width<0)
     width=MAX_SCANF_WIDTH;
 
@@ -184,11 +185,11 @@ static int scan_double(const char **bufp, double *out, int width)
   }
 
   if (!scanned_so_far) /* No actual digits scanned */
-    return -1;
+    return (-1);
 
   *out = neg ? -result : result;
 
-  return 0;
+  return (0);
 }
 
 /** Helper: copy up to <b>width</b> non-space characters from <b>bufp</b> to
@@ -197,8 +198,9 @@ static int scan_double(const char **bufp, double *out, int width)
 static int scan_string(const char **bufp, char *out, int width)
 {
   int scanned_so_far = 0;
+
   if (!bufp || !out || width < 0)
-    return -1;
+    return (-1);
 
   while (**bufp && ! ISSPACE(**bufp) && scanned_so_far < width) {
     *out++ = *(*bufp)++;
@@ -206,13 +208,14 @@ static int scan_string(const char **bufp, char *out, int width)
   }
   *out = '\0';
 
-  return 0;
+  return (0);
 }
 
 
 char * box_strdup(const char *s)
 {
   char *dup;
+
   assert(s);
 
   dup = strdup(s);
@@ -221,7 +224,7 @@ char * box_strdup(const char *s)
     LOG_ERROR("Out of memory on strdup(). Dying.");
   }
 
-  return dup;
+  return (dup);
 }
 
 /** Allocate and return a new string containing the first <b>n</b>
@@ -233,6 +236,7 @@ char * box_strdup(const char *s)
 char * box_strndup(const char *s, size_t n)
 {
   char *dup;
+
   assert(s);
 
   dup = MALLOC_ARRAY((n+1), char);
@@ -240,7 +244,7 @@ char * box_strndup(const char *s, size_t n)
   strncpy(dup, s, n);
   dup[n]='\0';
 
-  return dup;
+  return (dup);
 }
 
 /** Minimal sscanf replacement: parse <b>buf</b> according to <b>pattern</b>
@@ -261,12 +265,13 @@ char * box_strndup(const char *s, size_t n)
 int box_sscanf(const char *buf, const char *pattern, ...)
 {
   int r;
+
   va_list ap;
   va_start(ap, pattern);
   r = box_vsscanf(buf, pattern, ap);
   va_end(ap);
 
-  return r;
+  return (r);
 }
 
 /** Locale-independent, minimal, no-surprises scanf variant, accepting only a
@@ -295,10 +300,10 @@ int box_vsscanf(const char *buf, const char *pattern, va_list ap)
           width *= 10;
           width += digit_to_num(*pattern++);
           if (width > MAX_SCANF_WIDTH)
-            return -1;
+            return (-1);
         }
         if (!width) /* No zero-width things. */
-          return -1;
+          return (-1);
       }
       if (*pattern == 'l') {
         longmod = 1;
@@ -325,7 +330,7 @@ int box_vsscanf(const char *buf, const char *pattern, va_list ap)
       } else if (*pattern == 'f') {
         double *d = va_arg(ap, double *);
         if (!longmod)
-          return -1; /* float not supported */
+          return (-1); /* float not supported */
         if (!*buf)
           return n_matched;
         if (scan_double(&buf, d, width)<0)
@@ -350,9 +355,9 @@ int box_vsscanf(const char *buf, const char *pattern, va_list ap)
       } else if (*pattern == 's') {
         char *s = va_arg(ap, char *);
         if (longmod)
-          return -1;
+          return (-1);
         if (width < 0)
-          return -1;
+          return (-1);
         if (scan_string(&buf, s, width)<0)
           return n_matched;
         ++pattern;
@@ -360,9 +365,9 @@ int box_vsscanf(const char *buf, const char *pattern, va_list ap)
       } else if (*pattern == 'c') {
         char *ch = va_arg(ap, char *);
         if (longmod)
-          return -1;
+          return (-1);
         if (width != -1)
-          return -1;
+          return (-1);
         if (!*buf)
           return n_matched;
         *ch = *buf++;
@@ -372,16 +377,16 @@ int box_vsscanf(const char *buf, const char *pattern, va_list ap)
         if (*buf != '%')
           return n_matched;
         if (longmod)
-          return -1;
+          return (-1);
         ++buf;
         ++pattern;
       } else {
-        return -1; /* Unrecognized pattern component. */
+        return (-1); /* Unrecognized pattern component. */
       }
     }
   }
 
-  return n_matched;
+  return (n_matched);
 }
 
 /** Return a pointer to the first char of s that is not whitespace and

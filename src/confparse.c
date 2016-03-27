@@ -100,7 +100,7 @@ bitarray_init_zero(unsigned int n_bits)
 {
   /* round up to the next int. */
   size_t sz = (n_bits+BITARRAY_MASK) >> BITARRAY_SHIFT;
-  return CALLOC(sz, unsigned int);
+  return (CALLOC(sz, unsigned int));
 }
 
 /** Free the bit array <b>ba</b>. */
@@ -115,7 +115,7 @@ bitarray_free(bitarray_t *ba)
 static inline unsigned int
 bitarray_is_set(bitarray_t *b, int bit)
 {
-  return b[bit >> BITARRAY_SHIFT] & (1u << ((unsigned int)bit & BITARRAY_MASK));
+  return (b[bit >> BITARRAY_SHIFT] & (1u << ((unsigned int)bit & BITARRAY_MASK)));
 }
 
 /** Set the <b>bit</b>th bit in <b>b</b> to 1. */
@@ -130,9 +130,11 @@ static int
 config_count_options(const configformat *fmt)
 {
   int i;
+
   for (i=0; fmt->vars[i].name; ++i)
     ;
-  return i;
+
+  return (i);
 }
 
 /** Mark every linelist in <b>options</b> "fragile", so that fresh assignments
@@ -140,6 +142,7 @@ config_count_options(const configformat *fmt)
 static void mark_lists_fragile(const configformat *fmt, void *options)
 {
   int i;
+
   assert(fmt);
   assert(options);
 
@@ -195,10 +198,10 @@ static int assign_line(const configformat *fmt, void *options, configline *c,
       LOG_VERBOSE(VERBOSE_LEVEL_0, "Found unrecognized option '%s'; saving it.",
           c->key);
       line_append((configline**)lvalue, c->key, c->value);
-      return 0;
+      return (0);
     } else {
       LOG_WARNING("Unknown option '%s'.  Failing.", c->key);
-      return -1;
+      return (-1);
     }
   }
 
@@ -221,7 +224,7 @@ static int assign_line(const configformat *fmt, void *options, configline *c,
         reset(fmt, options, var, use_defaults);
       }
     }
-    return 0;
+    return (0);
   } else if (c->command == CONFIG_LINE_CLEAR && !clear_first) {
     reset(fmt, options, var, use_defaults);
   }
@@ -240,7 +243,8 @@ static int assign_line(const configformat *fmt, void *options, configline *c,
 
   if (assign_value(fmt, options, c) < 0)
     return -2;
-  return 0;
+
+  return (0);
 }
 
 /** Clear the option indexed by <b>var</b> in <b>options</b>. Then if
@@ -250,6 +254,7 @@ static void reset(const configformat *fmt, void *options, const configvar *var,
     int use_defaults)
 {
   configline *c;
+
   assert(fmt && options);
   assert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
   clear(fmt, options, var); /* clear it first */
@@ -318,20 +323,22 @@ static const char * unescape_string(const char *s, char **result,
 {
   const char *cp;
   char *out;
+
   if (s[0] != '\"')
-    return NULL;
+    return (NULL);
+
   cp = s+1;
   while (1) {
     switch (*cp) {
       case '\0':
       case '\n':
-        return NULL;
+        return (NULL);
       case '\"':
         goto end_of_loop;
       case '\\':
         if (cp[1] == 'x' || cp[1] == 'X') {
           if (!(ISXDIGIT(cp[2]) && ISXDIGIT(cp[3])))
-            return NULL;
+            return (NULL);
           cp += 4;
         } else if (ISODIGIT(cp[1])) {
           cp += 2;
@@ -341,7 +348,7 @@ static const char * unescape_string(const char *s, char **result,
                    || cp[1] == '\\' || cp[1] == '\'') {
           cp += 2;
         } else {
-          return NULL;
+          return (NULL);
         }
         break;
       default:
@@ -349,7 +356,7 @@ static const char * unescape_string(const char *s, char **result,
         break;
     }
   }
- end_of_loop:
+end_of_loop:
   out = *result = MALLOC_ARRAY((size_t)(cp-s + 1), char);
   cp = s+1;
   while (1) {
@@ -361,7 +368,7 @@ static const char * unescape_string(const char *s, char **result,
         return cp+1;
       case '\0':
         FREE(*result);
-        return NULL;
+        return (NULL);
       case '\\':
         switch (cp[1])
           {
@@ -376,7 +383,7 @@ static const char * unescape_string(const char *s, char **result,
               x2 = hex_decode_digit(cp[3]);
               if (x1 == -1 || x2 == -1) {
                   FREE(*result);
-                  return NULL;
+                  return (NULL);
               }
 
               *out++ = (char)((x1<<4) + x2);
@@ -390,7 +397,7 @@ static const char * unescape_string(const char *s, char **result,
               cp += 2;
               if (ISODIGIT(*cp)) { n = n*8 + *cp-'0'; cp++; }
               if (ISODIGIT(*cp)) { n = n*8 + *cp-'0'; cp++; }
-              if (n > 255) { FREE(*result); return NULL; }
+              if (n > 255) { FREE(*result); return (NULL); }
               *out++ = (char)n;
             }
             break;
@@ -402,7 +409,7 @@ static const char * unescape_string(const char *s, char **result,
             cp += 2;
             break;
           default:
-            FREE(*result); return NULL;
+            FREE(*result); return (NULL);
           }
         break;
       default:
@@ -459,7 +466,7 @@ static int assign_value(const configformat *fmt, void *options, configline *c)
     if (!ok) {
       LOG_WARNING("Int keyword '%s %s' is malformed or out of bounds.",
           c->key, c->value);
-      return -1;
+      return (-1);
     }
     *(int *)lvalue = i;
     break;
@@ -469,7 +476,7 @@ static int assign_value(const configformat *fmt, void *options, configline *c)
     if (!ok) {
       LOG_WARNING("Interval '%s %s' is malformed or out of bounds.", c->key,
           c->value);
-      return -1;
+      return (-1);
     }
     *(int *)lvalue = i;
     break;
@@ -480,7 +487,7 @@ static int assign_value(const configformat *fmt, void *options, configline *c)
     if (!ok) {
       LOG_WARNING("Msec interval '%s %s' is malformed or out of bounds.",
           c->key, c->value);
-      return -1;
+      return (-1);
     }
     *(int *)lvalue = i;
     break;
@@ -491,7 +498,7 @@ static int assign_value(const configformat *fmt, void *options, configline *c)
     if (!ok) {
       LOG_WARNING("Value '%s %s' is malformed or out of bounds.", c->key,
           c->value);
-      return -1;
+      return (-1);
     }
     *(uint64_t *)lvalue = u64;
     break;
@@ -501,7 +508,7 @@ static int assign_value(const configformat *fmt, void *options, configline *c)
     i = (int)parse_long(c->value, 10, 0, 1, &ok, NULL);
     if (!ok) {
       LOG_WARNING("Boolean '%s %s' expects 0 or 1.", c->key, c->value);
-      return -1;
+      return (-1);
     }
     *(int *)lvalue = i;
     break;
@@ -515,7 +522,7 @@ static int assign_value(const configformat *fmt, void *options, configline *c)
       *(int *)lvalue = 1;
     else {
       LOG_WARNING("Boolean '%s %s' expects 0, 1, or 'auto'.", c->key, c->value);
-      return -1;
+      return (-1);
     }
     break;
 
@@ -532,7 +539,7 @@ static int assign_value(const configformat *fmt, void *options, configline *c)
   case CONFIG_TYPE_ISOTIME:
     if (parse_iso_time(c->value, (time_t *)lvalue)) {
       LOG_WARNING("Invalid time '%s' for keyword '%s'", c->value, c->key);
-      return -1;
+      return (-1);
     }
     break;
 
@@ -557,12 +564,13 @@ static int assign_value(const configformat *fmt, void *options, configline *c)
     break;
   case CONFIG_TYPE_LINELIST_V:
     LOG_WARNING("You may not provide a value for virtual option '%s'", c->key);
-    return -1;
+    return (-1);
   default:
     assert(0);
     break;
   }
-  return 0;
+
+  return (0);
 }
 
 
@@ -572,24 +580,28 @@ static configvar * find_option_mutable(const configformat *fmt,
 {
   int i;
   size_t keylen = strlen(key);
+
   if (!keylen)
-    return NULL; /* if they say "--" on the command line, it's not an option */
+    return (NULL); /* if they say "--" on the command line, it's not an option */
+
   /* First, check for an exact (case-insensitive) match */
   for (i=0; fmt->vars[i].name; ++i) {
     if (!strcasecmp(key, fmt->vars[i].name)) {
-      return &fmt->vars[i];
+      return (&fmt->vars[i]);
     }
   }
+
   /* If none, check for an abbreviated match */
   for (i=0; fmt->vars[i].name; ++i) {
     if (!strncasecmp(key, fmt->vars[i].name, keylen)) {
       LOG_WARNING("The abbreviation '%s' is deprecated. "
           "Please use '%s' instead", key, fmt->vars[i].name);
-      return &fmt->vars[i];
+      return (&fmt->vars[i]);
     }
   }
+
   /* Okay, unrecognized option */
-  return NULL;
+  return (NULL);
 }
 
 void confparse_free_lines(configline *front)
@@ -618,11 +630,13 @@ void confparse_free(const configformat *fmt, void *options)
 
   for (i=0; fmt->vars[i].name; ++i)
     clear(fmt, options, &(fmt->vars[i]));
+
   if (fmt->extra) {
     configline **linep = STRUCT_VAR_P(options, fmt->extra->var_offset);
     confparse_free_lines(*linep);
     *linep = NULL;
   }
+
   FREE(options);
 }
 
@@ -633,6 +647,7 @@ int confparse_get_lines(const char *string, configline **result, int extended)
   const char *parse_err;
 
   next = &list;
+
   do {
     k = v = NULL;
     string = confparse_line_from_str_verbose(string, &k, &v, &parse_err);
@@ -642,8 +657,9 @@ int confparse_get_lines(const char *string, configline **result, int extended)
       confparse_free_lines(list);
       FREE(k);
       FREE(v);
-      return -1;
+      return (-1);
     }
+
     if (k && v) {
       unsigned command = CONFIG_LINE_NORMAL;
       if (extended) {
@@ -655,7 +671,7 @@ int confparse_get_lines(const char *string, configline **result, int extended)
           k = k_new;
           command = CONFIG_LINE_APPEND;
         } else if (k[0] == '/') {
-          char *k_new = box_strdup(k+1);
+          char *k_new = box_strdup(k + 1);
           if (!k_new)
             return (-1);
           FREE(k);
@@ -683,7 +699,8 @@ int confparse_get_lines(const char *string, configline **result, int extended)
   } while (*string);
 
   *result = list;
-  return 0;
+
+  return (0);
 }
 
 const char * confparse_line_from_str_verbose(const char *line,
@@ -697,6 +714,7 @@ const char * confparse_line_from_str_verbose(const char *line,
 
   *key_out = *value_out = NULL;
   key = val = NULL;
+
   /* Skip until the first keyword. */
   while (1) {
     while (isspace(*line))
@@ -716,9 +734,11 @@ const char * confparse_line_from_str_verbose(const char *line,
 
   /* Skip until the next space or \ followed by newline. */
   key = line;
+
   while (*line && !isspace(*line) && *line != '#' &&
          ! (line[0] == '\\' && line[1] == '\n'))
     ++line;
+
   *key_out = box_strndup(key, (unsigned long)(line-key));
 
   if (!*key_out)
@@ -735,14 +755,15 @@ const char * confparse_line_from_str_verbose(const char *line,
     if (!(line = unescape_string(line, value_out, NULL))) {
       if (err_out)
         *err_out = "Invalid escape sequence in quoted string";
-      return NULL;
+      return (NULL);
     }
+
     while (*line == ' ' || *line == '\t')
       ++line;
     if (*line && *line != '#' && *line != '\n') {
       if (err_out)
         *err_out = "Excess data after quoted string";
-      return NULL;
+      return (NULL);
     }
   } else {
     /* Look for the end of the line. */
@@ -767,7 +788,7 @@ const char * confparse_line_from_str_verbose(const char *line,
       cp = line;
     }
     /* Now back cp up to be the last nonspace character */
-    while (cp>val && isspace(*(cp-1)))
+    while (cp>val && isspace(*(cp - 1)))
       --cp;
 
     assert(cp >= val);
@@ -803,9 +824,10 @@ const char * confparse_line_from_str_verbose(const char *line,
       ++line;
     } while (*line && *line != '\n');
   }
+
   while (isspace(*line)) ++line;
 
-  return line;
+  return (line);
 }
 
 /** If <b>key</b> is a configuration option, return the corresponding const
@@ -822,8 +844,10 @@ const char * confparse_expand_abbrev(const configformat *fmt, const char *option
     int command_line, int warn_obsolete)
 {
   int i;
+
   if (! fmt->abbrevs)
-    return option;
+    return (option);
+
   for (i=0; fmt->abbrevs[i].abbreviated; ++i) {
     /* Abbreviations are case insensitive. */
     if (!strcasecmp(option,fmt->abbrevs[i].abbreviated) &&
@@ -839,7 +863,8 @@ const char * confparse_expand_abbrev(const configformat *fmt, const char *option
       option = fmt->abbrevs[i].full;
     }
   }
-  return option;
+
+  return (option);
 }
 
 /** Set all vars in the configuration object <b>options</b> to their default
@@ -848,6 +873,7 @@ void confparse_init(const configformat *fmt, void *options)
 {
   int i;
   const configvar *var;
+
   assert(fmt && options);
   assert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
 
@@ -872,7 +898,7 @@ int confparse_assign(const configformat *fmt, void *options, configline *list,
   /* pass 1: normalize keys */
   for (p = list; p; p = p->next) {
     const char *full = confparse_expand_abbrev(fmt, p->key, 0, 1);
-    if (strcmp(full,p->key)) {
+    if (strcmp(full, p->key)) {
       FREE(p->key);
       p->key = box_strdup(full);
       if (!p->key)
@@ -888,6 +914,7 @@ int confparse_assign(const configformat *fmt, void *options, configline *list,
   }
 
   options_seen = bitarray_init_zero((unsigned int)n_options);
+
   /* pass 3: assign. */
   while (list) {
     int r;
@@ -905,5 +932,5 @@ int confparse_assign(const configformat *fmt, void *options, configline *list,
    * them. */
   mark_lists_fragile(fmt, options);
 
-  return 0;
+  return (0);
 }

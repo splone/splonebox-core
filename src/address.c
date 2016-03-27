@@ -86,7 +86,7 @@ static inline uint32_t box_addr_to_ipv4n(const boxaddr *a)
  * AF_INET6, AF_INET, AF_UNSPEC. */
 static inline sa_family_t box_addr_family(const boxaddr *a)
 {
-  return a->family;
+  return (a->family);
 }
 
  /** Similar behavior to Unix gethostbyname: resolve <b>name</b>, and set
@@ -109,18 +109,18 @@ int box_getaddrinfo(const char *name, uint16_t family, boxaddr *addr)
 
   if (!*name) {
     /* Empty address is an error. */
-    return -1;
+    return (-1);
   } else if (inet_pton(AF_INET, name, &iaddr)) {
     /* It's an IPv4 IP. */
     if (family == AF_INET6)
-      return -1;
+      return (-1);
     box_addr_from_in(addr, &iaddr);
-    return 0;
+    return (0);
   } else if (inet_pton(AF_INET6, name, &iaddr6)) {
     if (family == AF_INET)
-      return -1;
+      return (-1);
     box_addr_from_in6(addr, &iaddr6);
-    return 0;
+    return (0);
   } else {
 #ifdef HAVE_GETADDRINFO
     int err;
@@ -161,7 +161,7 @@ int box_getaddrinfo(const char *name, uint16_t family, boxaddr *addr)
       }
       freeaddrinfo(res);
 
-      return result;
+      return (result);
     }
     return (err == EAI_AGAIN) ? 1 : -1;
 #else
@@ -190,11 +190,12 @@ int box_getaddrinfo(const char *name, uint16_t family, boxaddr *addr)
       if (ent->h_addrtype == AF_INET) {
         box_addr_from_in(addr, (struct in_addr*)ent->h_addr);
       } else if (ent->h_addrtype == AF_INET6) {
-        box_addr_from_in6(addr, (struct in6_addr*) ent->h_addr);
+        box_addr_from_in6(addr, (struct in6_addr*)ent->h_addr);
       } else {
         assert(0); /* gethostbyname() returned a bizarre addrtype */
       }
-      return 0;
+
+      return (0);
     }
 
     return (err == TRY_AGAIN) ? 1 : -1;
@@ -265,12 +266,15 @@ int box_addr_port_lookup(const char *s, boxaddr *addr_out, uint16_t *port_out)
 
   if (port_out)
     *port_out = portval;
+
   box_addr_copy(addr_out, &addr);
 
-  return 0;
+  return (0);
+
  err:
   FREE(tmp);
-  return -1;
+
+  return (-1);
 }
 
 
@@ -339,7 +343,7 @@ socklen_t box_addr_to_sockaddr(const boxaddr *a, uint16_t port,
 
     return sizeof(struct sockaddr_in6);
   } else {
-    return 0;
+    return (0);
   }
 }
 
@@ -352,11 +356,11 @@ const char * fmt_addr(const boxaddr *addr)
 {
   static char buf[BOX_ADDR_BUF_LEN];
   if (!addr)
-    return "<null>";
+    return ("<null>");
   if (box_addr_to_str(buf, addr, sizeof(buf)))
-    return buf;
+    return (buf);
   else
-    return "???";
+    return ("???");
 }
 
 /** Convert a boxaddr <b>addr</b> into a string, and store it in
@@ -372,13 +376,13 @@ const char * box_addr_to_str(char *dest, const boxaddr *addr, socklen_t len)
     case AF_INET:
       /* Shortest addr x.x.x.x + \0 */
       if (len < 8)
-        return NULL;
+        return (NULL);
       ptr = inet_ntop(AF_INET, &addr->addr.in_addr, dest, len);
       break;
     case AF_INET6:
       /* Shortest addr [ :: ] + \0 */
       if (len < 3)
-        return NULL;
+        return (NULL);
 
       ptr = inet_ntop(AF_INET6, &addr->addr.in6_addr, dest, len);
 
@@ -388,7 +392,8 @@ const char * box_addr_to_str(char *dest, const boxaddr *addr, socklen_t len)
       ptr = dest;
       break;
     default:
-      return NULL;
+      return (NULL);
   }
-  return ptr;
+
+  return (ptr);
 }
