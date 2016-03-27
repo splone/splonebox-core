@@ -42,7 +42,7 @@ void unit_pack_int(UNUSED(void **state))
   assert_int_equal(0, pack_int32(&pk, 0));
   assert_int_equal(0, pack_int32(&pk, 1));
   assert_int_equal(0, pack_int32(&pk, 11));
-  assert_int_not_equal(0, pack_uint32(NULL, 11));
+  assert_int_not_equal(0, pack_int32(NULL, 11));
 
   assert_int_equal(0, pack_int64(&pk, 0));
   assert_int_equal(0, pack_int64(&pk, 1));
