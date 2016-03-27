@@ -788,7 +788,7 @@ const char * confparse_line_from_str_verbose(const char *line,
       cp = line;
     }
     /* Now back cp up to be the last nonspace character */
-    while (cp>val && isspace(*(cp - 1)))
+    while (cp > val && isspace(*(cp - 1)))
       --cp;
 
     assert(cp >= val);

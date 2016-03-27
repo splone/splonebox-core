@@ -31,6 +31,7 @@ void unit_pack_string(UNUSED(void **state))
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
 
   assert_int_equal(0, pack_string(&pk, key));
+  assert_int_not_equal(0, pack_string(NULL, key));
 
   msgpack_sbuffer_destroy(&sbuf);
   free_string(key);

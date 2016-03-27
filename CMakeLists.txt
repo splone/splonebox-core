@@ -214,8 +214,12 @@ set(TEST-SOURCES
   test/unit/server-start.c
   test/unit/server-stop.c
   test/unit/pack-string.c
-  test/unit/pack-uint64.c
+  test/unit/pack-int.c
+  test/unit/pack-uint.c
   test/unit/pack-array.c
+  test/unit/pack-nil.c
+  test/unit/pack-float.c
+  test/unit/pack-bool.c
   test/unit/regression-issue-60.c
   test/unit/unpack-string.c
   test/unit/unpack-uint.c

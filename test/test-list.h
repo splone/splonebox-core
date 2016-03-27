@@ -21,8 +21,12 @@
 void unit_server_start(void **state);
 void unit_server_stop(void **state);
 void unit_pack_string(void **state);
+void unit_pack_int(void **state);
 void unit_pack_uint(void **state);
 void unit_pack_array(void **state);
+void unit_pack_nil(void **state);
+void unit_pack_float(void **state);
+void unit_pack_bool(void **state);
 void unit_unpack_string(void **state);
 void unit_unpack_uint(void **state);
 void unit_unpack_array(void **state);
@@ -61,14 +65,14 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_server_start),
   cmocka_unit_test(unit_server_stop),
   cmocka_unit_test(unit_pack_string),
+  cmocka_unit_test(unit_pack_int),
   cmocka_unit_test(unit_pack_uint),
-  cmocka_unit_test(unit_pack_uint),
-  cmocka_unit_test(unit_pack_string),
-  cmocka_unit_test(unit_pack_uint),
-  cmocka_unit_test(unit_pack_uint),
+  cmocka_unit_test(unit_pack_nil),
+  cmocka_unit_test(unit_pack_float),
+  cmocka_unit_test(unit_pack_bool),
+  cmocka_unit_test(unit_pack_array),
   cmocka_unit_test(unit_regression_issue_60),
   cmocka_unit_test(unit_api_get_key),
-  cmocka_unit_test(unit_event_queue_put),
   cmocka_unit_test(unit_event_queue_put),
   cmocka_unit_test(unit_message_deserialize_request),
   cmocka_unit_test(unit_message_deserialize_response),
