@@ -50,12 +50,13 @@
 
 #include <assert.h>
 #include "sb-common.h"
+#include "util.h"
 
 #define MAX_SCANF_WIDTH 9999
 
 /** Helper: given an ASCII-encoded decimal digit, return its numeric value.
  * NOTE: requires that its input be in-bounds. */
-static int digit_to_num(char d)
+STATIC int digit_to_num(char d)
 {
   int num = ((int)d) - (int)'0';
   assert(num <= 9 && num >= 0);
@@ -67,7 +68,7 @@ static int digit_to_num(char d)
  * characters.  (Handle arbitrary width if <b>width</b> is less than 0.)  On
  * success, store the result in <b>out</b>, advance bufp to the next
  * character, and return (0).  On failure, return (-1). */
-static int scan_unsigned(const char **bufp, unsigned long *out, int width,
+STATIC int scan_unsigned(const char **bufp, unsigned long *out, int width,
     int base)
 {
   unsigned long result = 0;
@@ -107,7 +108,7 @@ static int scan_unsigned(const char **bufp, unsigned long *out, int width,
  * characters.  (Handle arbitrary width if <b>width</b> is less than 0.)  On
  * success, store the result in <b>out</b>, advance bufp to the next
  * character, and return (0).  On failure, return (-1). */
-static int scan_signed(const char **bufp, long *out, int width)
+STATIC int scan_signed(const char **bufp, long *out, int width)
 {
   int neg = 0;
   unsigned long result = 0;
@@ -150,7 +151,7 @@ static int scan_signed(const char **bufp, long *out, int width)
  * <b>width</b> characters.  (Handle arbitrary width if <b>width</b> is less
  * than 0.)  On success, store the result in <b>out</b>, advance bufp to the
  * next character, and return (0).  On failure, return (-1). */
-static int scan_double(const char **bufp, double *out, int width)
+STATIC int scan_double(const char **bufp, double *out, int width)
 {
   int neg = 0;
   double result = 0;
@@ -195,7 +196,7 @@ static int scan_double(const char **bufp, double *out, int width)
 /** Helper: copy up to <b>width</b> non-space characters from <b>bufp</b> to
  * <b>out</b>.  Make sure <b>out</b> is nul-terminated. Advance <b>bufp</b>
  * to the next non-space character or the EOS. */
-static int scan_string(const char **bufp, char *out, int width)
+STATIC int scan_string(const char **bufp, char *out, int width)
 {
   int scanned_so_far = 0;
 

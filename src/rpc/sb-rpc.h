@@ -43,7 +43,7 @@
 /* Typedefs */
 typedef struct outputstream   outputstream;
 typedef struct inputstream inputstream;
-typedef void (*inputstream_cb)(inputstream *inputstream, void *data, bool eof);
+typedef int (*inputstream_cb)(inputstream *inputstream, void *data, bool eof);
 typedef struct api_event api_event;
 typedef struct equeue equeue;
 typedef struct queue_entry queue_entry;
@@ -459,6 +459,7 @@ int dispatch_teardown(void);
 dispatch_info dispatch_table_get(string method);
 void dispatch_table_put(string method, dispatch_info info);
 int handle_run(connection_request_event_info *info);
+int handle_result(connection_request_event_info *info);
 int handle_register(connection_request_event_info *info);
 int handle_error(connection_request_event_info *info);
 

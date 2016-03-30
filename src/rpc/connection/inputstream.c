@@ -37,10 +37,7 @@
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
-
-static void alloc_cb(uv_handle_t *, size_t, uv_buf_t *);
-static void read_cb(uv_stream_t *, ssize_t, const uv_buf_t *);
-static void close_cb(uv_handle_t *handle);
+#include "rpc/connection/inputstream.h"
 
 inputstream *inputstream_new(inputstream_cb cb, uint32_t buffer_size,
     void *data)
@@ -152,15 +149,15 @@ size_t inputstream_read(inputstream *istream, unsigned char *buf, size_t count)
 }
 
 
-static void close_cb(uv_handle_t *handle)
+STATIC void inputstream_close_cb(uv_handle_t *handle)
 {
   FREE(handle->data);
   FREE(handle);
 }
 
 
-static void alloc_cb(uv_handle_t *handle, UNUSED(size_t suggested_size),
-    uv_buf_t *buf)
+STATIC void inputstream_alloc_cb(uv_handle_t *handle,
+    UNUSED(size_t suggested_size), uv_buf_t *buf)
 {
   inputstream *istream = streamhandle_get_inputstream(handle);
 
@@ -179,7 +176,7 @@ static void alloc_cb(uv_handle_t *handle, UNUSED(size_t suggested_size),
 }
 
 
-static void read_cb(uv_stream_t *stream, ssize_t nread,
+STATIC void inputstream_read_cb(uv_stream_t *stream, ssize_t nread,
     UNUSED(const uv_buf_t *buf))
 {
   size_t read;

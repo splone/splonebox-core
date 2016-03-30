@@ -48,14 +48,15 @@
  *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "sb-common.h"
 #include <assert.h>
 #include <ctype.h>
+#include "sb-common.h"
+#include "parse.h"
 
 /** Yield true iff <b>y</b> is a leap-year. */
 #define IS_LEAPYEAR(y) (!(y % 4) && ((y % 100) || !(y % 400)))
 /** Helper: Return the number of leap-days between Jan 1, y1 and Jan 1, y2. */
-static int n_leapdays(int y1, int y2)
+STATIC int n_leapdays(int y1, int y2)
 {
   --y1;
   --y2;

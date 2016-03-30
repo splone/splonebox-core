@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/connection/crypto.h"
 #include "tweetnacl.h"
 
 /* server security */
@@ -24,7 +25,7 @@ int crypto_init(void)
   return (0);
 }
 
-static void nonce_update(struct crypto_context *cc)
+STATIC void nonce_update(struct crypto_context *cc)
 {
   ++cc->nonce;
   if (cc->nonce)

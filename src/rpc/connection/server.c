@@ -23,6 +23,7 @@
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/connection/server.h"
 
 
 #define ADDRESS_MAX_SIZE 256
@@ -45,9 +46,6 @@ struct server {
 };
 
 static hashmap(cstr_t, ptr_t) *servers = NULL;
-static void connection_cb(uv_stream_t *server_stream, int status);
-static void client_free_cb(uv_handle_t *handle);
-static void server_free_cb(uv_handle_t *handle);
 
 uv_loop_t loop;
 
@@ -187,7 +185,7 @@ int server_stop(char * endpoint)
   return (0);
 }
 
-static void connection_cb(uv_stream_t *server_stream, int status)
+STATIC void connection_cb(uv_stream_t *server_stream, int status)
 {
   int result;
   int namelen;
@@ -253,13 +251,13 @@ static void connection_cb(uv_stream_t *server_stream, int status)
 }
 
 
-static void client_free_cb(uv_handle_t *handle)
+STATIC void client_free_cb(uv_handle_t *handle)
 {
   FREE(handle);
 }
 
 
-static void server_free_cb(uv_handle_t *handle)
+STATIC void server_free_cb(uv_handle_t *handle)
 {
   struct server *server = (struct server*) handle->data;
 

@@ -43,17 +43,9 @@
 
 #include "tweetnacl.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/connection/connection.h"
 #include "api/sb-api.h"
 #include "sb-common.h"
-
-static void parse_cb(inputstream *istream, void *data, bool eof);
-static void close_cb(uv_handle_t *handle);
-static int connection_handle_request(struct connection *con,
-    msgpack_object *obj);
-static int connection_handle_response(struct connection *con,
-    msgpack_object *obj);
-static void connection_request_event(connection_request_event_info *info);
-static void connection_close(struct connection *con);
 
 static hashmap(string, ptr_t) *connections = NULL;
 static msgpack_sbuffer sbuf;
@@ -126,7 +118,7 @@ int connection_create(uv_stream_t *stream)
   return (0);
 }
 
-static void connection_close(struct connection *con)
+STATIC void connection_close(struct connection *con)
 {
   int is_closing;
   uv_handle_t *handle;
@@ -149,31 +141,32 @@ static void connection_close(struct connection *con)
 }
 
 
-static void close_cb(uv_handle_t *handle)
+STATIC void close_cb(uv_handle_t *handle)
 {
   FREE(handle->data);
   FREE(handle);
 }
 
-static void reset_packet(struct connection *con)
+STATIC void reset_packet(struct connection *con)
 {
   con->packet.start = 0;
   con->packet.end = 0;
   con->packet.pos = 0;
 }
 
-static void reset_parser(struct connection *con)
+STATIC void reset_parser(struct connection *con)
 {
   FREE(con->packet.data);
   msgpack_unpacker_free(con->mpac);
   reset_packet(con);
 }
 
-static void parse_cb(inputstream *istream, void *data, bool eof)
+STATIC int parse_cb(inputstream *istream, void *data, bool eof)
 {
   unsigned char *tunnelpacket;
   unsigned char *packet;
   struct connection *con = data;
+
   size_t read = 0;
   size_t pending;
   size_t size;
@@ -184,7 +177,7 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
 
   if (eof) {
     connection_close(con);
-    return;
+    return (-1);
   }
 
   pending = inputstream_pending(istream);
@@ -195,7 +188,8 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
     if (crypto_tunnel(&con->cc, tunnelpacket, con->streams.write) != 0)
       LOG_WARNING("establishing crypto tunnel failed");
     FREE(tunnelpacket);
-    return;
+
+    return (0);
   }
 
   if (con->packet.end <= 0) {
@@ -204,7 +198,7 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
     /* read the packet length */
     if (crypto_verify_header(packet, &con->packet.length)) {
       reset_packet(con);
-      return;
+      return (-1);
     }
 
     con->packet.end = con->packet.length;
@@ -225,7 +219,7 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
       if (crypto_read(&con->cc, con->packet.data, con->unpackbuf +
           consumedlen, con->packet.length, &plaintextlen) != 0) {
         reset_parser(con);
-        return;
+        return (-1);
       }
 
       consumedlen += plaintextlen;
@@ -233,12 +227,12 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
 
       if (packet == NULL) {
         reset_parser(con);
-        return;
+        return (-1);
       }
 
       if (crypto_verify_header(packet, &con->packet.length)) {
         reset_parser(con);
-        return;
+        return (-1);
       }
 
       con->packet.end = con->packet.length;
@@ -247,12 +241,12 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
     }
 
     if (con->packet.end > 0 && read == 0)
-      return;
+      return (0);
 
     if (crypto_read(&con->cc, con->packet.data, con->unpackbuf +
         consumedlen, con->packet.length, &plaintextlen) != 0) {
       reset_parser(con);
-      return;
+      return (-1);
     }
 
     consumedlen += plaintextlen;
@@ -278,6 +272,8 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
       msgpack_object_print(stdout, result.data);
     }
   }
+
+  return (0);
 }
 
 int connection_hashmap_put(string pluginlongtermpk, struct connection *con)
@@ -363,7 +359,7 @@ int connection_send_response(struct connection *con, uint32_t msgid,
 }
 
 
-static int connection_handle_request(struct connection *con,
+STATIC int connection_handle_request(struct connection *con,
     msgpack_object *obj)
 {
   dispatch_info dispatcher;
@@ -410,7 +406,7 @@ static int connection_handle_request(struct connection *con,
 }
 
 
-static void connection_request_event(connection_request_event_info *eventinfo)
+STATIC void connection_request_event(connection_request_event_info *eventinfo)
 {
   msgpack_packer packer;
 
@@ -429,7 +425,7 @@ static void connection_request_event(connection_request_event_info *eventinfo)
 }
 
 
-static int connection_handle_response(struct connection *con,
+STATIC int connection_handle_response(struct connection *con,
     msgpack_object *obj)
 {
   struct callinfo *cinfo;

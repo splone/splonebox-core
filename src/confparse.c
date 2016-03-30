@@ -48,9 +48,10 @@
  *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "sb-common.h"
 #include <assert.h>
 #include <ctype.h>
+#include "sb-common.h"
+#include "confparse.h"
 
 #define STRUCT_VAR_P(st, off) ((void*) ( ((char*)(st)) + (off) ) )
 
@@ -71,28 +72,10 @@
 /* Removes all previous configuration for an option. */
 #define CONFIG_LINE_CLEAR 2
 
-/** A random-access array of one-bit-wide elements. */
-typedef unsigned int bitarray_t;
-
-static void reset_line(const configformat *fmt, void *options,
-    const char *key, int use_defaults);
-static void mark_lists_fragile(const configformat *fmt, void *options);
-static void reset(const configformat *fmt, void *options, const configvar *var,
-    int use_defaults);
-static void clear(const configformat *fmt, void *options, const configvar *var);
-static void line_append(configline **lst, const char *key, const char *val);
-static int assign_line(const configformat *fmt, void *options, configline *c,
-    int use_defaults, int clear_first, bitarray_t *options_seen);
-static const char * unescape_string(const char *s, char **result,
-    size_t *size_out);
-static int assign_value(const configformat *fmt, void *options, configline *c);
-static configvar * find_option_mutable(const configformat *fmt,
-    const char *key);
 
 const uint32_t ISDIGIT_TABLE[8] = { 0, 0x3ff0000, 0, 0, 0, 0, 0, 0 };
 const uint32_t ISSPACE_TABLE[8] = { 0x3e00, 0x1, 0, 0, 0, 0, 0, 0 };
 const uint32_t ISXDIGIT_TABLE[8] = { 0, 0x3ff0000, 0x7e, 0x7e, 0, 0, 0, 0 };
-
 
 /** Create a new bit array that can hold <b>n_bits</b> bits. */
 static inline bitarray_t *
@@ -126,8 +109,7 @@ bitarray_set(bitarray_t *b, int bit)
 }
 
 /** Return the number of option entries in <b>fmt</b>. */
-static int
-config_count_options(const configformat *fmt)
+STATIC int config_count_options(const configformat *fmt)
 {
   int i;
 
@@ -139,7 +121,7 @@ config_count_options(const configformat *fmt)
 
 /** Mark every linelist in <b>options</b> "fragile", so that fresh assignments
  * to it will replace old ones. */
-static void mark_lists_fragile(const configformat *fmt, void *options)
+STATIC void mark_lists_fragile(const configformat *fmt, void *options)
 {
   int i;
 
@@ -159,7 +141,7 @@ static void mark_lists_fragile(const configformat *fmt, void *options)
   }
 }
 
-static void reset_line(const configformat *fmt, void *options, const char *key,
+STATIC void reset_line(const configformat *fmt, void *options, const char *key,
     int use_defaults)
 {
   const configvar *var;
@@ -183,7 +165,7 @@ static void reset_line(const configformat *fmt, void *options, const char *key,
  *
  * Called from confparse_assign().
  */
-static int assign_line(const configformat *fmt, void *options, configline *c,
+STATIC int assign_line(const configformat *fmt, void *options, configline *c,
     int use_defaults, int clear_first, bitarray_t *options_seen)
 {
   const configvar *var;
@@ -250,7 +232,7 @@ static int assign_line(const configformat *fmt, void *options, configline *c,
 /** Clear the option indexed by <b>var</b> in <b>options</b>. Then if
  * <b>use_defaults</b>, set it to its default value.
  * Called by confparse_init() and option_reset_line() and option_assign_line(). */
-static void reset(const configformat *fmt, void *options, const configvar *var,
+STATIC void reset(const configformat *fmt, void *options, const configvar *var,
     int use_defaults)
 {
   configline *c;
@@ -276,49 +258,49 @@ static void reset(const configformat *fmt, void *options, const configvar *var,
  * Called from reset() and confparse_free(). */
  /** Reset config option <b>var</b> to 0, 0.0, NULL, or the equivalent.
   * Called from reset() and confparse_free(). */
- static void clear(const configformat *fmt, void *options, const configvar *var)
- {
-   void *lvalue = STRUCT_VAR_P(options, var->var_offset);
-   (void)fmt; /* unused */
-   switch (var->type) {
-     case CONFIG_TYPE_STRING:
-     case CONFIG_TYPE_FILENAME:
-       FREE(*(char**)lvalue);
-       break;
-     case CONFIG_TYPE_DOUBLE:
-       *(double*)lvalue = 0.0;
-       break;
-     case CONFIG_TYPE_ISOTIME:
-       *(time_t*)lvalue = 0;
-       break;
-     case CONFIG_TYPE_INTERVAL:
-     case CONFIG_TYPE_MSEC_INTERVAL:
-     case CONFIG_TYPE_UINT:
-     case CONFIG_TYPE_INT:
-     case CONFIG_TYPE_PORT:
-     case CONFIG_TYPE_BOOL:
-       *(int*)lvalue = 0;
-       break;
-     case CONFIG_TYPE_AUTOBOOL:
-       *(int*)lvalue = -1;
-       break;
-     case CONFIG_TYPE_MEMUNIT:
-       *(uint64_t*)lvalue = 0;
-       break;
-     case CONFIG_TYPE_LINELIST:
-     case CONFIG_TYPE_LINELIST_S:
-       confparse_free_lines(*(configline **)lvalue);
-       *(configline **)lvalue = NULL;
-       break;
-     case CONFIG_TYPE_LINELIST_V:
-       /* handled by linelist_s. */
-       break;
-     case CONFIG_TYPE_OBSOLETE:
-       break;
-   }
- }
+STATIC void clear(const configformat *fmt, void *options, const configvar *var)
+{
+  void *lvalue = STRUCT_VAR_P(options, var->var_offset);
+  (void)fmt; /* unused */
+  switch (var->type) {
+    case CONFIG_TYPE_STRING:
+    case CONFIG_TYPE_FILENAME:
+      FREE(*(char**)lvalue);
+      break;
+    case CONFIG_TYPE_DOUBLE:
+      *(double*)lvalue = 0.0;
+      break;
+    case CONFIG_TYPE_ISOTIME:
+      *(time_t*)lvalue = 0;
+      break;
+    case CONFIG_TYPE_INTERVAL:
+    case CONFIG_TYPE_MSEC_INTERVAL:
+    case CONFIG_TYPE_UINT:
+    case CONFIG_TYPE_INT:
+    case CONFIG_TYPE_PORT:
+    case CONFIG_TYPE_BOOL:
+      *(int*)lvalue = 0;
+      break;
+    case CONFIG_TYPE_AUTOBOOL:
+      *(int*)lvalue = -1;
+      break;
+    case CONFIG_TYPE_MEMUNIT:
+      *(uint64_t*)lvalue = 0;
+      break;
+    case CONFIG_TYPE_LINELIST:
+    case CONFIG_TYPE_LINELIST_S:
+      confparse_free_lines(*(configline **)lvalue);
+      *(configline **)lvalue = NULL;
+      break;
+    case CONFIG_TYPE_LINELIST_V:
+      /* handled by linelist_s. */
+      break;
+    case CONFIG_TYPE_OBSOLETE:
+      break;
+  }
+}
 
-static const char * unescape_string(const char *s, char **result,
+STATIC const char * unescape_string(const char *s, char **result,
     size_t *size_out)
 {
   const char *cp;
@@ -420,7 +402,7 @@ end_of_loop:
 
 /** Helper: allocate a new configuration option mapping 'key' to 'val',
  * append it to *<b>lst</b>. */
-static void line_append(configline **lst, const char *key, const char *val)
+STATIC void line_append(configline **lst, const char *key, const char *val)
 {
   configline *newline;
 
@@ -428,6 +410,7 @@ static void line_append(configline **lst, const char *key, const char *val)
   newline->key = box_strdup(key);
   newline->value = box_strdup(val);
   newline->next = NULL;
+
   while (*lst)
     lst = &((*lst)->next);
 
@@ -439,7 +422,7 @@ static void line_append(configline **lst, const char *key, const char *val)
  *
  * Called from assign_line() and option_reset().
  */
-static int assign_value(const configformat *fmt, void *options, configline *c)
+STATIC int assign_value(const configformat *fmt, void *options, configline *c)
 {
   int i, ok;
   const configvar *var;
@@ -575,7 +558,7 @@ static int assign_value(const configformat *fmt, void *options, configline *c)
 
 
 /** As confparse_find_option, but return a non-const pointer. */
-static configvar * find_option_mutable(const configformat *fmt,
+STATIC configvar * find_option_mutable(const configformat *fmt,
     const char *key)
 {
   int i;

@@ -35,13 +35,13 @@
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/connection/streamhandle.h"
+
 
 struct streamhandle {
   inputstream * istream;
   outputstream *ostream;
 };
-
-static struct streamhandle *init_streamhandle(uv_handle_t *handle);
 
 void streamhandle_set_inputstream(uv_handle_t *handle, inputstream *istream)
 {
@@ -69,7 +69,7 @@ void streamhandle_set_outputstream(uv_handle_t *handle,
 }
 
 
-static struct streamhandle *init_streamhandle(uv_handle_t *handle)
+STATIC struct streamhandle *init_streamhandle(uv_handle_t *handle)
 {
   struct streamhandle *hd;
 
