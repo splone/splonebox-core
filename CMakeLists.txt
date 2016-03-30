@@ -126,7 +126,6 @@ set(SPLONEBOX-SOURCES
   src/api/apikey.c
   src/api/register.c
   src/api/run.c
-  src/api/result.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
   src/rpc/connection/event.h
@@ -208,7 +207,6 @@ set(TEST-SOURCES
   src/api/apikey.c
   src/api/register.c
   src/api/run.c
-  src/api/result.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
   src/rpc/connection/event.h
