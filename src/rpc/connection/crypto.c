@@ -177,7 +177,6 @@ int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
   sbmemzero(servershorttermpkboxed, sizeof servershorttermpkboxed);
   sbmemzero(packet, sizeof packet);
   sbmemzero(allzeroboxed, sizeof allzeroboxed);
-  sbmemzero(serverlongtermsk, sizeof serverlongtermsk);
 
   return (0);
 
