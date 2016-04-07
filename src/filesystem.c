@@ -62,6 +62,31 @@ int filesystem_open_read(const char *fn)
 #endif
 }
 
+int filesystem_open_lock(const char *fn)
+{
+  int fd;
+
+#ifdef O_CLOEXEC
+  fd = open(fn, O_RDWR | O_CLOEXEC);
+
+  if (fd == -1)
+    return (-1);
+#else
+  fd = open(fn,O_RDWR);
+
+  if (fd == -1)
+    return (-1);
+
+  fcntl(fd, F_SETFD, 1);
+#endif
+  if (lockf(fd, F_LOCK, 0) == -1) {
+    close(fd);
+    return (-1);
+  }
+
+  return (fd);
+}
+
 int filesystem_write_all(int fd, const void *x, size_t xlen)
 {
   size_t w;
