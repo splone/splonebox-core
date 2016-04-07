@@ -191,8 +191,9 @@ static void reset_parser(struct connection *con)
 
 static void parse_cb(inputstream *istream, void *data, bool eof)
 {
-//  unsigned char *tunnelpacket;
   unsigned char *packet;
+  unsigned char hellopacket[192];
+  unsigned char initiatepacket[256];
   struct connection *con = data;
   size_t read = 0;
   size_t pending;
@@ -207,23 +208,30 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
     return;
   }
 
+  if (con->cc.state == TUNNEL_INITIAL) {
+    size = inputstream_read(istream, hellopacket, 192);
+    if (crypto_recv_hello_send_cookie(&con->cc, hellopacket,
+        con->streams.write) != 0)
+      LOG_WARNING("establishing crypto tunnel failed");
+    return;
+  } else if (con->cc.state == TUNNEL_COOKIE_SENT) {
+    size = inputstream_read(istream, initiatepacket, 256);
+    if (crypto_recv_initiate(&con->cc, initiatepacket) != 0) {
+      LOG_WARNING("establishing crypto tunnel failed");
+      con->cc.state = TUNNEL_INITIAL;
+    }
+  }
+
   pending = inputstream_pending(istream);
 
-  if (con->cc.state == TUNNEL_INITIAL) {
-    unsigned char tunnelpacket[pending];
-//    tunnelpacket = MALLOC_ARRAY(pending, unsigned char);
-    size = inputstream_read(istream, &tunnelpacket, pending);
-    if (crypto_tunnel(&con->cc, tunnelpacket, con->streams.write) != 0)
-      LOG_WARNING("establishing crypto tunnel failed");
-//    FREE(tunnelpacket);
+  if (pending <= 0 || con->cc.state != TUNNEL_ESTABLISHED)
     return;
-  }
 
   if (con->packet.end <= 0) {
     packet = inputstream_get_read(istream, &read);
 
     /* read the packet length */
-    if (crypto_verify_header(packet, &con->packet.length)) {
+    if (crypto_verify_header(&con->cc, packet, &con->packet.length)) {
       reset_packet(con);
       return;
     }
@@ -267,7 +275,7 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
         return;
       }
 
-      if (crypto_verify_header(packet, &con->packet.length)) {
+      if (crypto_verify_header(&con->cc, packet, &con->packet.length)) {
         reset_parser(con);
         return;
       }

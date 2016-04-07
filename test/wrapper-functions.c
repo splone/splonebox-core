@@ -35,9 +35,10 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
     return (-1);
 
   switch(buffer[7]) {
-  case 'T':
+  case 'C':
     /* tunnel packet */
-    assert_int_equal(0, validate_crypto_tunnel(buffer, len));
+    assert_int_equal(0, validate_crypto_cookie_packet((unsigned char*)buffer,
+        len));
     break;
   case 'M':
     /* message packet */

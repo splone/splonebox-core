@@ -88,6 +88,7 @@ typedef enum {
 
 typedef enum {
   TUNNEL_INITIAL,
+  TUNNEL_COOKIE_SENT,
   TUNNEL_ESTABLISHED
 } crypto_state;
 
@@ -134,6 +135,11 @@ struct crypto_context {
   uint64_t nonce;
   uint64_t receivednonce;
   unsigned char clientshortservershort[32];
+  unsigned char clientshorttermpk[32];
+  unsigned char servershorttermpk[32];
+  unsigned char servershorttermsk[32];
+  unsigned char minutekey[32];
+  unsigned char lastminutekey[32];
 };
 
 struct connection {
@@ -158,6 +164,7 @@ struct connection {
     uint64_t length;
     unsigned char *data;
   } packet;
+  uv_timer_t minutekey_timer;
 };
 
 struct callinfo {
@@ -559,22 +566,33 @@ int crypto_init(void);
 /**
  * Verfify if data has a message packet identifier and get the packet length
  *
+ * @param cc The crypto_context connection crypto information (nonce etc.)
  * @param data Buffer containing a packet
  * @param[out] length The packet length
  * returns -1 in case of error otherwise 0
  */
-int crypto_verify_header(unsigned char *data, uint64_t *length);
+ int crypto_verify_header(struct crypto_context *cc, unsigned char *data,
+     uint64_t *length);
 
 /**
- * Handle a client tunnel packet and send a server tunnel packet as response
+ * Handle a client initiate packet
  *
  * @param cc The crypto_context connection crypto information (nonce etc.)
- * @param data Buffer containing a client tunnel packet
+ * @param data Buffer containing a client initiate packet
+ * returns -1 in case of error otherwise 0
+ */
+int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data);
+
+/**
+ * Handle a client hello packet and send a server cookie packet as response
+ *
+ * @param cc The crypto_context connection crypto information (nonce etc.)
+ * @param data Buffer containing a client hello packet
  * @param out The outputstream ready to write data
  * returns -1 in case of error otherwise 0
  */
-int crypto_tunnel(struct crypto_context *cc, unsigned char *data,
-    outputstream *out);
+int crypto_recv_hello_send_cookie(struct crypto_context *cc,
+    unsigned char *data, outputstream *out);
 
 /**
  * Handle a client message packet and unbox it's data
@@ -600,6 +618,8 @@ int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
  */
 int crypto_write(struct crypto_context *cc, char *data,
     size_t length, outputstream *out);
+
+void crypto_update_minutekey(struct crypto_context *cc);
 
 /**
  * Pack uint64_t into 8 byte
