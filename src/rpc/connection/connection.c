@@ -48,6 +48,7 @@
 
 static void parse_cb(inputstream *istream, void *data, bool eof);
 static void close_cb(uv_handle_t *handle);
+static void timer_cb(uv_timer_t *timer);
 static int connection_handle_request(struct connection *con,
     msgpack_object *obj);
 static int connection_handle_response(struct connection *con,
@@ -118,6 +119,14 @@ int connection_create(uv_stream_t *stream)
 
   con->cc.receivednonce = 0;
   con->cc.state = TUNNEL_INITIAL;
+
+  /* crypto minutekey timer */
+  randombytes(con->cc.minutekey, sizeof con->cc.minutekey);
+  randombytes(con->cc.lastminutekey, sizeof con->cc.lastminutekey);
+  con->minutekey_timer.data = &con->cc;
+  uv_timer_init(&loop, &con->minutekey_timer);
+  uv_timer_start(&con->minutekey_timer, timer_cb, 60000, 60000);
+
   con->packet.start = 0;
   con->packet.end = 0;
   con->packet.pos = 0;
@@ -129,6 +138,12 @@ int connection_create(uv_stream_t *stream)
   outputstream_set(con->streams.write, stream);
 
   return (0);
+}
+
+static void timer_cb(uv_timer_t *timer)
+{
+  struct crypto_context *cc = (struct crypto_context*)timer->data;
+  crypto_update_minutekey(cc);
 }
 
 static void connection_close(struct connection *con)
