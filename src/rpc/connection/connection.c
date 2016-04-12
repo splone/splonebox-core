@@ -212,12 +212,12 @@ static void parse_cb(inputstream *istream, void *data, bool eof)
     size = inputstream_read(istream, hellopacket, 192);
     if (crypto_recv_hello_send_cookie(&con->cc, hellopacket,
         con->streams.write) != 0)
-      LOG_WARNING("establishing crypto tunnel failed");
+      LOG_WARNING("establishing crypto tunnel failed at hello-cookie packet");
     return;
   } else if (con->cc.state == TUNNEL_COOKIE_SENT) {
     size = inputstream_read(istream, initiatepacket, 256);
     if (crypto_recv_initiate(&con->cc, initiatepacket) != 0) {
-      LOG_WARNING("establishing crypto tunnel failed");
+      LOG_WARNING("establishing crypto tunnel failed at initiate packet");
       con->cc.state = TUNNEL_INITIAL;
     }
   }
