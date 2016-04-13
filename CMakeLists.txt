@@ -116,6 +116,7 @@ set(SPLONEBOX-SOURCES
   src/parse.c
   src/util.c
   src/address.c
+  src/sbmemzero.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -184,6 +185,7 @@ set(TEST-SOURCES
   src/parse.c
   src/util.c
   src/address.c
+  src/sbmemzero.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
