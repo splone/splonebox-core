@@ -21,6 +21,9 @@ int8_t verbose_level;
 
 unsigned char pk[crypto_box_PUBLICKEYBYTES];
 unsigned char sk[crypto_box_SECRETKEYBYTES];
+unsigned char lock[1];
+unsigned char noncekey[32];
+unsigned char noncecounter[8];
 
 static void print_usage(const char *name)
 {
@@ -52,10 +55,25 @@ int main(int argc, char **argv)
     LOG_ERROR("unable to create key file .keys/server-long-term.pub\n");
   }
 
+  randombytes(noncekey, sizeof noncekey);
+
   umask(077);
 
   if (filesystem_save_sync(".keys/server-long-term", sk, sizeof(sk))) {
     LOG_ERROR("unable to create key file .keys/server-long-term.pub\n");
+  }
+
+  if (filesystem_save_sync(".keys/lock", lock, sizeof(lock))) {
+    LOG_ERROR("unable to create lock file .keys/lock\n");
+  }
+
+  if (filesystem_save_sync(".keys/noncekey", noncekey, sizeof(noncekey))) {
+    LOG_ERROR("unable to create noncekey file .keys/noncekey\n");
+  }
+
+  if (filesystem_save_sync(".keys/noncecounter", noncecounter,
+      sizeof(noncecounter))) {
+    LOG_ERROR("unable to create noncecounter file .keys/noncecounter\n");
   }
 
   return (0);

@@ -71,6 +71,12 @@ extern int8_t verbose_level;
 /* uv loop global */
 extern uv_loop_t loop;
 
+/* check if number is odd */
+static inline int ISODD(uint64_t x)
+{
+  return x & 1;
+}
+
 /* Hashmap Functions */
 /* Must be declared before initializing KHASH */
 
@@ -201,6 +207,7 @@ void *reallocarray(void *optr, size_t nmemb, size_t size);
 string cstring_to_string(char *str);
 string cstring_copy_string(const char *str);
 void free_string(string str);
+void sbmemzero(void * const pnt, const size_t len);
 
 int64_t randommod(long long n);
 
@@ -216,6 +223,7 @@ int signal_init(void);
 
 int filesystem_open_write(const char *fn);
 int filesystem_open_read(const char *fn);
+int filesystem_open_lock(const char *fn);
 int filesystem_write_all(int fd, const void *x, size_t xlen);
 int filesystem_read_all(int fd, void *x, size_t xlen);
 int filesystem_save_sync(const char *fn, const void *x, size_t xlen);

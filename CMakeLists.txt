@@ -111,6 +111,7 @@ set(SPLONEBOX-SOURCES
   src/devurandom.c
   src/tweetnacl.h
   src/tweetnacl.c
+  src/sbmemzero.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -174,6 +175,7 @@ set(TEST-SOURCES
   src/devurandom.c
   src/tweetnacl.h
   src/tweetnacl.c
+  src/sbmemzero.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
