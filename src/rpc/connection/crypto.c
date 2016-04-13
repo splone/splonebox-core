@@ -225,7 +225,7 @@ int crypto_verify_header(struct crypto_context *cc, unsigned char *data,
     uint64_t *length)
 {
   uint64_t packetnonce;
-  unsigned char lengthpacked[40];
+  unsigned char lengthpacked[40] = {0};
   unsigned char nonce[crypto_box_NONCEBYTES];
 
   assert(cc);
