@@ -42,7 +42,7 @@ static hashmap(uint64_t, ptr_t) *callids = NULL;
 
 int handle_error(connection_request_event_info *info)
 {
-  struct message_request *request = info->request;
+  struct message_request *request = &info->request;
   struct api_error *api_error = &info->api_error;
 
   if (!request || !api_error )
@@ -64,7 +64,7 @@ int handle_register(connection_request_event_info *info)
   array functions;
   string pluginlongtermpk, name, description, author, license;
 
-  struct message_request *request = info->request;
+  struct message_request *request = &info->request;
   struct api_error *api_error = &info->api_error;
 
   if (!api_error || !request)
@@ -136,7 +136,7 @@ int handle_register(connection_request_event_info *info)
   functions = request->params.obj[1].data.params;
 
   if (api_register(pluginlongtermpk, name, description, author, license,
-      functions, info->con, info->request->msgid, api_error) == -1) {
+      functions, info->con, info->request.msgid, api_error) == -1) {
 
     if (!api_error->isset)
       error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -158,7 +158,7 @@ int handle_run(connection_request_event_info *info)
   struct message_request *request;
   struct api_error *api_error;
 
-  request = info->request;
+  request = &info->request;
   api_error = &info->api_error;
 
   if (!api_error || !request)
@@ -238,7 +238,7 @@ int handle_run(connection_request_event_info *info)
   hashmap_put(uint64_t, ptr_t)(callids, callid, info->con);
 
   if (api_run(pluginlongtermpk, function_name, callid, args_object, info->con,
-      info->request->msgid, api_error) == -1) {
+      info->request.msgid, api_error) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error executing run API request.");
     return (-1);
@@ -271,9 +271,11 @@ int dispatch_teardown(void)
 int dispatch_table_init(void)
 {
   dispatch_info register_info = {.func = handle_register, .async = true,
-      .name = (string) {.str = "register", .length = sizeof("register") - 1,}};
+      .name = (string) {.str = "register", .length = sizeof("register") - 1}};
   dispatch_info run_info = {.func = handle_run, .async = true,
-      .name = (string) {.str = "run", .length = sizeof("run") - 1,}};
+      .name = (string) {.str = "run", .length = sizeof("run") - 1}};
+  dispatch_info error_info = {.func = handle_error, .async = true,
+      .name = (string) {.str = "error", .length = sizeof("error") - 1}};
 
   msgpack_sbuffer_init(&sbuf);
 
@@ -285,6 +287,7 @@ int dispatch_table_init(void)
 
   dispatch_table_put(register_info.name, register_info);
   dispatch_table_put(run_info.name, run_info);
+  dispatch_table_put(error_info.name, error_info);
 
   return (0);
 }

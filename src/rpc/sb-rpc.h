@@ -58,9 +58,6 @@ typedef struct connection_request_event_info connection_request_event_info;
 #define MESSAGE_RESPONSE_UNKNOWN UINT32_MAX
 #define MESSAGE_APIKEY_LENGTH 64
 
-#define ARRAY_INIT {.size = 0, .capacity = 0, .obj = NULL}
-#define ERROR_INIT {.isset = false}
-
 #define STREAM_BUFFER_SIZE 0xffff
 
 
@@ -114,7 +111,6 @@ struct message_object {
 };
 
 struct message_request {
-  uint8_t type;
   uint32_t msgid;
   string method;
   array params;
@@ -171,7 +167,7 @@ struct callinfo {
   uint32_t msgid;
   bool hasresponse;
   bool errorresponse;
-  struct message_response *response;
+  struct message_response response;
 };
 
 typedef struct {
@@ -209,7 +205,7 @@ struct inputstream {
 /* this structure holds a request and all information to send a response */
 struct connection_request_event_info {
   struct connection *con;
-  struct message_request *request;
+  struct message_request request;
   dispatch_info dispatcher;
   struct api_error api_error;
 };
@@ -479,12 +475,12 @@ int message_serialize_error_response(msgpack_packer *pk, struct api_error *err,
     uint32_t msgid);
 int message_serialize_response(struct message_response *res,
     msgpack_packer *pk);
-struct message_request *message_deserialize_request(msgpack_object *obj,
-                                                    struct api_error *err);
-struct message_response *message_deserialize_response(msgpack_object *obj,
-    struct api_error *api_error);
-struct message_response *message_deserialize_error_response(msgpack_object *obj,
-    struct api_error *api_error);
+int message_deserialize_request(struct message_request *req,
+    msgpack_object *obj, struct api_error *api_error);
+int message_deserialize_response(struct message_response *res,
+    msgpack_object *obj, struct api_error *api_error);
+int message_deserialize_error_response(struct message_response *res,
+    msgpack_object *obj, struct api_error *api_error);
 int message_serialize_request(struct message_request *req, msgpack_packer *pk);
 void message_dispatch(msgpack_object *req, msgpack_packer *res);
 uint64_t message_get_id(msgpack_object *obj);

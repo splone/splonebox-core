@@ -70,10 +70,9 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   string author = cstring_copy_string("test");
   string license = cstring_copy_string("none");
 
-  info.request = MALLOC(struct message_request);
-  info.request->msgid = 1;
+  info.request.msgid = 1;
 
-  request = info.request;
+  request = &info.request;
   assert_non_null(request);
 
   info.api_error = *err;
@@ -262,7 +261,6 @@ void functional_dispatch_handle_register(UNUSED(void **state))
 
   free_params(request->params);
   connection_teardown();
-  FREE(request);
   FREE(err);
   db_close();
 }

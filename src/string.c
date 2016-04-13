@@ -36,7 +36,7 @@ string cstring_copy_string(const char *str)
   char *ret;
 
   if (!str)
-    return (string) {.str = NULL, .length = 0};
+    return (string) STRING_INIT;
 
   length = strlen(str);
   ret = MALLOC_ARRAY(length + 1, char);
