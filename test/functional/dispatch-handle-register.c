@@ -15,20 +15,23 @@
  */
 
 #include <msgpack.h>
-#include <sodium.h>
 
 #include "sb-common.h"
+#include "tweetnacl.h"
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 #include "helper-all.h"
 #include "rpc/msgpack/sb-msgpack-rpc.h"
 
 
-int validate_register_response(const unsigned long data1, UNUSED(const unsigned long data2))
+int validate_register_response(const unsigned long data1,
+    UNUSED(const unsigned long data2))
 {
   struct msgpack_object *deserialized = (struct msgpack_object *) data1;
   struct message_object request;
   array params;
+
+  wrap_crypto_write = true;
 
   assert_int_equal(0, unpack_params(deserialized, &params));
 
@@ -144,7 +147,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
 
   /* a valid request has to trigger the corresponding response */
   assert_false(info.api_error.isset);
-  expect_check(__wrap_outputstream_write, &deserialized, validate_register_response, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
   assert_int_equal(0, handle_register(&info));
 
   /* payload does not consist of two arrays, meta and func */
@@ -188,13 +191,13 @@ void functional_dispatch_handle_register(UNUSED(void **state))
    * there are no real constrains for the plugin name, this should work.
    */
   size_t len = 8096;
-  char *buf = MALLOC_ARRAY(len, char);
+  unsigned char *buf = MALLOC_ARRAY(len, unsigned char);
   assert_non_null(buf);
-  randombytes_buf(buf, len);
-  meta->obj[1].data.string.str = buf;
+  randombytes(buf, len);
+  meta->obj[1].data.string.str = (char*) buf;
   meta->obj[1].data.string.length = len;
   assert_false(info.api_error.isset);
-  expect_check(__wrap_outputstream_write, &deserialized, validate_register_response, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
   assert_int_equal(0, handle_register(&info));
   assert_false(info.api_error.isset);
   meta->obj[1].data.string = name;
@@ -212,13 +215,13 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   /* very long function description should work so far */
   string func_desc = func1->obj[1].data.string;
   len = 8096;
-  buf = MALLOC_ARRAY(len, char);
+  buf = MALLOC_ARRAY(len, unsigned char);
   assert_non_null(buf);
-  randombytes_buf(buf, len);
-  func1->obj[1].data.string.str = buf;
+  randombytes(buf, len);
+  func1->obj[1].data.string.str = (char*) buf;
   func1->obj[1].data.string.length = len;
   assert_false(info.api_error.isset);
-  expect_check(__wrap_outputstream_write, &deserialized, validate_register_response, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
   assert_int_equal(0, handle_register(&info));
   assert_false(info.api_error.isset);
   func1->obj[1].data.string = func_desc;
@@ -243,7 +246,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   args->obj[1].type = OBJECT_TYPE_STR;
   args->obj[1].data.string = cstring_copy_string("foobar");
   assert_false(info.api_error.isset);
-  expect_check(__wrap_outputstream_write, &deserialized, validate_register_response, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
   assert_int_equal(0, handle_register(&info));
   assert_false(info.api_error.isset);
   info.api_error.isset = false;
@@ -251,7 +254,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   /* registering only one function must work */
   functions->size = 1;
   assert_false(info.api_error.isset);
-  expect_check(__wrap_outputstream_write, &deserialized, validate_register_response, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
   assert_int_equal(0, handle_register(&info));
   assert_false(info.api_error.isset);
   info.api_error.isset = false;

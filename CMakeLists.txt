@@ -54,7 +54,6 @@ endif()
 find_package(LIBUV REQUIRED)
 find_package(MSGPACK REQUIRED)
 find_package(HIREDIS REQUIRED)
-find_package(SODIUM REQUIRED)
 find_package(CMOCKA REQUIRED)
 
 include(CheckLibraryExists)
@@ -109,6 +108,10 @@ set(SPLONEBOX-SOURCES
   src/optparser.c
   src/signal.c
   src/filesystem.c
+  src/devurandom.c
+  src/tweetnacl.h
+  src/tweetnacl.c
+  src/sbmemzero.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -122,6 +125,7 @@ set(SPLONEBOX-SOURCES
   src/rpc/connection/loop.c
   src/rpc/connection/connection.c
   src/rpc/connection/dispatch.c
+  src/rpc/connection/crypto.c
   src/rpc/msgpack/sb-msgpack-rpc.h
   src/rpc/msgpack/message.c
   src/rpc/msgpack/pack.c
@@ -145,6 +149,17 @@ set(SB-PLUGIN-SOURCES
   src/rpc/db/plugin.c
 )
 
+# sb-plugin target sources
+set(SB-MAKEKEY-SOURCES
+  src/sb-common.h
+  src/reallocarray.c
+  src/tweetnacl.c
+  src/tweetnacl.h
+  src/devurandom.c
+  src/sb-makekey.c
+  src/filesystem.c
+)
+
 # splonebox test(s) sources
 set(TEST-SOURCES
   src/sb-common.h
@@ -157,6 +172,10 @@ set(TEST-SOURCES
   src/optparser.c
   src/signal.c
   src/filesystem.c
+  src/devurandom.c
+  src/tweetnacl.h
+  src/tweetnacl.c
+  src/sbmemzero.c
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
@@ -169,6 +188,7 @@ set(TEST-SOURCES
   src/rpc/connection/server.c
   src/rpc/connection/connection.c
   src/rpc/connection/dispatch.c
+  src/rpc/connection/crypto.c
   src/rpc/msgpack/sb-msgpack-rpc.h
   src/rpc/msgpack/message.c
   src/rpc/msgpack/pack.c
@@ -207,6 +227,7 @@ set(TEST-SOURCES
   test/functional/filesystem-save-sync.c
   test/functional/dispatch-handle-register.c
   test/functional/dispatch-handle-run.c
+  test/functional/crypto.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
@@ -215,7 +236,7 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/test)
-include_directories(${BSD_INCLUDE_DIRS} ${LIBUV_INCLUDE_DIRS} ${MSGPACK_INCLUDE_DIRS} ${HIREDIS_INCLUDE_DIRS} ${SODIUM_INCLUDE_DIRS} ${CMOCKA_INCLUDE_DIRS})
+include_directories(${BSD_INCLUDE_DIRS} ${LIBUV_INCLUDE_DIRS} ${MSGPACK_INCLUDE_DIRS} ${HIREDIS_INCLUDE_DIRS} ${CMOCKA_INCLUDE_DIRS})
 
 # sb target
 add_executable(sb ${SPLONEBOX-SOURCES})
@@ -224,25 +245,27 @@ target_link_libraries(sb
   ${LIBUV_LIBRARIES}
   ${MSGPACK_LIBRARIES}
   ${HIREDIS_LIBRARIES}
-  ${SODIUM_LIBRARIES}
 )
 
 # sb-plugin target
 add_executable(sb-plugin ${SB-PLUGIN-SOURCES})
 target_link_libraries(sb-plugin ${BSD_LIBRARIES} ${HIREDIS_LIBRARIES})
 
+# sb-makekey target
+add_executable(sb-makekey ${SB-MAKEKEY-SOURCES})
+target_link_libraries(sb-makekey ${BSD_LIBRARIES})
+
 # sb-test target
 add_executable(sb-test ${TEST-SOURCES})
 
 # wrap some functions for testing
-set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response ")
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response,--wrap=crypto_write ")
 
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}
   ${LIBUV_LIBRARIES}
   ${MSGPACK_LIBRARIES}
   ${HIREDIS_LIBRARIES}
-  ${SODIUM_LIBRARIES}
   ${CMOCKA_LIBRARIES}
 )
 

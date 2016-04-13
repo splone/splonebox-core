@@ -38,6 +38,7 @@
 #include <hiredis/hiredis.h>
 
 #include "sb-common.h"
+#include "tweetnacl.h"
 
 /* Typedefs */
 typedef struct outputstream   outputstream;
@@ -60,6 +61,7 @@ typedef struct connection_request_event_info connection_request_event_info;
 #define ARRAY_INIT {.size = 0, .capacity = 0, .obj = NULL}
 #define ERROR_INIT {.isset = false}
 
+#define STREAM_BUFFER_SIZE 0xffff
 
 
 /*
@@ -83,6 +85,12 @@ typedef enum {
   OBJECT_TYPE_BIN,
   OBJECT_TYPE_ARRAY,
 } message_object_type;
+
+typedef enum {
+  TUNNEL_INITIAL,
+  TUNNEL_COOKIE_SENT,
+  TUNNEL_ESTABLISHED
+} crypto_state;
 
 /* Structs */
 
@@ -117,11 +125,29 @@ struct message_response {
   array params;
 };
 
+/*****************************************************************************
+ * The following crypto_context structure should be considered PRIVATE to    *
+ * the rpc connection layer. No non-rpc connection layer code should be      *
+ * using this structure in any way.                                          *
+ *****************************************************************************/
+struct crypto_context {
+  crypto_state state;
+  uint64_t nonce;
+  uint64_t receivednonce;
+  unsigned char clientshortservershort[32];
+  unsigned char clientshorttermpk[32];
+  unsigned char servershorttermpk[32];
+  unsigned char servershorttermsk[32];
+  unsigned char minutekey[32];
+  unsigned char lastminutekey[32];
+};
+
 struct connection {
   uint32_t msgid;
   uint32_t pendingcalls;
   msgpack_unpacker *mpac;
   msgpack_sbuffer *sbuf;
+  char *unpackbuf;
   bool closed;
   equeue *queue;
   struct {
@@ -130,6 +156,15 @@ struct connection {
     uv_stream_t *uv;
   } streams;
   kvec_t(struct callinfo *) callvector;
+  struct crypto_context cc;
+  struct {
+    uint64_t start;
+    uint64_t end;
+    uint64_t pos;
+    uint64_t length;
+    unsigned char *data;
+  } packet;
+  uv_timer_t minutekey_timer;
 };
 
 struct callinfo {
@@ -334,7 +369,8 @@ unsigned char *inputstream_get_read(inputstream *istream, size_t *read_count);
  * @param count The number of bytes to copy
  * @return The number of bytes copied
  */
-size_t inputstream_read(inputstream *inputstream, char *buf, size_t count);
+size_t inputstream_read(inputstream *inputstream, unsigned char *buf,
+    size_t count);
 
 /**
  * Initialize a Server Instance
@@ -519,3 +555,94 @@ extern int db_apikey_verify(string apikey);
  * returns 0 on success otherwise -1
  */
 extern int db_apikey_add(string apikey);
+
+/**
+ * Currently only loads the server private key.
+ *
+ * @return 0 on success otherwise -1
+ */
+int crypto_init(void);
+
+/**
+ * Verfify if data has a message packet identifier and get the packet length
+ *
+ * @param cc The crypto_context connection crypto information (nonce etc.)
+ * @param data Buffer containing a packet
+ * @param[out] length The packet length
+ * returns -1 in case of error otherwise 0
+ */
+ int crypto_verify_header(struct crypto_context *cc, unsigned char *data,
+     uint64_t *length);
+
+/**
+ * Handle a client initiate packet
+ *
+ * @param cc The crypto_context connection crypto information (nonce etc.)
+ * @param data Buffer containing a client initiate packet
+ * returns -1 in case of error otherwise 0
+ */
+int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data);
+
+/**
+ * Handle a client hello packet and send a server cookie packet as response
+ *
+ * @param cc The crypto_context connection crypto information (nonce etc.)
+ * @param data Buffer containing a client hello packet
+ * @param out The outputstream ready to write data
+ * returns -1 in case of error otherwise 0
+ */
+int crypto_recv_hello_send_cookie(struct crypto_context *cc,
+    unsigned char *data, outputstream *out);
+
+/**
+ * Handle a client message packet and unbox it's data
+ *
+ * @param cc The crypto_context connection crypto information (nonce etc.)
+ * @param in Buffer containing a client message packet
+ * @param[out] out Buffer for unboxed data
+ * @param length The 'in' buffer length
+ * @param[out] plaintextlen The packet length
+ * returns -1 in case of error otherwise 0
+ */
+int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
+    uint64_t length, uint64_t *plaintextlen);
+
+/**
+ * Box data into a server message packet send it
+ *
+ * @param cc The crypto_context connection crypto information (nonce etc.)
+ * @param data Buffer containing data
+ * @param length The 'data' buffer length
+ * @param out The outputstream ready to write data
+ * returns -1 in case of error otherwise 0
+ */
+int crypto_write(struct crypto_context *cc, char *data,
+    size_t length, outputstream *out);
+
+void crypto_update_minutekey(struct crypto_context *cc);
+
+/**
+ * Pack uint64_t into 8 byte
+ *
+ * @param y Buffer position
+ * @param x The number
+ */
+void uint64_pack(unsigned char *y, uint64_t x);
+
+/**
+ * Unpack uint64_t from 8 byte
+ *
+ * @param x Buffer position
+ * returns The unpacked number
+ */
+uint64_t uint64_unpack(const unsigned char *x);
+
+/**
+ * Check if bytes are equal (a == b)
+ *
+ * @param yv Buffer position a
+ * @param ylen The length of a
+ * @param xv Buffer position b
+ * returns -1 in case of error otherwise 0
+ */
+int byte_isequal(const void *yv, long long ylen, const void *xv);

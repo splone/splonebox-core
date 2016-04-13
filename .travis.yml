@@ -4,13 +4,9 @@ matrix:
   include:
     - os: linux
       compiler: clang-3.6
-      env: GCOV=llvm-cov-3.6 EXTRA_FLAGS="-DUSE_COVERAGE=ON"
+      env: GCOV=llvm-cov-3.6 EXTRA_FLAGS="-DUSE_COVERAGE=ON -DCLANG_ADDRESS_SANITIZER=ON"
 
 before_install:
-  # libsodium
-  - sudo add-apt-repository ppa:chris-lea/libsodium -y
-  - sudo apt-get update -q
-  - sudo apt-get install -y libsodium-dev
   # cmocka
   - wget https://cmocka.org/files/1.0/cmocka-1.0.1.tar.xz
   - tar -xJvf cmocka-1.0.1.tar.xz
@@ -52,7 +48,7 @@ addons:
       - pkg-config
       - libbsd-dev
       - libhiredis-dev
-  
+
 before_script: redis-server redis-test.conf
-script: make sb && make test && ./out/bin/sb-test
-after_success: coveralls --exclude test --exclude out/CMakeFiles/CompilerIdC/CMakeCCompilerId.c --exclude out/CMakeFiles/CompilerIdCXX/CMakeCXXCompilerId.cpp --gcov "$(which "${GCOV}")" --encoding iso-8859-1 || echo 'coveralls upload failed.'
+script: make sb && make test && make sb-makekey && ./out/bin/sb-makekey && ./out/bin/sb-test
+after_success: coveralls -e test -e out/CMakeFiles/CompilerIdC/CMakeCCompilerId.c -e out/CMakeFiles/CompilerIdCXX/CMakeCXXCompilerId.cpp --gcov "$(which "${GCOV}")" --encoding iso-8859-1 -b out

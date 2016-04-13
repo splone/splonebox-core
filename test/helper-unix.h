@@ -20,3 +20,6 @@
 #include <stdarg.h>
 #include <setjmp.h>
 #include <cmocka.h>
+
+extern bool wrap_outputstream_write;
+extern bool wrap_crypto_write;
