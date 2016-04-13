@@ -45,6 +45,7 @@ void functional_filesystem_load(void **state);
 void functional_filesystem_save_sync(void **state);
 void functional_dispatch_handle_register(void **state);
 void functional_dispatch_handle_run(void **state);
+void functional_crypto(void **state);
 
 const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_dispatch_table_get),
@@ -71,4 +72,5 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(functional_filesystem_save_sync),
   cmocka_unit_test(functional_dispatch_handle_register),
   cmocka_unit_test(functional_dispatch_handle_run),
+  cmocka_unit_test(functional_crypto),
 };

@@ -17,9 +17,9 @@
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
-#include <sodium.h>
 
 #include "sb-common.h"
+#include "tweetnacl.h"
 #include "rpc/sb-rpc.h"
 
 #define ENV_VAR_LISTEN_ADDRESS    "SPLONEBOX_LISTEN_ADDRESS"
@@ -37,6 +37,8 @@ int main(int argc, char **argv)
 
   uv_loop_init(&loop);
 
+  crypto_init();
+
   string db_ip = cstring_copy_string(DB_IP);
   string db_auth = cstring_copy_string(DB_PASSWORD);
   struct timeval timeout = { 1, 500000 };
@@ -49,11 +51,6 @@ int main(int argc, char **argv)
   /* initialize signal handler */
   if (signal_init() == -1) {
     LOG_ERROR("Failed to initialize signal handler.");
-  }
-
-  /* initialize libsodium */
-  if (sodium_init() == -1) {
-    LOG_ERROR("Failed to initialize sodium.");
   }
 
   /* initialize event queue */

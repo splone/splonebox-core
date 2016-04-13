@@ -14,22 +14,41 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stdint.h>
-#include "tweetnacl.h"
-#include "sb-common.h"
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
-int64_t randommod(long long n)
+static int fd = -1;
+
+void randombytes(unsigned char *x, unsigned long long xlen)
 {
-  int64_t result = 0;
-  int64_t j;
-  unsigned char r[32];
-  if (n <= 1)
-    return 0;
+  size_t nbytes;
+  ssize_t bytes_read;
 
-  randombytes(r,32);
+  if (fd == -1) {
+    for (;;) {
+      fd = open("/dev/urandom", O_RDONLY);
+      if (fd != -1)
+        break;
+      sleep(1);
+    }
+  }
 
-  for (j = 0; j < 32; ++j)
-    result = (int64_t)((uint64_t)(result * 256) + (uint64_t)r[j]) % n;
+  while (xlen > 0) {
+    if (xlen < 1048576)
+      nbytes = xlen;
+    else
+      nbytes = 1048576;
 
-  return result;
+    bytes_read = read(fd, x, nbytes);
+
+    if (bytes_read < 1) {
+      sleep(1);
+      continue;
+    }
+
+    x += bytes_read;
+    xlen -= (unsigned long long) bytes_read;
+  }
 }
