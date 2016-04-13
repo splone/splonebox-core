@@ -85,7 +85,7 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
   data->data.params = message_object_copy(args).data.params;
 
   /* send request */
-  run = (string) {.str = "run", .length = sizeof("run") - 1,};
+  run = (string) {.str = "run", .length = sizeof("run") - 1};
   cinfo = connection_send_request(pluginlongtermpk, run, run_params,
       api_error);
 
@@ -95,15 +95,15 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
       return (-1);
   }
 
-  if (cinfo->response == NULL || cinfo->response->params.size != 1) {
+  if (cinfo->response.params.size != 1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API response. Either response is broken "
         "or it just has wrong params size.");
     return (-1);
   }
 
-  if (!(cinfo->response->params.obj[0].type == OBJECT_TYPE_UINT &&
-    callid == cinfo->response->params.obj[0].data.uinteger)) {
+  if (!(cinfo->response.params.obj[0].type == OBJECT_TYPE_UINT &&
+    callid == cinfo->response.params.obj[0].data.uinteger)) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API response. Invalid callid");
     return (-1);
@@ -118,8 +118,7 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
     return (-1);
   };
 
-  free_params(cinfo->response->params);
-  FREE(cinfo->response);
+  free_params(cinfo->response.params);
   FREE(cinfo);
 
   return (0);

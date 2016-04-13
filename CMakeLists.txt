@@ -216,6 +216,14 @@ set(TEST-SOURCES
   test/unit/dispatch-table-get.c
   test/unit/event-queue-put.c
   test/unit/event-queue-get.c
+  test/unit/message-deserialize-request.c
+  test/unit/message-deserialize-response.c
+  test/unit/message-deserialize-error-response.c
+  test/unit/message-serialize-request.c
+  test/unit/message-serialize-response.c
+  test/unit/message-serialize-error-response.c
+  test/unit/message-is-request.c
+  test/unit/message-is-response.c
   test/functional/db-connect.c
   test/functional/db-plugin-add.c
   test/functional/db-apikey-verify.c

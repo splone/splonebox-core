@@ -197,6 +197,10 @@ define UNUSED(x) x
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+#define ARRAY_INIT {.size = 0, .capacity = 0, .obj = NULL}
+#define STRING_INIT {.str = NULL, .length = 0}
+#define ERROR_INIT {.isset = false}
+
 /* Functions */
 void *reallocarray(void *optr, size_t nmemb, size_t size);
 
