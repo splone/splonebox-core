@@ -50,14 +50,17 @@ static int safenonce(unsigned char *y, int flaglongterm)
 
     fdlock = filesystem_open_lock(".keys/lock");
 
-    if (fdlock == -1) return -1;
+    if (fdlock == -1)
+      return -1;
 
     if (filesystem_load(".keys/noncekey", noncekey, sizeof noncekey) == -1) {
       close(fdlock);
       return -1;
     }
 
-    close(fdlock);
+    if (close(fdlock) == -1)
+      return -1;
+
     flagkeyloaded = 1;
   }
 
@@ -66,7 +69,8 @@ static int safenonce(unsigned char *y, int flaglongterm)
 
     fdlock = filesystem_open_lock(".keys/lock");
 
-    if (fdlock == -1) return -1;
+    if (fdlock == -1)
+      return -1;
 
     if (filesystem_load(".keys/noncecounter", data, 8) == -1) {
       close(fdlock);
@@ -87,7 +91,8 @@ static int safenonce(unsigned char *y, int flaglongterm)
       return -1;
     }
 
-    close(fdlock);
+    if (close(fdlock) == -1)
+      return -1;
   }
 
   randombytes(data + 8, 8);
@@ -509,6 +514,9 @@ int crypto_write(struct crypto_context *cc, char *data,
   blocklen = length + 32;
   block = CALLOC(blocklen, unsigned char);
   ciphertext = MALLOC_ARRAY(blocklen, unsigned char);
+
+  if ((block == NULL) || (ciphertext == NULL))
+    return -1;
 
   memcpy(block + 32, data, length);
 

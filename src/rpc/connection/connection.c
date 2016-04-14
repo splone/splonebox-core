@@ -97,6 +97,8 @@ int connection_teardown(void)
 
 int connection_create(uv_stream_t *stream)
 {
+  int r;
+
   stream->data = NULL;
 
   struct connection *con = MALLOC(struct connection);
@@ -124,8 +126,10 @@ int connection_create(uv_stream_t *stream)
   randombytes(con->cc.minutekey, sizeof con->cc.minutekey);
   randombytes(con->cc.lastminutekey, sizeof con->cc.lastminutekey);
   con->minutekey_timer.data = &con->cc;
-  uv_timer_init(&loop, &con->minutekey_timer);
-  uv_timer_start(&con->minutekey_timer, timer_cb, 60000, 60000);
+  r = uv_timer_init(&loop, &con->minutekey_timer);
+  assert(r == 0);
+  r = uv_timer_start(&con->minutekey_timer, timer_cb, 60000, 60000);
+  assert(r == 0);
 
   con->packet.start = 0;
   con->packet.end = 0;
