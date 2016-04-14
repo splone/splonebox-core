@@ -49,7 +49,8 @@
  */
 
 #include <assert.h>
-#include <sb-common.h>
+#include "sb-common.h"
+#include "address.h"
 
 #if defined(__clang__)
 #pragma clang diagnostic ignored "-Wcast-align"
@@ -61,9 +62,6 @@
 #define box_addr_from_in(dest, in) \
   box_addr_from_ipv4n((dest), (in)->s_addr);
 
-static void box_addr_from_ipv6_bytes(boxaddr *dest, const char *ipv6_bytes);
-static void box_addr_from_in6(boxaddr *dest, const struct in6_addr *in6);
-static void box_addr_from_ipv4n(boxaddr *dest, uint32_t v4addr);
 static inline uint32_t box_addr_to_ipv4n(const boxaddr *a);
 static inline sa_family_t box_addr_family(const boxaddr *a);
 static inline const struct in6_addr * box_addr_to_in6(const boxaddr *a);
@@ -280,7 +278,7 @@ int box_addr_port_lookup(const char *s, boxaddr *addr_out, uint16_t *port_out)
 
 /** Set <b>dest</b> to equal the IPv6 address in the 16 bytes at
  * <b>ipv6_bytes</b>. */
-static void box_addr_from_ipv6_bytes(boxaddr *dest, const char *ipv6_bytes)
+STATIC void box_addr_from_ipv6_bytes(boxaddr *dest, const char *ipv6_bytes)
 {
   assert(dest);
   assert(ipv6_bytes);
@@ -291,14 +289,14 @@ static void box_addr_from_ipv6_bytes(boxaddr *dest, const char *ipv6_bytes)
 }
 
 /** Set <b>dest</b> equal to the IPv6 address in the in6_addr <b>in6</b>. */
-static void box_addr_from_in6(boxaddr *dest, const struct in6_addr *in6)
+STATIC void box_addr_from_in6(boxaddr *dest, const struct in6_addr *in6)
 {
   box_addr_from_ipv6_bytes(dest, (const char*)in6->s6_addr);
 }
 
 /** Set <b>dest</b> to equal the IPv4 address in <b>v4addr</b> (given in
  * network order). */
-static void box_addr_from_ipv4n(boxaddr *dest, uint32_t v4addr)
+STATIC void box_addr_from_ipv4n(boxaddr *dest, uint32_t v4addr)
 {
   assert(dest);
   memset(dest, 0, sizeof(boxaddr));

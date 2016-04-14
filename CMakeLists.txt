@@ -106,16 +106,22 @@ set(SPLONEBOX-SOURCES
   src/hashmap.c
   src/random.c
   src/optparser.c
+  src/optparser.h
   src/signal.c
   src/filesystem.c
   src/devurandom.c
   src/tweetnacl.h
   src/tweetnacl.c
   src/options.c
+  src/options.h
   src/confparse.c
+  src/confparse.h
   src/parse.c
+  src/parse.h
   src/util.c
+  src/util.h
   src/address.c
+  src/address.h
   src/sbmemzero.c
   src/api/sb-api.h
   src/api/apikey.c
@@ -123,14 +129,21 @@ set(SPLONEBOX-SOURCES
   src/api/run.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
+  src/rpc/connection/event.h
   src/rpc/connection/streamhandle.c
+  src/rpc/connection/streamhandle.h
   src/rpc/connection/inputstream.c
+  src/rpc/connection/inputstream.h
   src/rpc/connection/outputstream.c
+  src/rpc/connection/outputstream.h
   src/rpc/connection/server.c
-  src/rpc/connection/loop.c
+  src/rpc/connection/server.h
   src/rpc/connection/connection.c
+  src/rpc/connection/connection.h
   src/rpc/connection/dispatch.c
   src/rpc/connection/crypto.c
+  src/rpc/connection/crypto.h
+  src/rpc/connection/loop.c
   src/rpc/msgpack/sb-msgpack-rpc.h
   src/rpc/msgpack/message.c
   src/rpc/msgpack/pack.c
@@ -175,16 +188,22 @@ set(TEST-SOURCES
   src/hashmap.c
   src/random.c
   src/optparser.c
+  src/optparser.h
   src/signal.c
   src/filesystem.c
   src/devurandom.c
   src/tweetnacl.h
   src/tweetnacl.c
   src/options.c
+  src/options.h
   src/confparse.c
+  src/confparse.h
   src/parse.c
+  src/parse.h
   src/util.c
+  src/util.h
   src/address.c
+  src/address.h
   src/sbmemzero.c
   src/api/sb-api.h
   src/api/apikey.c
@@ -192,13 +211,21 @@ set(TEST-SOURCES
   src/api/run.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
+  src/rpc/connection/event.h
   src/rpc/connection/streamhandle.c
+  src/rpc/connection/streamhandle.h
   src/rpc/connection/inputstream.c
+  src/rpc/connection/inputstream.h
   src/rpc/connection/outputstream.c
+  src/rpc/connection/outputstream.h
   src/rpc/connection/server.c
+  src/rpc/connection/server.h
   src/rpc/connection/connection.c
+  src/rpc/connection/connection.h
   src/rpc/connection/dispatch.c
   src/rpc/connection/crypto.c
+  src/rpc/connection/crypto.h
+  src/rpc/connection/loop.c
   src/rpc/msgpack/sb-msgpack-rpc.h
   src/rpc/msgpack/message.c
   src/rpc/msgpack/pack.c
@@ -283,6 +310,7 @@ add_executable(sb-test ${TEST-SOURCES})
 
 # wrap some functions for testing
 set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response,--wrap=crypto_write ")
+set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DBOX_UNIT_TESTS ")
 
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}

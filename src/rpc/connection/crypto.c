@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/connection/crypto.h"
 #include "tweetnacl.h"
 
 #define CRYPTO_PREFIX_SPLONEBOXCLIENT	"splonebox-client"
@@ -24,10 +25,10 @@ static uint64_t counterhigh;
 static unsigned char flagkeyloaded;
 static unsigned char noncekey[32];
 
-static int crypto_block(unsigned char *out, const unsigned char *in,
+STATIC int crypto_block(unsigned char *out, const unsigned char *in,
     const unsigned char *k);
-static int safenonce(unsigned char *y, int flaglongterm);
-static void nonce_update(struct crypto_context *cc);
+STATIC int safenonce(unsigned char *y, int flaglongterm);
+STATIC void nonce_update(struct crypto_context *cc);
 
 int crypto_init(void)
 {
@@ -39,7 +40,7 @@ int crypto_init(void)
 }
 
 
-static int safenonce(unsigned char *y, int flaglongterm)
+STATIC int safenonce(unsigned char *y, int flaglongterm)
 {
   unsigned char data[16];
 
@@ -102,8 +103,7 @@ static int safenonce(unsigned char *y, int flaglongterm)
   return 0;
 }
 
-
-static int crypto_block(unsigned char *out, const unsigned char *in,
+STATIC int crypto_block(unsigned char *out, const unsigned char *in,
     const unsigned char *k)
 {
   int i;
@@ -134,7 +134,7 @@ static int crypto_block(unsigned char *out, const unsigned char *in,
 }
 
 
-static void nonce_update(struct crypto_context *cc)
+STATIC void nonce_update(struct crypto_context *cc)
 {
   assert(cc);
 

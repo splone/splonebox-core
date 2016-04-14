@@ -33,11 +33,9 @@
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/connection/event.h"
 
 equeue *equeue_root;
-
-static queue_entry *dequeue_child(equeue *queue);
-static queue_entry *dequeue_child_from_root(equeue *queue);
 
 int event_initialize(void)
 {
@@ -122,7 +120,7 @@ api_event equeue_get(equeue *queue)
 }
 
 
-static queue_entry *dequeue_child(equeue *queue)
+STATIC queue_entry *dequeue_child(equeue *queue)
 {
   queue_entry *entry;
 
@@ -136,7 +134,7 @@ static queue_entry *dequeue_child(equeue *queue)
 }
 
 
-static queue_entry *dequeue_child_from_root(equeue *queue)
+STATIC queue_entry *dequeue_child_from_root(equeue *queue)
 {
   queue_entry *entry, *centry;
   equeue *cqueue;

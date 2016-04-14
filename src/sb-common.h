@@ -406,6 +406,12 @@ define UNUSED(x) x
 #define ARCH_32
 #endif
 
+#ifdef BOX_UNIT_TESTS
+#define STATIC
+#else
+#define STATIC static
+#endif
+
 #define VERBOSE_OFF                 -1
 #define VERBOSE_LEVEL_0             0
 #define VERBOSE_LEVEL_1             1

@@ -51,6 +51,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include "sb-common.h"
+#include "options.h"
 
 /** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
 #if defined(__GNUC__) && __GNUC__ > 3
@@ -90,11 +91,6 @@ static configvar option_vars_[] = {
   V(ContactInfo,                STRING,   NULL),
   { NULL, CONFIG_TYPE_OBSOLETE, 0, NULL }
 };
-
-static setoptionerror options_init_from_string(const char *cf);
-static int options_validate(options *options);
-static void options_init(options *options);
-static char * load_boxrc_from_disk(void);
 
 /** Magic value for options. */
 #define OR_OPTIONS_MAGIC 9090909
@@ -148,7 +144,7 @@ void options_free(options *options)
  *  * -3 for transition not allowed
  *  * -4 for error while setting the new options
  */
-static setoptionerror options_init_from_string(const char *cf)
+STATIC setoptionerror options_init_from_string(const char *cf)
 {
   options *newoptions;
   configline *cl;
@@ -196,7 +192,7 @@ static setoptionerror options_init_from_string(const char *cf)
   return err;
 }
 
-static char * load_boxrc_from_disk(void)
+STATIC char * load_boxrc_from_disk(void)
 {
   int fd;
   char *string = NULL;
@@ -232,7 +228,7 @@ static char * load_boxrc_from_disk(void)
   return string;
 }
 
-static int options_validate(options *options)
+STATIC int options_validate(options *options)
 {
   if (options->ApiTransportListen && options->ApiNamedPipeListen) {
     LOG_WARNING("You cannot set both ApiTransportListen and ApiNamedPipeListen.\
@@ -274,7 +270,7 @@ static int options_validate(options *options)
 
 /** Set <b>options</b> to hold reasonable defaults for most options.
  * Each option defaults to zero. */
-static void options_init(options *options)
+STATIC void options_init(options *options)
 {
   confparse_init(&options_format, options);
 }
