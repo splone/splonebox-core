@@ -40,6 +40,7 @@ int main(int argc, char **argv)
   uv_loop_init(&loop);
 
   crypto_init();
+
   struct timeval timeout = { 1, 500000 };
 
   globaloptions = options_get();

@@ -34,14 +34,19 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
   if (!(byte_isequal(buffer, 7, "rZQTd2n")))
     return (-1);
 
-  /* tunnel packet */
-  if (buffer[7] == 'T') {
-    assert_int_equal(0, validate_crypto_tunnel(buffer, len));
-  }
-
-  /* message packet */
-  if (buffer[7] == 'M') {
+  switch(buffer[7]) {
+  case 'C':
+    /* tunnel packet */
+    assert_int_equal(0, validate_crypto_cookie_packet((unsigned char*)buffer,
+        len));
+    break;
+  case 'M':
+    /* message packet */
     assert_int_equal(0, validate_crypto_write(buffer, len));
+    break;
+  default:
+    LOG_WARNING("Illegal identifier suffix.");
+    return (-1);
   }
 
   return (0);

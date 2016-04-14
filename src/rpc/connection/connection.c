@@ -47,6 +47,16 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
+STATIC int parse_cb(inputstream *istream, void *data, bool eof);
+STATIC void close_cb(uv_handle_t *handle);
+STATIC void timer_cb(uv_timer_t *timer);
+STATIC int connection_handle_request(struct connection *con,
+    msgpack_object *obj);
+STATIC int connection_handle_response(struct connection *con,
+    msgpack_object *obj);
+STATIC void connection_request_event(connection_request_event_info *info);
+STATIC void connection_close(struct connection *con);
+
 static hashmap(string, ptr_t) *connections = NULL;
 static msgpack_sbuffer sbuf;
 equeue *equeue_root;
@@ -88,6 +98,8 @@ int connection_teardown(void)
 
 int connection_create(uv_stream_t *stream)
 {
+  int r;
+
   stream->data = NULL;
 
   struct connection *con = MALLOC(struct connection);
@@ -103,8 +115,23 @@ int connection_create(uv_stream_t *stream)
   con->streams.write = outputstream_new(1024 * 1024);
   con->streams.uv = stream;
   con->cc.nonce = (uint64_t) randommod(281474976710656LL);
+
+  if (ISODD(con->cc.nonce)) {
+    con->cc.nonce++;
+  }
+
   con->cc.receivednonce = 0;
   con->cc.state = TUNNEL_INITIAL;
+
+  /* crypto minutekey timer */
+  randombytes(con->cc.minutekey, sizeof con->cc.minutekey);
+  randombytes(con->cc.lastminutekey, sizeof con->cc.lastminutekey);
+  con->minutekey_timer.data = &con->cc;
+  r = uv_timer_init(&loop, &con->minutekey_timer);
+  assert(r == 0);
+  r = uv_timer_start(&con->minutekey_timer, timer_cb, 60000, 60000);
+  assert(r == 0);
+
   con->packet.start = 0;
   con->packet.end = 0;
   con->packet.pos = 0;
@@ -116,6 +143,12 @@ int connection_create(uv_stream_t *stream)
   outputstream_set(con->streams.write, stream);
 
   return (0);
+}
+
+STATIC void timer_cb(uv_timer_t *timer)
+{
+  struct crypto_context *cc = (struct crypto_context*)timer->data;
+  crypto_update_minutekey(cc);
 }
 
 STATIC void connection_close(struct connection *con)
@@ -163,8 +196,9 @@ STATIC void reset_parser(struct connection *con)
 
 STATIC int parse_cb(inputstream *istream, void *data, bool eof)
 {
-  unsigned char *tunnelpacket;
   unsigned char *packet;
+  unsigned char hellopacket[192];
+  unsigned char initiatepacket[256];
   struct connection *con = data;
 
   size_t read = 0;
@@ -180,37 +214,54 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
     return (-1);
   }
 
+  if (con->cc.state == TUNNEL_INITIAL) {
+    size = inputstream_read(istream, hellopacket, 192);
+    if (crypto_recv_hello_send_cookie(&con->cc, hellopacket,
+        con->streams.write) != 0)
+      LOG_WARNING("establishing crypto tunnel failed at hello-cookie packet");
+    return -1;
+  } else if (con->cc.state == TUNNEL_COOKIE_SENT) {
+    size = inputstream_read(istream, initiatepacket, 256);
+    if (crypto_recv_initiate(&con->cc, initiatepacket) != 0) {
+      LOG_WARNING("establishing crypto tunnel failed at initiate packet");
+      con->cc.state = TUNNEL_INITIAL;
+    }
+  }
+
   pending = inputstream_pending(istream);
 
-  if (con->cc.state == TUNNEL_INITIAL) {
-    tunnelpacket = MALLOC_ARRAY(pending, unsigned char);
-    size = inputstream_read(istream, tunnelpacket, pending);
-    if (crypto_tunnel(&con->cc, tunnelpacket, con->streams.write) != 0)
-      LOG_WARNING("establishing crypto tunnel failed");
-    FREE(tunnelpacket);
-
-    return (0);
-  }
+  if (pending <= 0 || con->cc.state != TUNNEL_ESTABLISHED)
+    return -1;
 
   if (con->packet.end <= 0) {
     packet = inputstream_get_read(istream, &read);
 
     /* read the packet length */
-    if (crypto_verify_header(packet, &con->packet.length)) {
+    if (crypto_verify_header(&con->cc, packet, &con->packet.length)) {
       reset_packet(con);
       return (-1);
     }
 
     con->packet.end = con->packet.length;
     con->packet.data = MALLOC_ARRAY(MAX(con->packet.end, read), unsigned char);
-    msgpack_unpacker_reserve_buffer(con->mpac, MAX(read, con->packet.end));
+    if (!con->packet.data) {
+      LOG_ERROR("Failed to alloc mem for con packet.");
+      return -1;
+    }
+
+    if (msgpack_unpacker_reserve_buffer(con->mpac,
+      MAX(read, con->packet.end)) == false) {
+      LOG_ERROR("Failed to reserve mem msgpack buffer.");
+      return -1;
+    };
+
     /* get decrypted message start position */
     con->unpackbuf = msgpack_unpacker_buffer(con->mpac);
   }
 
   while(read > 0) {
-    con->packet.start = inputstream_read(istream, con->packet.data + con->packet.pos,
-        con->packet.end);
+    con->packet.start = inputstream_read(istream,
+      con->packet.data + con->packet.pos, con->packet.end);
     con->packet.pos += con->packet.start;
     con->packet.end -= con->packet.start;
     read -= con->packet.start;
@@ -230,7 +281,7 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
         return (-1);
       }
 
-      if (crypto_verify_header(packet, &con->packet.length)) {
+      if (crypto_verify_header(&con->cc, packet, &con->packet.length)) {
         reset_parser(con);
         return (-1);
       }

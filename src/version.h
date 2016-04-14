@@ -20,8 +20,8 @@
 #define STR_VALUE(arg) #arg
 
 #define VERSION_MAJOR 0
-#define VERSION_MINOR 0
-#define VERSION_REVISION 5
+#define VERSION_MINOR 1
+#define VERSION_REVISION 0
 
 #define VERSION STRINGIFY(VERSION_MAJOR) "." \
                 STRINGIFY(VERSION_MINOR) "." \

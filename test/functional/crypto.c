@@ -21,28 +21,28 @@
 
 unsigned char clientshorttermpk[32];
 unsigned char clientshorttermsk[32];
+unsigned char clientlongtermpk[32];
+unsigned char clientlongtermsk[32];
 unsigned char serverlongtermpk[32];
+unsigned char servershorttermpk[32];
+unsigned char cookie[96];
 
 struct crypto_context cc;
 
-int validate_crypto_tunnel(unsigned char *buffer, uint64_t length)
+int validate_crypto_cookie_packet(unsigned char *buffer,
+    UNUSED(uint64_t length))
 {
   unsigned char *block;
   unsigned char *ciphertextpadded;
   unsigned char nonce[crypto_box_NONCEBYTES];
-  uint64_t packetnonce;
   uint64_t ciphertextlen;
   uint64_t blocklen;
-  /* read length */
-  length = uint64_unpack(buffer + 8);
-  /* unpack nonce and check it's validity */
-  packetnonce = uint64_unpack(buffer + 16);
-  /* nonce is prefixed with 16-byte string "splonbox-client" */
-  memcpy(nonce, "splonebox-server", 16);
-  memcpy(nonce + 16, buffer + 16, 8);
 
-  ciphertextlen = length - 8;
-  blocklen = length - 24;
+  memcpy(nonce, "splonePK", 8);
+  memcpy(nonce + 8, buffer + 8, 16);
+
+  ciphertextlen = 160;
+  blocklen = 144;
 
   block = MALLOC_ARRAY(ciphertextlen, unsigned char);
   ciphertextpadded = CALLOC(ciphertextlen, unsigned char);
@@ -59,30 +59,44 @@ int validate_crypto_tunnel(unsigned char *buffer, uint64_t length)
     return (-1);
   }
 
+  memcpy(servershorttermpk, block + 32, 32);
+  memcpy(cookie, block + 64, 96);
+
   FREE(block);
   FREE(ciphertextpadded);
 
   return (0);
 }
 
-int validate_crypto_write(unsigned char *buffer, uint64_t length)
+int validate_crypto_write(unsigned char *buffer, UNUSED(uint64_t length))
 {
   unsigned char *block;
   unsigned char *ciphertextpadded;
   unsigned char nonce[crypto_box_NONCEBYTES];
+  unsigned char lengthpacked[40];
+  unsigned char lengthbox[40] = {0};
+  uint64_t unpackedlen;
   uint64_t packetnonce;
   uint64_t ciphertextlen;
   uint64_t blocklen;
-  /* read length */
-  length = uint64_unpack(buffer + 8);
+
   /* unpack nonce and check it's validity */
-  packetnonce = uint64_unpack(buffer + 16);
+  packetnonce = uint64_unpack(buffer + 8);
   /* nonce is prefixed with 16-byte string "splonbox-client" */
   memcpy(nonce, "splonebox-server", 16);
-  memcpy(nonce + 16, buffer + 16, 8);
+  memcpy(nonce + 16, buffer + 8, 8);
 
-  ciphertextlen = length - 8;
-  blocklen = length - 24;
+  memcpy(lengthbox + 16, buffer + 16, 24);
+
+  if (crypto_box_open_afternm(lengthpacked, lengthbox, 40, nonce,
+      cc.clientshortservershort)) {
+    return (-1);
+  }
+
+  unpackedlen = uint64_unpack(lengthpacked + 32);
+
+  ciphertextlen = unpackedlen - 24;
+  blocklen = unpackedlen - 40;
 
   block = MALLOC_ARRAY(ciphertextlen, unsigned char);
   ciphertextpadded = CALLOC(ciphertextlen, unsigned char);
@@ -90,7 +104,9 @@ int validate_crypto_write(unsigned char *buffer, uint64_t length)
   if (block == NULL || ciphertextpadded == NULL)
     return (-1);
 
-  memcpy(ciphertextpadded + 16, buffer + 24, blocklen);
+  memcpy(ciphertextpadded + 16, buffer + 40, blocklen);
+
+  uint64_pack(nonce + 16, packetnonce + 2);
 
   if (crypto_box_open_afternm(block, ciphertextpadded, ciphertextlen, nonce,
       cc.clientshortservershort)) {
@@ -108,11 +124,17 @@ int validate_crypto_write(unsigned char *buffer, uint64_t length)
 void functional_crypto(UNUSED(void **state))
 {
   unsigned char nonce[crypto_box_NONCEBYTES];
-  unsigned char tunnelpacket[136];
-  unsigned char messagepacket[104];
-  unsigned char messagepacketout[104] = {0};
+  unsigned char initiatenonce[crypto_box_NONCEBYTES];
+  unsigned char hellopacket[192] = {0};
+  unsigned char initiatepacket[256] = {0};
+  unsigned char messagepacket[120];
+  unsigned char messagepacketout[120] = {0};
   unsigned char allzeroboxed[96] = {0};
+  unsigned char initiatebox[160] = {0};
+  unsigned char pubkeybox[96] = {0};
+  unsigned char lengthbox[40] = {0};
   uint64_t plaintextlen;
+  uint64_t readlen;
   outputstream write;
 
   wrap_crypto_write = false;
@@ -121,48 +143,85 @@ void functional_crypto(UNUSED(void **state))
       serverlongtermpk, sizeof serverlongtermpk));
 
   cc.nonce = (uint64_t) randommod(281474976710656LL);
+
+  if (!ISODD(cc.nonce)) {
+    cc.nonce++;
+  }
+
   cc.receivednonce = 0;
   cc.state = TUNNEL_INITIAL;
 
   memcpy(nonce, "splonebox-client", 16);
   uint64_pack(nonce + 16, cc.nonce);
 
-  /* pack tunnel packet */
-  memcpy(tunnelpacket, "oqQN2kaT", 8);
-  /* pack length (8 id + 8 compressed nonce + 8 length + 48 server pub key) */
-  uint64_pack(tunnelpacket + 8, 136);
+  /* pack hello packet */
+  memcpy(hellopacket, "oqQN2kaH", 8);
   /* pack compressed nonce */
-  memcpy(tunnelpacket + 16, nonce + 16, 8);
+  memcpy(hellopacket + 104, nonce + 16, 8);
 
+  /* generate client ephemeral keys */
+  if (crypto_box_keypair(clientlongtermpk, clientlongtermsk) != 0)
+    return;
   /* generate client ephemeral keys */
   if (crypto_box_keypair(clientshorttermpk, clientshorttermsk) != 0)
     return;
 
-  memcpy(tunnelpacket + 24, clientshorttermpk, 32);
+  memcpy(hellopacket + 8, clientshorttermpk, 32);
 
   assert_int_equal(0, crypto_box(allzeroboxed, allzeroboxed, 96, nonce,
       serverlongtermpk, clientshorttermsk));
 
-  memcpy(tunnelpacket + 56, allzeroboxed + 16, 80);
+  memcpy(hellopacket + 112, allzeroboxed + 16, 80);
 
   crypto_init();
 
   /* positiv test */
-  assert_int_equal(0, crypto_tunnel(&cc, tunnelpacket, &write));
+  assert_int_equal(0, crypto_recv_hello_send_cookie(&cc, hellopacket, &write));
 
   /* wrong identifier */
-  memcpy(tunnelpacket, "deadbeef", 8);
-  assert_int_not_equal(0, crypto_tunnel(&cc, tunnelpacket, &write));
-  memcpy(tunnelpacket, "oqQN2kaT", 8);
+  memcpy(hellopacket, "deadbeef", 8);
+  assert_int_not_equal(0, crypto_recv_hello_send_cookie(&cc, hellopacket, &write));
+  memcpy(hellopacket, "oqQN2kaH", 8);
 
   /* wrong nonce */
   cc.receivednonce = cc.nonce + 1;
-  assert_int_not_equal(0, crypto_tunnel(&cc, tunnelpacket, &write));
+  assert_int_not_equal(0, crypto_recv_hello_send_cookie(&cc, hellopacket, &write));
   cc.receivednonce = 0;
 
   /* wrong pubkey */
-  memset(tunnelpacket + 24, '0', 32);
-  assert_int_not_equal(0, crypto_tunnel(&cc, tunnelpacket, &write));
+  memset(hellopacket + 8, '0', 32);
+  assert_int_not_equal(0, crypto_recv_hello_send_cookie(&cc, hellopacket, &write));
+  memcpy(hellopacket + 8, clientshorttermpk, 32);
+
+  assert_int_equal(0, crypto_recv_hello_send_cookie(&cc, hellopacket, &write));
+
+  /* crypto_recv_initiate() test */
+
+  /* pack initiate packet */
+  memcpy(initiatepacket, "oqQN2kaI", 8);
+  memcpy(initiatepacket + 8, cookie, 96);
+  /* pack compressed nonce */
+  memcpy(initiatepacket + 104, nonce + 16, 8);
+
+  memcpy(initiatebox + 32, clientlongtermpk, 32);
+  randombytes(initiatebox + 64, 16);
+  memcpy(initiatenonce, "splonePV", 8);
+  memcpy(initiatenonce + 8, initiatebox + 64, 16);
+
+  memcpy(pubkeybox + 32, clientshorttermpk, 32);
+  memcpy(pubkeybox + 64, servershorttermpk, 32);
+
+  assert_int_equal(0, crypto_box(pubkeybox, pubkeybox, 96, initiatenonce,
+      serverlongtermpk, clientlongtermsk));
+
+  memcpy(initiatebox + 80, pubkeybox + 16, 80);
+
+  assert_int_equal(0, crypto_box(initiatebox, initiatebox, 160, nonce,
+      servershorttermpk, clientshorttermsk));
+
+  memcpy(initiatepacket + 112, initiatebox + 16, 144);
+
+  assert_int_equal(0, crypto_recv_initiate(&cc, initiatepacket));
 
   /* crypto_write() test */
   assert_int_equal(0, crypto_write(&cc, (char*) allzeroboxed,
@@ -172,18 +231,29 @@ void functional_crypto(UNUSED(void **state))
 
   /* pack message packet */
   memcpy(messagepacket, "oqQN2kaM", 8);
-  uint64_pack(messagepacket + 8, 104);
+
   /* pack compressed nonce */
   memcpy(nonce, "splonebox-client", 16);
   uint64_pack(nonce + 16, cc.nonce);
-  memcpy(messagepacket + 16, nonce + 16, 8);
+  memcpy(messagepacket + 8, nonce + 16, 8);
+
+  uint64_pack(lengthbox + 32, 120);
+
+  assert_int_equal(0, crypto_box(lengthbox, lengthbox, 40, nonce,
+      servershorttermpk, clientshorttermsk));
+
+  memcpy(messagepacket + 16, lengthbox + 16, 24);
+
+  uint64_pack(nonce + 16, cc.nonce + 2);
 
   memset(allzeroboxed, 0, 96);
   assert_int_equal(0, crypto_box_afternm(allzeroboxed, allzeroboxed, 96, nonce,
       cc.clientshortservershort));
 
-  memcpy(messagepacket + 24, allzeroboxed + 16, 80);
+  memcpy(messagepacket + 40, allzeroboxed + 16, 80);
+
+  assert_int_equal(0, crypto_verify_header(&cc, messagepacket, &readlen));
 
   assert_int_equal(0, crypto_read(&cc, messagepacket, (char*)messagepacketout,
-      104, &plaintextlen));
+      readlen, &plaintextlen));
 }
