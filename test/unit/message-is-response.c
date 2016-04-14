@@ -23,7 +23,6 @@
 
 void unit_message_is_response(UNUSED(void **state))
 {
-  struct api_error error = ERROR_INIT;
   msgpack_sbuffer sbuf;
   msgpack_packer pk;
   msgpack_zone mempool;
