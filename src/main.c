@@ -34,7 +34,7 @@ int main(int argc, char **argv)
   if (options_init_from_boxrc() < 0) {
       LOG_ERROR("Reading config failed--see warnings above. "
               "For usage, try -h.");
-      return -1;
+      abort();
   }
 
   uv_loop_init(&loop);
@@ -50,26 +50,30 @@ int main(int argc, char **argv)
       globaloptions->RedisDatabaseListenPort, timeout,
       globaloptions->RedisDatabaseAuth) < 0) {
     LOG_ERROR("Failed to connect to database");
-    return EXIT_FAILURE;
+    abort();
   }
 
   /* initialize signal handler */
   if (signal_init() == -1) {
     LOG_ERROR("Failed to initialize signal handler.");
+    abort();
   }
 
   /* initialize event queue */
   if (event_initialize() == -1) {
     LOG_ERROR("Failed to initialize event queue.");
+    abort();
   }
 
   /* initialize connections */
   if (connection_init() == -1) {
     LOG_ERROR("Failed to initialise connections.");
+    abort();
   }
 
   if (server_init() == -1) {
     LOG_ERROR("Failed to initialise server.");
+    abort();
   }
 
   /* initialize server */

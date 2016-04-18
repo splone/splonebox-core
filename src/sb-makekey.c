@@ -43,16 +43,20 @@ int main(int argc, char **argv)
 
   umask(022);
 
-  if (mkdir(".keys",0700) == -1)
+  if (mkdir(".keys",0700) == -1) {
     LOG_ERROR("unable to create .keys directory\n");
+    abort();
+  }
 
   /* generate server ephemeral keys */
   if (crypto_box_keypair(pk, sk) != 0) {
     LOG_ERROR("unable to create keypair\n");
+    abort();
   }
 
   if (filesystem_save_sync(".keys/server-long-term.pub", pk, sizeof(pk))) {
     LOG_ERROR("unable to create key file .keys/server-long-term.pub\n");
+    abort();
   }
 
   randombytes(noncekey, sizeof noncekey);
@@ -61,19 +65,23 @@ int main(int argc, char **argv)
 
   if (filesystem_save_sync(".keys/server-long-term", sk, sizeof(sk))) {
     LOG_ERROR("unable to create key file .keys/server-long-term.pub\n");
+    abort();
   }
 
   if (filesystem_save_sync(".keys/lock", lock, sizeof(lock))) {
     LOG_ERROR("unable to create lock file .keys/lock\n");
+    abort();
   }
 
   if (filesystem_save_sync(".keys/noncekey", noncekey, sizeof(noncekey))) {
     LOG_ERROR("unable to create noncekey file .keys/noncekey\n");
+    abort();
   }
 
   if (filesystem_save_sync(".keys/noncecounter", noncecounter,
       sizeof(noncecounter))) {
     LOG_ERROR("unable to create noncecounter file .keys/noncecounter\n");
+    abort();
   }
 
   return (0);

@@ -319,8 +319,10 @@ int crypto_recv_hello_send_cookie(struct crypto_context *cc,
 
   memcpy(nonce, CRYPTO_MINUTE_KEY, 8);
 
-  if (safenonce(nonce + 8, 1) == -1)
+  if (safenonce(nonce + 8, 1) == -1) {
     LOG_ERROR("nonce-generation disaster");
+    goto fail;
+  }
 
   if (crypto_secretbox(cookiebox + 64, cookiebox + 64, 96, nonce, cc->minutekey)
       != 0)

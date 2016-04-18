@@ -200,7 +200,7 @@ STATIC void connection_cb(uv_stream_t *server_stream, int status)
   size_t hbuflen;
 
   if (status == -1) {
-    LOG("error on_write_end");
+    LOG_ERROR("error on_write_end");
     return;
   }
 
@@ -221,7 +221,7 @@ STATIC void connection_cb(uv_stream_t *server_stream, int status)
   result = uv_accept(server_stream, client);
 
   if (result) {
-    LOG("Failed to accept connection: %s", uv_strerror(result));
+    LOG_ERROR("Failed to accept connection: %s", uv_strerror(result));
     uv_close((uv_handle_t *)client, client_free_cb);
     return;
   }
