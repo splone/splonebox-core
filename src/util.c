@@ -48,7 +48,6 @@
  *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <assert.h>
 #include "sb-common.h"
 #include "util.h"
 
@@ -59,7 +58,7 @@
 STATIC int digit_to_num(char d)
 {
   int num = ((int)d) - (int)'0';
-  assert(num <= 9 && num >= 0);
+  sbassert(num <= 9 && num >= 0);
 
   return (num);
 }
@@ -75,7 +74,7 @@ STATIC int scan_unsigned(const char **bufp, unsigned long *out, int width,
   int scanned_so_far = 0;
   const int hex = base==16;
 
-  assert(base == 10 || base == 16);
+  sbassert(base == 10 || base == 16);
 
   if (!bufp || !*bufp || !out)
     return (-1);
@@ -217,7 +216,7 @@ char * box_strdup(const char *s)
 {
   char *dup;
 
-  assert(s);
+  sbassert(s);
 
   dup = strdup(s);
 
@@ -238,7 +237,7 @@ char * box_strndup(const char *s, size_t n)
 {
   char *dup;
 
-  assert(s);
+  sbassert(s);
 
   dup = MALLOC_ARRAY((n+1), char);
 
@@ -395,7 +394,7 @@ int box_vsscanf(const char *buf, const char *pattern, va_list ap)
  */
 const char * eat_whitespace(const char *s)
 {
-  assert(s);
+  sbassert(s);
 
   while (1) {
     switch (*s) {

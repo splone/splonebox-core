@@ -48,7 +48,6 @@
  *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <assert.h>
 #include <ctype.h>
 #include "sb-common.h"
 #include "parse.h"
@@ -267,13 +266,13 @@ uint64_t parse_units(const char *val, struct unit_table_t *u, int *ok)
   int use_float = 0;
   char *cp;
 
-  assert(ok);
+  sbassert(ok);
 
   v = parse_uint64(val, 10, 0, UINT64_MAX, ok, &cp);
 
   if (!*ok || (cp && *cp == '.')) {
     d = parse_double(val, 0, UINT64_MAX, ok, &cp);
-    
+
     if (!*ok)
       goto done;
     use_float = 1;

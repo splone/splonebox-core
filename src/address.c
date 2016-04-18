@@ -48,7 +48,6 @@
  *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <assert.h>
 #include "sb-common.h"
 #include "address.h"
 
@@ -100,10 +99,9 @@ int box_getaddrinfo(const char *name, uint16_t family, boxaddr *addr)
   struct in_addr iaddr;
   struct in6_addr iaddr6;
 
-  assert(name);
-  assert(addr);
-
-  assert(family == AF_INET || family == AF_INET6 || family == AF_UNSPEC);
+  sbassert(name);
+  sbassert(addr);
+  sbassert(family == AF_INET || family == AF_INET6 || family == AF_UNSPEC);
 
   if (!*name) {
     /* Empty address is an error. */
@@ -190,7 +188,7 @@ int box_getaddrinfo(const char *name, uint16_t family, boxaddr *addr)
       } else if (ent->h_addrtype == AF_INET6) {
         box_addr_from_in6(addr, (struct in6_addr*)ent->h_addr);
       } else {
-        assert(0); /* gethostbyname() returned a bizarre addrtype */
+        sbassert(0); /* gethostbyname() returned a bizarre addrtype */
       }
 
       return (0);
@@ -208,8 +206,8 @@ void box_addr_copy(boxaddr *dest, const boxaddr *src)
   if (src == dest)
     return;
 
-  assert(src);
-  assert(dest);
+  sbassert(src);
+  sbassert(dest);
 
   memcpy(dest, src, sizeof(boxaddr));
 }
@@ -224,8 +222,8 @@ int box_addr_port_lookup(const char *s, boxaddr *addr_out, uint16_t *port_out)
   uint16_t portval;
   char *tmp = NULL;
 
-  assert(s);
-  assert(addr_out);
+  sbassert(s);
+  sbassert(addr_out);
 
   s = eat_whitespace(s);
 
@@ -280,8 +278,8 @@ int box_addr_port_lookup(const char *s, boxaddr *addr_out, uint16_t *port_out)
  * <b>ipv6_bytes</b>. */
 STATIC void box_addr_from_ipv6_bytes(boxaddr *dest, const char *ipv6_bytes)
 {
-  assert(dest);
-  assert(ipv6_bytes);
+  sbassert(dest);
+  sbassert(ipv6_bytes);
 
   memset(dest, 0, sizeof(boxaddr));
   dest->family = AF_INET6;
@@ -298,7 +296,7 @@ STATIC void box_addr_from_in6(boxaddr *dest, const struct in6_addr *in6)
  * network order). */
 STATIC void box_addr_from_ipv4n(boxaddr *dest, uint32_t v4addr)
 {
-  assert(dest);
+  sbassert(dest);
   memset(dest, 0, sizeof(boxaddr));
   dest->family = AF_INET;
   dest->addr.in_addr.s_addr = v4addr;
@@ -368,7 +366,7 @@ const char * fmt_addr(const boxaddr *addr)
 const char * box_addr_to_str(char *dest, const boxaddr *addr, socklen_t len)
 {
   const char *ptr;
-  assert(addr && dest);
+  sbassert(addr && dest);
 
   switch (box_addr_family(addr)) {
     case AF_INET:

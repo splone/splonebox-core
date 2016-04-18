@@ -128,9 +128,9 @@ int connection_create(uv_stream_t *stream)
   randombytes(con->cc.lastminutekey, sizeof con->cc.lastminutekey);
   con->minutekey_timer.data = &con->cc;
   r = uv_timer_init(&loop, &con->minutekey_timer);
-  assert(r == 0);
+  sbassert(r == 0);
   r = uv_timer_start(&con->minutekey_timer, timer_cb, 60000, 60000);
-  assert(r == 0);
+  sbassert(r == 0);
 
   con->packet.start = 0;
   con->packet.end = 0;

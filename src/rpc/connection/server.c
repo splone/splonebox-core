@@ -64,6 +64,8 @@ int server_start_tcp(boxaddr *addr, uint16_t port)
   int result;
   struct server *server = NULL;
 
+  sbassert(addr);
+
   server = MALLOC(struct server);
 
   if (hashmap_has(cstr_t, ptr_t)(servers, fmt_addr(addr))) {
@@ -109,6 +111,8 @@ int server_start_pipe(char *name)
 {
   int result;
   struct server *server = NULL;
+
+  sbassert(name);
 
   server = MALLOC(struct server);
 

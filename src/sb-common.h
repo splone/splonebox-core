@@ -341,6 +341,17 @@ static inline bool string_eq(string a, string b)
 #define hashmap_del(T, U) hashmap_##T##_##U##_del
 #define hashmap_clear(T, U) hashmap_##T##_##U##_clear
 
+#define ANSI_COLOR_RED     "\x1b[31m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_DEFAULT_BOLD      "\x1b[1m\x1b[39m"
+#define ANSI_COLOR_RED_BOLD   "\x1b[1m\x1b[31m"
+#define ANSI_COLOR_MAGENTA_BOLD      "\x1b[1m\x1b[35m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
+
 #define error_set(err, errtype, ...)                                \
   do {                                                              \
     if (snprintf((err)->msg, sizeof((err)->msg), __VA_ARGS__) < 0)  \
@@ -359,6 +370,14 @@ static inline bool string_eq(string a, string b)
 #define UNUSED(x) __attribute__((unused)) x
 #else
 define UNUSED(x) x
+#endif
+
+#if defined(__clang__) || defined(__GNUC__)
+#define PREDICT_LIKELY(exp) __builtin_expect(!!(exp), 1)
+#define PREDICT_UNLIKELY(exp) __builtin_expect(!!(exp), 0)
+#else
+#define PREDICT_LIKELY(exp) (exp)
+#define PREDICT_UNLIKELY(exp) (exp)
 #endif
 
 #define MALLOC(type) ((type *)reallocarray(NULL, 1, sizeof(type)))
@@ -383,14 +402,14 @@ define UNUSED(x) x
     fflush(stdout);               \
   } while(0)                      \
 
-#define LOG_ERROR(...)            \
-  do {                            \
-    errx(1, __VA_ARGS__);         \
+#define LOG_ERROR(...)                                                  \
+  do {                                                                  \
+    warnx(ANSI_COLOR_RED_BOLD "Error: " ANSI_COLOR_RESET __VA_ARGS__);  \
   } while(0)
 
-#define LOG_WARNING(...)          \
-  do {                            \
-    warnx(__VA_ARGS__);           \
+#define LOG_WARNING(...)                                                      \
+  do {                                                                        \
+    warnx(ANSI_COLOR_MAGENTA_BOLD "Warning: " ANSI_COLOR_RESET __VA_ARGS__);  \
   } while(0)
 
 #define LOG_VERBOSE(level, ...)                       \
@@ -415,19 +434,21 @@ define UNUSED(x) x
 #define VERBOSE_OFF                 -1
 #define VERBOSE_LEVEL_0             0
 #define VERBOSE_LEVEL_1             1
-#define ANSI_COLOR_RED     "\x1b[31m"
-#define ANSI_COLOR_GREEN   "\x1b[32m"
-#define ANSI_COLOR_YELLOW  "\x1b[33m"
-#define ANSI_COLOR_BLUE    "\x1b[34m"
-#define ANSI_COLOR_MAGENTA "\x1b[35m"
-#define ANSI_COLOR_CYAN    "\x1b[36m"
-#define ANSI_COLOR_RESET   "\x1b[0m"
 
 #define BOX_ADDR_BUF_LEN 48
 
 #define ARRAY_INIT {.size = 0, .capacity = 0, .obj = NULL}
 #define STRING_INIT {.str = NULL, .length = 0}
 #define ERROR_INIT {.isset = false}
+
+#define sbassert(expr)                                                  \
+  do {                                                                  \
+    if (PREDICT_UNLIKELY(!(expr))) {                                    \
+      LOG_ERROR("%s:%u: %s: Assertion %s failed; aborting.", __FILE__,  \
+          __LINE__, __func__, #expr);                                   \
+      abort();                                                          \
+    }                                                                   \
+  } while (0)
 
 /* Functions */
 void *reallocarray(void *optr, size_t nmemb, size_t size);

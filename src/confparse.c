@@ -48,7 +48,6 @@
  *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <assert.h>
 #include <ctype.h>
 #include "sb-common.h"
 #include "confparse.h"
@@ -125,8 +124,8 @@ STATIC void mark_lists_fragile(const configformat *fmt, void *options)
 {
   int i;
 
-  assert(fmt);
-  assert(options);
+  sbassert(fmt);
+  sbassert(options);
 
   for (i = 0; fmt->vars[i].name; ++i) {
     const configvar *var = &fmt->vars[i];
@@ -146,8 +145,8 @@ STATIC void reset_line(const configformat *fmt, void *options, const char *key,
 {
   const configvar *var;
 
-  assert(fmt && options);
-  assert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
+  sbassert(fmt && options);
+  sbassert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
 
   var = confparse_find_option(fmt, key);
   if (!var)
@@ -170,8 +169,8 @@ STATIC int assign_line(const configformat *fmt, void *options, configline *c,
 {
   const configvar *var;
 
-  assert(fmt && options);
-  assert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
+  sbassert(fmt && options);
+  sbassert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
 
   var = confparse_find_option(fmt, c->key);
   if (!var) {
@@ -237,8 +236,8 @@ STATIC void reset(const configformat *fmt, void *options, const configvar *var,
 {
   configline *c;
 
-  assert(fmt && options);
-  assert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
+  sbassert(fmt && options);
+  sbassert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
   clear(fmt, options, var); /* clear it first */
 
   if (!use_defaults)
@@ -428,11 +427,11 @@ STATIC int assign_value(const configformat *fmt, void *options, configline *c)
   const configvar *var;
   void *lvalue;
 
-  assert(fmt && options);
-  assert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
+  sbassert(fmt && options);
+  sbassert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
 
   var = confparse_find_option(fmt, c->key);
-  assert(var);
+  sbassert(var);
 
   lvalue = STRUCT_VAR_P(options, var->var_offset);
 
@@ -549,7 +548,7 @@ STATIC int assign_value(const configformat *fmt, void *options, configline *c)
     LOG_WARNING("You may not provide a value for virtual option '%s'", c->key);
     return (-1);
   default:
-    assert(0);
+    sbassert(0);
     break;
   }
 
@@ -609,7 +608,7 @@ void confparse_free(const configformat *fmt, void *options)
   if (!options)
     return;
 
-  assert(fmt);
+  sbassert(fmt);
 
   for (i=0; fmt->vars[i].name; ++i)
     clear(fmt, options, &(fmt->vars[i]));
@@ -692,8 +691,8 @@ const char * confparse_line_from_str_verbose(const char *line,
   const char *key, *val, *cp;
   int continuation = 0;
 
-  assert(key_out);
-  assert(value_out);
+  sbassert(key_out);
+  sbassert(value_out);
 
   *key_out = *value_out = NULL;
   key = val = NULL;
@@ -774,7 +773,7 @@ const char * confparse_line_from_str_verbose(const char *line,
     while (cp > val && isspace(*(cp - 1)))
       --cp;
 
-    assert(cp >= val);
+    sbassert(cp >= val);
 
     /* Now copy out and decode the value. */
     *value_out = box_strndup(val, (unsigned long)(cp-val));
@@ -857,8 +856,8 @@ void confparse_init(const configformat *fmt, void *options)
   int i;
   const configvar *var;
 
-  assert(fmt && options);
-  assert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
+  sbassert(fmt && options);
+  sbassert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
 
   for (i=0; fmt->vars[i].name; ++i) {
     var = &fmt->vars[i];
@@ -875,8 +874,8 @@ int confparse_assign(const configformat *fmt, void *options, configline *list,
   bitarray_t *options_seen;
   const int n_options = config_count_options(fmt);
 
-  assert(fmt && options);
-  assert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
+  sbassert(fmt && options);
+  sbassert((fmt)->magic == *(uint32_t*)STRUCT_VAR_P(options,fmt->magic_offset));
 
   /* pass 1: normalize keys */
   for (p = list; p; p = p->next) {

@@ -48,7 +48,6 @@
  *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
  */
 
-#include <assert.h>
 #include <unistd.h>
 #include "sb-common.h"
 #include "options.h"
@@ -125,7 +124,7 @@ int options_init_from_boxrc(void)
 
 options * options_get(void)
 {
-  assert(global_options);
+  sbassert(global_options);
   return global_options;
 }
 

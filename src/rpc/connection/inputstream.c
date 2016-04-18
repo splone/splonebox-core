@@ -71,8 +71,8 @@ void inputstream_set(inputstream *istream, uv_stream_t *stream)
 
 void inputstream_start(inputstream *istream)
 {
-  assert(istream);
-  assert(istream->stream);
+  sbassert(istream);
+  sbassert(istream->stream);
 
   uv_read_start(istream->stream, inputstream_alloc_cb, inputstream_read_cb);
 }
@@ -86,8 +86,8 @@ void inputstream_stop(inputstream *istream)
 
 void inputstream_free(inputstream *istream)
 {
-  assert(istream);
-  assert(istream->stream);
+  sbassert(istream);
+  sbassert(istream->stream);
 
   uv_close((uv_handle_t *)istream->stream, inputstream_close_cb);
 }
