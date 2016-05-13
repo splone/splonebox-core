@@ -115,6 +115,7 @@ set(SPLONEBOX-SOURCES
   src/api/sb-api.h
   src/api/apikey.c
   src/api/register.c
+  src/api/result.c
   src/api/run.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
@@ -180,6 +181,7 @@ set(TEST-SOURCES
   src/api/apikey.c
   src/api/register.c
   src/api/run.c
+  src/api/result.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
   src/rpc/connection/streamhandle.c
@@ -235,6 +237,7 @@ set(TEST-SOURCES
   test/functional/filesystem-save-sync.c
   test/functional/dispatch-handle-register.c
   test/functional/dispatch-handle-run.c
+  test/functional/dispatch-handle-result.c
   test/functional/crypto.c
 )
 

@@ -57,3 +57,7 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
  * @return 0 in case of success otherwise -1
  */
 int api_get_key(string key);
+
+int api_result(string pluginlongtermpk, uint64_t callid,
+    struct message_object args, struct connection *con, uint32_t msgid,
+    struct api_error *api_error);

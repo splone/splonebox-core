@@ -38,7 +38,7 @@
 
 static msgpack_sbuffer sbuf;
 static hashmap(string, dispatch_info) *dispatch_table = NULL;
-static hashmap(uint64_t, ptr_t) *callids = NULL;
+static hashmap(uint64_t, string) *callids = NULL;
 
 int handle_error(connection_request_event_info *info)
 {
@@ -235,7 +235,8 @@ int handle_run(connection_request_event_info *info)
 
   args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
-  hashmap_put(uint64_t, ptr_t)(callids, callid, info->con);
+  hashmap_put(uint64_t, string)(callids, callid,
+      cstring_copy_string(pluginlongtermpk.str));
 
   if (api_run(pluginlongtermpk, function_name, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
@@ -247,6 +248,77 @@ int handle_run(connection_request_event_info *info)
   return (0);
 }
 
+int handle_result(connection_request_event_info *info)
+{
+  uint64_t callid;
+  array *meta = NULL;
+  struct message_object args_object;
+  struct message_request *request;
+  struct api_error *api_error;
+  string pluginlongtermpk;
+
+  request = &info->request;
+  api_error = &info->api_error;
+
+  if (!api_error || !request)
+    return (-1);
+
+  /* check params size */
+  if (request->params.size != 2) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API request. Invalid params size");
+    return (-1);
+  }
+
+  if (request->params.obj[0].type == OBJECT_TYPE_ARRAY)
+    meta = &request->params.obj[0].data.params;
+  else {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API request. meta params has wrong type");
+    return (-1);
+  }
+
+  if (!meta) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API request. meta params is NULL");
+    return (-1);
+  }
+
+  /* meta = [callid]*/
+  if (meta->size != 1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API request. Invalid meta params size");
+    return (-1);
+  }
+
+  /* extract meta information */
+  if (meta->obj[0].type != OBJECT_TYPE_UINT) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API request. meta elements have wrong type");
+    return (-1);
+  }
+
+  callid = meta->obj[0].data.uinteger;
+
+  if (request->params.obj[1].type != OBJECT_TYPE_ARRAY) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API request. function string has wrong type");
+    return (-1);
+  }
+
+  args_object = request->params.obj[1];
+
+  pluginlongtermpk = hashmap_get(uint64_t, string)(callids, callid);
+
+  if (api_result(pluginlongtermpk, callid, args_object, info->con,
+      info->request.msgid, api_error) == -1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error executing run API request.");
+    return (-1);
+  }
+
+  return (0);
+}
 
 void dispatch_table_put(string method, dispatch_info info)
 {
@@ -261,8 +333,15 @@ dispatch_info dispatch_table_get(string method)
 
 int dispatch_teardown(void)
 {
+  string value;
+  
   hashmap_free(string, dispatch_info)(dispatch_table);
-  hashmap_free(uint64_t, ptr_t)(callids);
+
+  hashmap_foreach_value(callids, value, {
+    free_string(value);
+  });
+
+  hashmap_free(uint64_t, string)(callids);
 
   return (0);
 }
@@ -276,11 +355,13 @@ int dispatch_table_init(void)
       .name = (string) {.str = "run", .length = sizeof("run") - 1}};
   dispatch_info error_info = {.func = handle_error, .async = true,
       .name = (string) {.str = "error", .length = sizeof("error") - 1}};
+  dispatch_info result_info = {.func = handle_result, .async = true,
+      .name = (string) {.str = "result", .length = sizeof("result") - 1,}};
 
   msgpack_sbuffer_init(&sbuf);
 
   dispatch_table = hashmap_new(string, dispatch_info)();
-  callids = hashmap_new(uint64_t, ptr_t)();
+  callids = hashmap_new(uint64_t, string)();
 
   if (!dispatch_table || !callids)
     return (-1);
@@ -288,6 +369,8 @@ int dispatch_table_init(void)
   dispatch_table_put(register_info.name, register_info);
   dispatch_table_put(run_info.name, run_info);
   dispatch_table_put(error_info.name, error_info);
+  dispatch_table_put(result_info.name, result_info);
+
 
   return (0);
 }

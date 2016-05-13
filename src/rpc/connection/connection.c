@@ -420,8 +420,7 @@ static int connection_handle_request(struct connection *con,
   if (message_deserialize_request(&eventinfo.request, obj, &api_error) != 0) {
     /* request wasn't parsed correctly, send error with pseudo RESPONSE ID*/
     eventinfo.request.msgid = MESSAGE_RESPONSE_UNKNOWN;
-    eventinfo.request.method = (string) {.str = "error",
-        .length = sizeof("error") - 1};
+    eventinfo.request.method = cstring_copy_string("error");
   }
 
   LOG_VERBOSE(VERBOSE_LEVEL_0, "received request: method = %s\n",
@@ -469,6 +468,9 @@ static void connection_request_event(connection_request_event_info *eventinfo)
 
     msgpack_sbuffer_clear(&sbuf);
   }
+
+  free_params(eventinfo->request.params);
+  free_string(eventinfo->request.method);
 }
 
 
