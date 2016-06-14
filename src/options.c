@@ -160,6 +160,7 @@ STATIC setoptionerror options_init_from_string(const char *cf)
 
   if (!body)
     goto err;
+
   /* get config lines, assign them */
   retval = confparse_get_lines(body, &cl, 1);
 
@@ -193,7 +194,7 @@ STATIC setoptionerror options_init_from_string(const char *cf)
   return err;
 }
 
-STATIC char * load_boxrc_from_disk(void)
+STATIC char *load_boxrc_from_disk(void)
 {
   int fd;
   char *string = NULL;
