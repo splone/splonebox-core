@@ -20,23 +20,31 @@
 #include "rpc/db/sb-db.h"
 #include "helper-unix.h"
 
-#define DB_PORT 6378
-
 void connect_to_db(void)
 {
   redisReply *reply;
-  string db_ip = cstring_copy_string("127.0.0.1");
-  string db_auth = cstring_copy_string("vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2");
-
+  options *globaloptions;
   struct timeval timeout = { 1, 500000 };
 
-  assert_int_equal(0, db_connect(db_ip, DB_PORT, timeout, db_auth));
+  if (options_init_from_boxrc() < 0) {
+      LOG_ERROR("Reading config failed--see warnings above. "
+              "For usage, try -h.");
+      return;
+  }
+
+  globaloptions = options_get();
+
+  /* connect to database */
+  assert_int_equal(0, db_connect(
+      fmt_addr(&globaloptions->RedisDatabaseListenAddr),
+      globaloptions->RedisDatabaseListenPort, timeout,
+      globaloptions->RedisDatabaseAuth));
 
   reply = redisCommand(rc, "FLUSHALL");
 
   freeReplyObject(reply);
-  free_string(db_ip);
-  free_string(db_auth);
+
+  options_free(globaloptions);
 }
 
 void connect_and_create(string apikey)

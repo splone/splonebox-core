@@ -22,18 +22,20 @@ uv_loop_t loop;
 
 void unit_server_stop(UNUSED(void **state))
 {
-  string endpoint_ip_correct = cstring_copy_string("127.0.0.1:11111");
+  boxaddr addr;
+  uint16_t port;
+
   uv_loop_init(&loop);
+
+  box_addr_port_lookup("127.0.0.1:11111", &addr, &port);
 
   server_init();
 
-  assert_int_equal(0, server_start(endpoint_ip_correct));
-  assert_int_equal(0, server_stop(endpoint_ip_correct));
+  assert_int_equal(0, server_start_tcp(&addr, port));
+  assert_int_equal(0, server_stop((char*)fmt_addr(&addr)));
 
   server_close();
 
   uv_run(&loop, UV_RUN_ONCE);
   uv_loop_close(&loop);
-
-  free_string(endpoint_ip_correct);
 }

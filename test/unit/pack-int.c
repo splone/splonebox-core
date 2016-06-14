@@ -21,41 +21,33 @@
 #include "helper-unix.h"
 
 
-void unit_pack_array(UNUSED(void **state))
+void unit_pack_int(UNUSED(void **state))
 {
-  array params = ARRAY_INIT;
   msgpack_sbuffer sbuf;
   msgpack_packer pk;
-
-  params.size = 5;
-  params.obj =  CALLOC(params.size, struct message_object);
-
-  params.obj[0].type = OBJECT_TYPE_UINT;
-  params.obj[0].data.uinteger = 5;
-
-  params.obj[1].type = OBJECT_TYPE_INT;
-  params.obj[1].data.uinteger = 5;
-
-  params.obj[2].type = OBJECT_TYPE_ARRAY;
-  params.obj[2].data.params.size = 1;
-  params.obj[2].data.params.obj = CALLOC(params.obj[2].data.params.size,
-                                        struct message_object);
-  params.obj[2].data.params.obj[0].type = OBJECT_TYPE_INT;
-  params.obj[2].data.params.obj[0].data.uinteger = 6;
-
-  params.obj[3].type = OBJECT_TYPE_BOOL;
-  params.obj[3].data.boolean = true;
-
-  params.obj[4].type = OBJECT_TYPE_FLOAT;
-  params.obj[4].data.floating = 1.2345;
 
   msgpack_sbuffer_init(&sbuf);
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
 
-  assert_int_equal(0, pack_params(&pk, params));
-  assert_int_not_equal(0, pack_params(NULL, params));
+  assert_int_equal(0, pack_int8(&pk, 0));
+  assert_int_equal(0, pack_int8(&pk, 1));
+  assert_int_equal(0, pack_int8(&pk, 11));
+  assert_int_not_equal(0, pack_int8(NULL, 11));
+
+  assert_int_equal(0, pack_int16(&pk, 0));
+  assert_int_equal(0, pack_int16(&pk, 1));
+  assert_int_equal(0, pack_int16(&pk, 11));
+  assert_int_not_equal(0, pack_int16(NULL, 11));
+
+  assert_int_equal(0, pack_int32(&pk, 0));
+  assert_int_equal(0, pack_int32(&pk, 1));
+  assert_int_equal(0, pack_int32(&pk, 11));
+  assert_int_not_equal(0, pack_int32(NULL, 11));
+
+  assert_int_equal(0, pack_int64(&pk, 0));
+  assert_int_equal(0, pack_int64(&pk, 1));
+  assert_int_equal(0, pack_int64(&pk, 11));
+  assert_int_not_equal(0, pack_int64(NULL, 11));
 
   msgpack_sbuffer_destroy(&sbuf);
-
-  free_params(params);
 }

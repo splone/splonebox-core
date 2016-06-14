@@ -14,25 +14,23 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <hiredis/hiredis.h>
+#include <msgpack.h>
 
-#include "rpc/sb-rpc.h"
 #include "sb-common.h"
+#include "rpc/msgpack/sb-msgpack-rpc.h"
 #include "helper-unix.h"
 
-#define DB_PORT 6378
 
-void functional_db_connect(UNUSED(void **state))
+void unit_pack_float(UNUSED(void **state))
 {
-  struct timeval timeout = { 1, 500000 };
+  msgpack_sbuffer sbuf;
+  msgpack_packer pk;
 
-  assert_int_equal(0, db_connect("127.0.0.1", DB_PORT, timeout,
-      "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"));
-  db_close();
-  assert_int_not_equal(0, db_connect("127.0.0.2", DB_PORT, timeout,
-      "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"));
-  assert_int_not_equal(0, db_connect("127.0.0.1", 1234, timeout,
-      "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"));
-  assert_int_not_equal(0, db_connect("127.0.0.1", DB_PORT, timeout,
-      "wrong password"));
+  msgpack_sbuffer_init(&sbuf);
+  msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+  assert_int_equal(0, pack_float(&pk, 1.234));
+  assert_int_not_equal(0, pack_float(NULL, 1.234));
+
+  msgpack_sbuffer_destroy(&sbuf);
 }

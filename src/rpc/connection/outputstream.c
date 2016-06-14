@@ -35,8 +35,8 @@
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/connection/outputstream.h"
 
-static void write_cb(uv_write_t *req, int status);
 
 outputstream *outputstream_new(uint32_t maxmem)
 {
@@ -101,7 +101,7 @@ int outputstream_write(outputstream *ostream, char *buffer, size_t len)
 }
 
 
-static void write_cb(uv_write_t *req, int status)
+STATIC void write_cb(uv_write_t *req, int status)
 {
   struct write_request_data *data = req->data;
 

@@ -33,7 +33,8 @@ extern redisContext *rc;
  * @param[in]   password  password to authenticate against redis db
  * @return    0 on success otherwise -1
  */
-extern int db_connect(string ip, int port, const struct timeval tv, string password);
+extern int db_connect(const char *ip, int port, const struct timeval tv,
+    const char *password);
 
 /**
  * Disconnects from Redis db and frees Context object.
