@@ -1,0 +1,38 @@
+.Dd 2016-06-14
+.Dt sb
+.Os
+.\" ------------ NAME ------------
+.Sh NAME
+.Nm .boxrc
+\- splonebox configuration file
+
+.\" ------------ DESCRIPTION ------------
+.Sh DESCRIPTION
+The
+.Nm
+allows configuring the splonebox.
+
+.Bl -tag -width indent
+.It ApiTransportListen Ar host:port
+The address the splonebox core listens for plugins.
+
+.It RedisDatabaseListen Ar host:port
+The address the management database listens to. For instance, the splonebox
+uses the management database to store meta information about plugins.
+
+.It RedisDatabaseAuth Ar password
+The password to authenticate towards the management database.
+
+.El
+
+
+.\" ------------ SEE ALSO ------------
+.Sh SEE ALSO
+
+splonebox(1)
+
+.\" ------------ AUTHOR ------------
+.Sh AUTHOR
+.An "splone" Aq mail@splone.com
+
+
