@@ -103,6 +103,7 @@ int server_start_tcp(boxaddr *addr, uint16_t port)
 
   hashmap_put(cstr_t, ptr_t)(servers, fmt_addr(addr), server);
 
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "Listening on %s:%d..\n", fmt_addr(addr), port);
   return (0);
 }
 
