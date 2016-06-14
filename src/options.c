@@ -52,6 +52,8 @@
 #include "sb-common.h"
 #include "options.h"
 
+#define BOXRC ".boxrc"
+
 /** Return the offset of <b>member</b> within the type <b>tp</b>, in bytes */
 #if defined(__GNUC__) && __GNUC__ > 3
 #define STRUCT_OFFSET(tp, member) __builtin_offsetof(tp, member)
@@ -197,7 +199,7 @@ STATIC char * load_boxrc_from_disk(void)
   char *string = NULL;
   struct stat statbuf;
 
-  fd = filesystem_open_read(".boxrc");
+  fd = filesystem_open_read(BOXRC);
 
   if (fstat(fd, &statbuf) < 0) {
     return (NULL);
