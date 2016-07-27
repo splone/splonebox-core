@@ -121,11 +121,10 @@ int handle_register(connection_request_event_info *info)
     return (-1);
   }
 
-  pluginlongtermpk = meta->obj[0].data.string;
-  name = meta->obj[1].data.string;
-  description = meta->obj[2].data.string;
-  author = meta->obj[3].data.string;
-  license = meta->obj[4].data.string;
+  name = meta->obj[0].data.string;
+  description = meta->obj[1].data.string;
+  author = meta->obj[2].data.string;
+  license = meta->obj[3].data.string;
 
   if (request->params.obj[1].type != OBJECT_TYPE_ARRAY) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -135,7 +134,7 @@ int handle_register(connection_request_event_info *info)
 
   functions = request->params.obj[1].data.params;
 
-  if (api_register(pluginlongtermpk, name, description, author, license,
+  if (api_register(name, description, author, license,
       functions, info->con, info->request.msgid, api_error) == -1) {
 
     if (!api_error->isset)

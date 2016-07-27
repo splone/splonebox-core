@@ -20,17 +20,15 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-int api_register(string pluginkey, string name, string desc,
+int api_register(string name, string desc,
     string author, string license, array functions, struct connection *con,
     uint32_t msgid, struct api_error *api_error)
 {
   struct message_object *func;
+  unsigned char pluginkey[8];
   array params = ARRAY_INIT;
 
-  if (db_pluginkey_verify(pluginkey) == -1) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
-    return (-1);
-  }
+  pluginkey = con->cc->pluginkey;
 
   if (functions.size == 0) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
