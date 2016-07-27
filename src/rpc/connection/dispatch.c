@@ -152,7 +152,7 @@ int handle_run(connection_request_event_info *info)
 {
   uint64_t callid;
   array *meta = NULL;
-  string pluginlongtermpk, function_name;
+  string targetpluginkey, function_name;
   struct message_object args_object;
   struct message_request *request;
   struct api_error *api_error;
@@ -184,7 +184,7 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  /* meta = [pluginlongtermpk, nil]*/
+  /* meta = [targetpluginkey, nil]*/
   if (meta->size != 2) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid meta params size");
@@ -204,7 +204,7 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  pluginlongtermpk = meta->obj[0].data.string;
+  targetpluginkey = meta->obj[0].data.string;
 
   if (meta->obj[1].type != OBJECT_TYPE_NIL) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -236,7 +236,7 @@ int handle_run(connection_request_event_info *info)
   callid = (uint64_t) randommod(281474976710656LL);
   hashmap_put(uint64_t, string)(callids, callid, pluginlongtermpk);
 
-  if (api_run(pluginlongtermpk, function_name, callid, args_object, info->con,
+  if (api_run(targetpluginkey, function_name, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error executing run API request.");
