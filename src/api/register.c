@@ -20,14 +20,14 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-int api_register(string pluginlongtermpk, string name, string desc,
+int api_register(string pluginkey, string name, string desc,
     string author, string license, array functions, struct connection *con,
     uint32_t msgid, struct api_error *api_error)
 {
   struct message_object *func;
   array params = ARRAY_INIT;
 
-  if (db_apikey_verify(pluginlongtermpk) == -1) {
+  if (db_pluginkey_verify(pluginkey) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
     return (-1);
   }
@@ -38,7 +38,7 @@ int api_register(string pluginlongtermpk, string name, string desc,
     return (-1);
   }
 
-  if (db_plugin_add(pluginlongtermpk, name, desc, author, license) == -1) {
+  if (db_plugin_add(pluginkey, name, desc, author, license) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Failed to register plugin in database.");
     return (-1);
@@ -53,7 +53,7 @@ int api_register(string pluginlongtermpk, string name, string desc,
       continue;
     }
 
-    if (db_function_add(pluginlongtermpk, &func->data.params) == -1) {
+    if (db_function_add(pluginkey, &func->data.params) == -1) {
       error_set(api_error, API_ERROR_TYPE_VALIDATION,
           "Failed to register function in database.");
       continue;
@@ -67,7 +67,7 @@ int api_register(string pluginlongtermpk, string name, string desc,
    * add connection with the client long term public key as key to the
    * connection hashmap
    */
-  connection_hashmap_put(pluginlongtermpk, con);
+  connection_hashmap_put(pluginkey, con);
 
   if (connection_send_response(con, msgid, params, api_error) < 0) {
     return (-1);

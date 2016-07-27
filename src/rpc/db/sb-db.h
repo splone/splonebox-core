@@ -43,47 +43,47 @@ extern void db_close(void);
 
 /**
  * Stores a function in database associated with the corresponding module.
- * @param[in] apikey  key of the module that provides the corresponding
+ * @param[in] pluginkey  key of the module that provides the corresponding
  *                    function
  * @param[in] func    array of functions to actually store
  * @return 0 on success otherwise -1
  */
-extern int db_function_add(string apikey, array *func);
+extern int db_function_add(string pluginkey, array *func);
 
 /**
  * Verifies whether the corresponding function is called correctly. To
  * do so, it verifies the name of the function and the arguments' type.
- * @param[in] apikey  key of the module that provides the corresponding
+ * @param[in] pluginkey  key of the module that provides the corresponding
  *                    function
  * @param[in] name    name of the function to call
  * @param[in] args    function arguments
  * @return 0 if call is valid, otherwise -1
  */
-extern int db_function_verify(string apikey, string name,
+extern int db_function_verify(string pluginkey, string name,
   array *args);
 
 /**
  * Creates a plugin entry in the database and uses the API key as key.
- * @param[in] apikey buffer to contain the API key
+ * @param[in] pluginkey buffer to contain the API key
  * @param[in] name    name of plugin
  * @param[in] desc    description of the plugin
  * @param[in] author  author of the plugin
  * @param[in] license the plugin's license text
  * returns -1 in case of error otherwise 0
  */
-extern int db_plugin_add(string apikey, string name, string desc, string author,
+extern int db_plugin_add(string pluginkey, string name, string desc, string author,
     string license);
 
 /**
  * Checks whether the passed API key is assigned to a plugin.
- * @param[in] apikey  key to check
+ * @param[in] pluginkey  key to check
  * returns 0 if key is valid otherwise -1
  */
-extern int db_apikey_verify(string apikey);
+extern int db_pluginkey_verify(string pluginkey);
 
 /**
  * Stores an API key in the database.
  * @param[in] key to store
  * returns 0 on success otherwise -1
  */
-extern int db_apikey_add(string apikey);
+extern int db_pluginkey_add(string pluginkey);

@@ -20,7 +20,7 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
+int api_run(string pluginkey, string function_name, uint64_t callid,
     struct message_object args, struct connection *con,
     uint32_t msgid, struct api_error *api_error)
 {
@@ -35,12 +35,12 @@ int api_run(string pluginlongtermpk, string function_name, uint64_t callid,
     return (-1);
 
   /* check if id is in database */
-  if (db_apikey_verify(pluginlongtermpk) == -1) {
+  if (db_pluginkey_verify(pluginkey) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
     return (-1);
   }
 
-  if (db_function_verify(pluginlongtermpk, function_name, &args.data.params) == -1) {
+  if (db_function_verify(pluginkey, function_name, &args.data.params) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "run() verification failed.");
     return (-1);

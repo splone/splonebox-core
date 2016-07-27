@@ -327,14 +327,14 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
   return (0);
 }
 
-int connection_hashmap_put(string pluginlongtermpk, struct connection *con)
+int connection_hashmap_put(string pluginkey, struct connection *con)
 {
-  hashmap_put(string, ptr_t)(connections, pluginlongtermpk, con);
+  hashmap_put(string, ptr_t)(connections, pluginkey, con);
 
   return (0);
 }
 
-struct callinfo * connection_send_request(string pluginlongtermpk, string method,
+struct callinfo * connection_send_request(string pluginkey, string method,
     array params, struct api_error *api_error)
 {
   struct connection *con;
@@ -342,7 +342,7 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   struct message_request request;
   struct callinfo *cinfo;
 
-  con = hashmap_get(string, ptr_t)(connections, pluginlongtermpk);
+  con = hashmap_get(string, ptr_t)(connections, pluginkey);
 
   /*
    * if no connection is available for the key, set the connection to the

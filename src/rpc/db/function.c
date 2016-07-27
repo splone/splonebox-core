@@ -27,14 +27,14 @@
 #define FUNC_MAX_LEN_NAME 255
 #define FUNC_MIN_LEN_NAME 1
 
-static int db_function_add_name(string apikey, string name)
+static int db_function_add_name(string pluginkey, string name)
 {
   redisReply *reply;
 
   if (!rc)
     return (-1);
 
-  reply = redisCommand(rc, "SADD %s:func:all %s", apikey.str, name.str);
+  reply = redisCommand(rc, "SADD %s:func:all %s", pluginkey.str, name.str);
 
   if (reply->type != REDIS_REPLY_INTEGER) {
     LOG_WARNING("Redis failed to add function name to func:all set: %s",
@@ -48,14 +48,14 @@ static int db_function_add_name(string apikey, string name)
 }
 
 
-static int db_function_add_meta(string apikey, string name, string desc)
+static int db_function_add_meta(string pluginkey, string name, string desc)
 {
   redisReply *reply;
 
   if (!rc)
     return (-1);
 
-  reply = redisCommand(rc, "HSET %s:func:%s:meta desc %s", apikey.str,
+  reply = redisCommand(rc, "HSET %s:func:%s:meta desc %s", pluginkey.str,
           name.str, desc.str);
 
   if (reply->type == REDIS_REPLY_ERROR) {
@@ -70,7 +70,7 @@ static int db_function_add_meta(string apikey, string name, string desc)
 }
 
 
-static int db_function_add_args(string apikey, string name,
+static int db_function_add_args(string pluginkey, string name,
     message_object_type type)
 {
   redisReply *reply;
@@ -78,7 +78,7 @@ static int db_function_add_args(string apikey, string name,
   if (!rc)
     return (-1);
 
-  reply = redisCommand(rc, "LPUSH %s:func:%s:args %lu", apikey.str, name.str,
+  reply = redisCommand(rc, "LPUSH %s:func:%s:args %lu", pluginkey.str, name.str,
           type);
 
   if (reply->type != REDIS_REPLY_INTEGER) {
@@ -92,7 +92,7 @@ static int db_function_add_args(string apikey, string name,
 }
 
 
-static int db_function_flush_args(string apikey, string name)
+static int db_function_flush_args(string pluginkey, string name)
 {
   redisReply *reply;
   int start = 1;
@@ -103,7 +103,7 @@ static int db_function_flush_args(string apikey, string name)
 
   /* if start > end, the result will be an empty list (which causes
    * key to be removed) */
-  reply = redisCommand(rc, "LTRIM %s:func:%s:args %i %i", apikey.str, name.str,
+  reply = redisCommand(rc, "LTRIM %s:func:%s:args %i %i", pluginkey.str, name.str,
           start, end);
 
   if ((reply->type != REDIS_REPLY_STATUS) ||
@@ -120,7 +120,7 @@ static int db_function_flush_args(string apikey, string name)
 }
 
 
-int db_function_add(string apikey, array *func)
+int db_function_add(string pluginkey, array *func)
 {
   struct message_object *name_elem, *desc_elem, *args, *arg;
   string name, desc;
@@ -158,20 +158,20 @@ int db_function_add(string apikey, array *func)
     return (-1);
   }
 
-  if (db_function_add_name(apikey, name) == -1)
+  if (db_function_add_name(pluginkey, name) == -1)
     return (-1);
 
-  if (db_function_add_meta(apikey, name, desc) == -1)
+  if (db_function_add_meta(pluginkey, name, desc) == -1)
     return (-1);
 
   args = &func->obj[2];
 
-  db_function_flush_args(apikey, name);
+  db_function_flush_args(pluginkey, name);
 
   for (size_t i = 0; i < args->data.params.size; i++) {
     arg = &args->data.params.obj[i];
 
-    if (db_function_add_args(apikey, name, arg->type) == -1) {
+    if (db_function_add_args(pluginkey, name, arg->type) == -1) {
       LOG_WARNING("Failed to add function arguments!");
       return (-1);
     }
@@ -181,7 +181,7 @@ int db_function_add(string apikey, array *func)
 }
 
 
-static bool db_function_exists(string apikey, string name)
+static bool db_function_exists(string pluginkey, string name)
 {
   redisReply *reply;
   bool result;
@@ -191,7 +191,7 @@ static bool db_function_exists(string apikey, string name)
     return (false);
   }
 
-  reply = redisCommand(rc, "SISMEMBER %s:func:all %s", apikey.str,
+  reply = redisCommand(rc, "SISMEMBER %s:func:all %s", pluginkey.str,
           name.str);
 
   if (reply->type != REDIS_REPLY_INTEGER) {
@@ -207,7 +207,7 @@ static bool db_function_exists(string apikey, string name)
 }
 
 
-static ssize_t db_function_get_argc(string apikey, string name)
+static ssize_t db_function_get_argc(string pluginkey, string name)
 {
   redisReply *reply;
   ssize_t result;
@@ -217,7 +217,7 @@ static ssize_t db_function_get_argc(string apikey, string name)
     return (-1);
   }
 
-  reply = redisCommand(rc, "LLEN %s:func:%s:args", apikey.str,
+  reply = redisCommand(rc, "LLEN %s:func:%s:args", pluginkey.str,
           name.str);
 
   if (reply->type != REDIS_REPLY_INTEGER) {
@@ -233,7 +233,7 @@ static ssize_t db_function_get_argc(string apikey, string name)
 }
 
 
-static int db_function_typecheck(string apikey, string name,
+static int db_function_typecheck(string pluginkey, string name,
     array *args)
 {
   redisReply *reply;
@@ -247,13 +247,13 @@ static int db_function_typecheck(string apikey, string name,
     return (-1);
   }
 
-  if (((argc = db_function_get_argc(apikey, name)) < 0) ||
+  if (((argc = db_function_get_argc(pluginkey, name)) < 0) ||
       ((size_t)argc != (size_t)args->size)) {
     LOG_WARNING("Invalid argument count!");
     return (-1);
   }
 
-  reply = redisCommand(rc, "LRANGE %s:func:%s:args 0 %d", apikey.str, name.str,
+  reply = redisCommand(rc, "LRANGE %s:func:%s:args 0 %d", pluginkey.str, name.str,
           argc);
 
   if (reply->type == REDIS_REPLY_ARRAY)
@@ -304,13 +304,13 @@ static int db_function_typecheck(string apikey, string name,
 }
 
 
-int db_function_verify(string apikey, string name,
+int db_function_verify(string pluginkey, string name,
     array *args)
 {
-  if (!db_function_exists(apikey, name))
+  if (!db_function_exists(pluginkey, name))
     return (-1);
 
-  if (db_function_typecheck(apikey, name, args) == -1)
+  if (db_function_typecheck(pluginkey, name, args) == -1)
     return (-1);
 
   return (0);
