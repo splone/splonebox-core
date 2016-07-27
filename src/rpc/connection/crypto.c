@@ -425,6 +425,11 @@ int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data)
 
   memcpy(clientlongtermpk, initiatebox + 32, 32);
 
+  if (db_pluginlongtermpk_verify(clientlongtermpk) == -1) {
+    LOG_VERBOSE(VERBOSE_LEVEL_0, "Failed to verify plugin long-term public key.");
+    goto fail;
+  }
+
   crypto_box_beforenm(clientlongserverlong, clientlongtermpk, serverlongtermsk);
 
   memcpy(nonce, CRYPTO_PREFIX_VNONCE, 8);

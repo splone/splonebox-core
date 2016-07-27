@@ -56,7 +56,7 @@ int db_plugin_add(string pluginkey, string name, string desc, string author,
 }
 
 
-int db_pluginkey_verify(string pluginkey)
+int db_pluginlongtermpk_verify(string pluginlongtermpk)
 {
   redisReply *reply;
   bool valid = false;
@@ -64,7 +64,7 @@ int db_pluginkey_verify(string pluginkey)
   if (!rc)
     return (-1);
 
-  reply = redisCommand(rc, "Exists %s", pluginkey.str);
+  reply = redisCommand(rc, "Exists %s", pluginlongtermpk.str);
 
   if (reply->type != REDIS_REPLY_INTEGER)
     LOG_WARNING("Redis failed to query plugin key existence: %s", reply->str);
@@ -80,7 +80,7 @@ int db_pluginkey_verify(string pluginkey)
 }
 
 
-int db_pluginkey_add(string pluginkey)
+int db_pluginlongtermpk_add(string pluginlongtermpk)
 {
   redisReply *reply;
 
@@ -92,7 +92,7 @@ int db_pluginkey_add(string pluginkey)
     return (-1);
   }
 
-  reply = redisCommand(rc, "HMSET %s  name ''", pluginkey.str);
+  reply = redisCommand(rc, "HMSET %s  name ''", pluginlongtermpk.str);
 
   if (reply->type == REDIS_REPLY_ERROR) {
     LOG_WARNING("Redis failed to add string value to plugin: %s", reply->str);
