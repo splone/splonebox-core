@@ -87,11 +87,6 @@ int db_pluginlongtermpk_add(string pluginlongtermpk)
   if (!rc)
     return (-1);
 
-  if (apikey.length < MIN_LEN_APIKEY) {
-    LOG_WARNING("API key length should be greater than %d.", MIN_LEN_APIKEY);
-    return (-1);
-  }
-
   reply = redisCommand(rc, "HMSET %s  name ''", pluginlongtermpk.str);
 
   if (reply->type == REDIS_REPLY_ERROR) {
