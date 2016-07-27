@@ -47,15 +47,11 @@
 
 /* Functions */
 
-int message_unpack_apikey(msgpack_object *obj, struct message_request *req,
-    struct api_error *api_error);
 int message_unpack_type(msgpack_object *obj, struct message_request *req,
     struct api_error *api_error);
 int message_unpack_validate_type(msgpack_object *ptr,
     struct api_error *api_error);
 int message_unpack_validate_msgid(msgpack_object *ptr,
-    struct api_error *api_error);
-int message_unpack_validate_apikey(msgpack_object *obj,
     struct api_error *api_error);
 int message_unpack_validate_status(msgpack_object *ptr,
     struct api_error *api_error);
@@ -75,7 +71,6 @@ int message_unpack_validate_args(msgpack_object *ptr,
     struct api_error *api_error);
 int message_unpack_args(msgpack_object *obj, struct message_request *req,
     array *params, struct api_error *api_error);
-int message_pack_apikey(msgpack_packer *pk, char *key);
 int message_pack_type(msgpack_packer *pk, uint8_t type);
 int message_pack_method(msgpack_packer *pk, char *method);
 int message_pack_params(msgpack_packer *pk,
