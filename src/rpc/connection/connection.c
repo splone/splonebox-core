@@ -434,6 +434,7 @@ STATIC int connection_handle_request(struct connection *con,
   dispatcher = dispatch_table_get(eventinfo.request.method);
 
   if (dispatcher.func == NULL) {
+    LOG_VERBOSE(VERBOSE_LEVEL_0, "could not dispatch method\n");
     error_set(&api_error, API_ERROR_TYPE_VALIDATION, "could not dispatch method");
     dispatcher.func = handle_error;
     dispatcher.async = true;

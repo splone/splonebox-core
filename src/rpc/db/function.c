@@ -282,7 +282,7 @@ static int db_function_typecheck(string pluginkey, string name,
       }
 
       if(val == OBJECT_TYPE_INT && args->obj[k].type == OBJECT_TYPE_UINT){
-        /* Any positive integer will be treated as and unsigned int
+        /* Any positive integer will be treated as an unsigned int
          * (see unpack/pack.c) and might be a valid signed integer */
         if(args->obj[k].data.uinteger > INT64_MAX){
           LOG_WARNING("run() function argument has wrong type.");
