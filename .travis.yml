@@ -3,8 +3,8 @@ language: c
 matrix:
   include:
     - os: linux
-      compiler: clang-3.6
-      env: GCOV=llvm-cov-3.6 EXTRA_FLAGS="-DUSE_COVERAGE=ON -DCLANG_ADDRESS_SANITIZER=ON"
+      compiler: clang
+      env: GCOV=llvm-cov-3.4 EXTRA_FLAGS="-DUSE_COVERAGE=ON -DCLANG_ADDRESS_SANITIZER=ON"
 
 before_install:
   # cmocka
