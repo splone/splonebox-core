@@ -238,7 +238,6 @@ static int db_function_typecheck(string pluginkey, string name,
 {
   redisReply *reply;
   ssize_t argc = 0;
-  size_t k = 0;
   char *endptr;
   long val;
 
@@ -257,7 +256,8 @@ static int db_function_typecheck(string pluginkey, string name,
           argc);
 
   if (reply->type == REDIS_REPLY_ARRAY)
-    for (size_t j = reply->elements; j != 0; j--) {
+    for (size_t j = reply->elements, k = 0; j != 0; j--, k++) {
+
       if (reply->element[j-1]->type != REDIS_REPLY_STRING) {
         LOG_WARNING("Redis returned list element has wrong type.");
         freeReplyObject(reply);
@@ -295,7 +295,6 @@ static int db_function_typecheck(string pluginkey, string name,
         return (-1);
       }
 
-      k++;
     }
 
   freeReplyObject(reply);
