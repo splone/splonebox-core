@@ -136,6 +136,7 @@ struct crypto_context {
   unsigned char servershorttermsk[32];
   unsigned char minutekey[32];
   unsigned char lastminutekey[32];
+  unsigned char pluginkey[8];
 };
 
 struct connection {
