@@ -205,7 +205,11 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  targetpluginkey = meta->obj[0].data.string;
+  if (0 > base16_decode(targetpluginkey, 8, meta->obj[0].data.string)) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching run API request. Invalid target plugin key");
+    return (-1);
+  }
 
   if (meta->obj[1].type != OBJECT_TYPE_NIL) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
