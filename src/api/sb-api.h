@@ -33,19 +33,19 @@
  * @param[in] funcs   the actual functions to register
  * @return 0 in case of success otherwise 1
  */
- int api_register(string pluginkey, string name, string desc,
+ int api_register(string name, string desc,
      string author, string license, array functions, struct connection *con,
      uint32_t msgid, struct api_error *api_error);
 
 /**
  * Run a plugin function
- * @param[in] pluginkey    pluginkey of the plugin
- * @param[in] function_name    function of the plugin
- * @param[in] args  function arguments of the plugin
- * @param[in] pk   msgpack packer instance
+ * @param[in] targetpluginkey    pluginkey of the plugin to start
+ * @param[in] function_name      function of the plugin
+ * @param[in] args    function arguments of the plugin
+ * @param[in] pk      msgpack packer instance
  * @param[in] api_error   api_error instance
  * @return 0 in case of success otherwise -1
  */
-int api_run(string pluginkey, string function_name, uint64_t callid,
+int api_run(unsigned char targetpluginkey[8], string function_name, uint64_t callid,
     struct message_object args, struct connection *con,
     uint32_t msgid, struct api_error *api_error);

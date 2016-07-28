@@ -27,7 +27,7 @@
 #define FUNC_MAX_LEN_NAME 255
 #define FUNC_MIN_LEN_NAME 1
 
-static int db_function_add_name(string pluginkey, string name)
+static int db_function_add_name(unsigned char pluginkey[8], string name)
 {
   redisReply *reply;
 
@@ -48,7 +48,7 @@ static int db_function_add_name(string pluginkey, string name)
 }
 
 
-static int db_function_add_meta(string pluginkey, string name, string desc)
+static int db_function_add_meta(unsigned char pluginkey[8], string name, string desc)
 {
   redisReply *reply;
 
@@ -70,7 +70,7 @@ static int db_function_add_meta(string pluginkey, string name, string desc)
 }
 
 
-static int db_function_add_args(string pluginkey, string name,
+static int db_function_add_args(unsigned char pluginkey[8], string name,
     message_object_type type)
 {
   redisReply *reply;
@@ -92,7 +92,7 @@ static int db_function_add_args(string pluginkey, string name,
 }
 
 
-static int db_function_flush_args(string pluginkey, string name)
+static int db_function_flush_args(unsigned char pluginkey[8], string name)
 {
   redisReply *reply;
   int start = 1;
@@ -120,7 +120,7 @@ static int db_function_flush_args(string pluginkey, string name)
 }
 
 
-int db_function_add(string pluginkey, array *func)
+int db_function_add(unsigned char pluginkey[8], array *func)
 {
   struct message_object *name_elem, *desc_elem, *args, *arg;
   string name, desc;
@@ -181,7 +181,7 @@ int db_function_add(string pluginkey, array *func)
 }
 
 
-static bool db_function_exists(string pluginkey, string name)
+static bool db_function_exists(unsigned char pluginkey[8], string name)
 {
   redisReply *reply;
   bool result;
@@ -207,7 +207,7 @@ static bool db_function_exists(string pluginkey, string name)
 }
 
 
-static ssize_t db_function_get_argc(string pluginkey, string name)
+static ssize_t db_function_get_argc(unsigned char pluginkey[8], string name)
 {
   redisReply *reply;
   ssize_t result;
@@ -233,7 +233,7 @@ static ssize_t db_function_get_argc(string pluginkey, string name)
 }
 
 
-static int db_function_typecheck(string pluginkey, string name,
+static int db_function_typecheck(unsigned char pluginkey[8], string name,
     array *args)
 {
   redisReply *reply;
@@ -303,7 +303,7 @@ static int db_function_typecheck(string pluginkey, string name,
 }
 
 
-int db_function_verify(string pluginkey, string name,
+int db_function_verify(unsigned char pluginkey[8], string name,
     array *args)
 {
   if (!db_function_exists(pluginkey, name))

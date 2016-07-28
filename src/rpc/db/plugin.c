@@ -26,7 +26,7 @@
 #define MIN_LEN_NAME 3
 
 
-int db_plugin_add(string pluginkey, string name, string desc, string author,
+int db_plugin_add(unsigned char pluginkey[8], string name, string desc, string author,
     string license)
 {
   redisReply *reply;
@@ -56,7 +56,7 @@ int db_plugin_add(string pluginkey, string name, string desc, string author,
 }
 
 
-int db_pluginlongtermpk_verify(string pluginlongtermpk)
+int db_plugin_verify(unsigned char pluginkey[8])
 {
   redisReply *reply;
   bool valid = false;

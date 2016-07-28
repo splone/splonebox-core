@@ -152,10 +152,11 @@ int handle_run(connection_request_event_info *info)
 {
   uint64_t callid;
   array *meta = NULL;
-  string targetpluginkey, function_name;
+  string function_name;
   struct message_object args_object;
   struct message_request *request;
   struct api_error *api_error;
+  unsigned char targetpluginkey[8];
 
   request = &info->request;
   api_error = &info->api_error;
