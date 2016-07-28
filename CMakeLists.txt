@@ -152,6 +152,7 @@ set(SPLONEBOX-SOURCES
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
   src/rpc/db/function.c
+  src/rpc/db/auth.c
 )
 
 # sb-plugin target sources
