@@ -414,3 +414,63 @@ const char * eat_whitespace(const char *s)
     }
   }
 }
+
+/** Helper: given a hex digit, return its value, or -1 if it isn't hex. */
+STATIC inline int hex_decode_digit_(char c)
+{
+  switch (c) {
+    case '0': return 0;
+    case '1': return 1;
+    case '2': return 2;
+    case '3': return 3;
+    case '4': return 4;
+    case '5': return 5;
+    case '6': return 6;
+    case '7': return 7;
+    case '8': return 8;
+    case '9': return 9;
+    case 'A': case 'a': return 10;
+    case 'B': case 'b': return 11;
+    case 'C': case 'c': return 12;
+    case 'D': case 'd': return 13;
+    case 'E': case 'e': return 14;
+    case 'F': case 'f': return 15;
+    default:
+      return -1;
+  }
+}
+
+/** Given a hexadecimal string of <b>srclen</b> bytes in <b>src</b>, decode
+ * it and store the result in the <b>destlen</b>-byte buffer at <b>dest</b>.
+ * Return the number of bytes decoded on success, -1 on failure. If
+ * <b>destlen</b> is greater than INT_MAX or less than half of
+ * <b>srclen</b>, -1 is returned. */
+int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
+{
+  const char *end;
+  char *dest_orig = dest;
+  int v1,v2;
+
+  if ((srclen % 2) != 0)
+    return -1;
+  if (destlen < srclen/2 || destlen > INT_MAX)
+    return -1;
+
+  /* Make sure we leave no uninitialized data in the destination buffer. */
+  memset(dest, 0, destlen);
+
+  end = src+srclen;
+  while (src<end) {
+    v1 = hex_decode_digit_(*src);
+    v2 = hex_decode_digit_(*(src+1));
+    if (v1<0||v2<0)
+      return -1;
+    *(uint8_t*)dest = (v1<<4)|v2;
+    ++dest;
+    src+=2;
+  }
+
+  sbassert((dest-dest_orig) <= (ptrdiff_t) destlen);
+
+  return (int) (dest-dest_orig);
+}
