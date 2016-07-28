@@ -41,8 +41,8 @@ int db_plugin_add(unsigned char pluginkey[8], string name, string desc, string a
     return (-1);
   }
 
-  reply = redisCommand(rc, "HMSET %s name %s desc %s author %s license %s",
-          pluginkey.str, name.str, desc.str, author.str, license.str);
+  reply = redisCommand(rc, "HMSET %b name %s desc %s author %s license %s",
+          pluginkey, sizeof(pluginkey), name.str, desc.str, author.str, license.str);
 
   if (reply->type == REDIS_REPLY_ERROR) {
     LOG_WARNING("Redis failed to add string value to plugin: %s\n", reply->str);
@@ -64,7 +64,7 @@ int db_plugin_verify(unsigned char pluginkey[8])
   if (!rc)
     return (-1);
 
-  reply = redisCommand(rc, "Exists %s", pluginlongtermpk.str);
+  reply = redisCommand(rc, "Exists %b", pluginkey, sizeof(pluginkey));
 
   if (reply->type != REDIS_REPLY_INTEGER)
     LOG_WARNING("Redis failed to query plugin key existence: %s", reply->str);

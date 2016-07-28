@@ -34,8 +34,7 @@ int api_run(unsigned char targetpluginkey[8], string function_name, uint64_t cal
   if (!api_error)
     return (-1);
 
-  /* check if id is in database */
-  if (db_pluginkey_verify(targetpluginkey) == -1) {
+  if (db_plugin_verify(targetpluginkey) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
     return (-1);
   }

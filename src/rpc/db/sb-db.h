@@ -87,3 +87,20 @@ extern int db_pluginkey_verify(unsigned char pluginkey[8]);
  * returns 0 on success otherwise -1
  */
 extern int db_pluginkey_add(unsigned char pluginkey[8]);
+
+/**
+ * Adds a plugin's long-term public key to the list of authorized plugins.
+ * @param[in] key to store
+ * returns 0 on success otherwise -1
+ */
+int db_authorized_add(unsigned char pluginlongtermpk[32]);
+
+/**
+ * Checks whether a plugin's long-term public key is in the list of
+ * authorized plugins.
+ * @param[in] key to store
+ * returns 0 on success otherwise -1
+ */
+int db_authorized_verify(unsigned char pluginlongtermpk[32]);
+
+
