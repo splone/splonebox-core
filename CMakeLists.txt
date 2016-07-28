@@ -124,7 +124,6 @@ set(SPLONEBOX-SOURCES
   src/address.h
   src/sbmemzero.c
   src/api/sb-api.h
-  src/api/apikey.c
   src/api/register.c
   src/api/run.c
   src/rpc/sb-rpc.h
@@ -162,7 +161,6 @@ set(SB-PLUGIN-SOURCES
   src/string.c
   src/reallocarray.c
   src/api/sb-api.h
-  src/api/apikey.c
   src/rpc/db/sb-db.h
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
@@ -207,7 +205,6 @@ set(TEST-SOURCES
   src/address.h
   src/sbmemzero.c
   src/api/sb-api.h
-  src/api/apikey.c
   src/api/register.c
   src/api/run.c
   src/rpc/sb-rpc.h
@@ -254,7 +251,6 @@ set(TEST-SOURCES
   test/unit/unpack-string.c
   test/unit/unpack-uint.c
   test/unit/unpack-array.c
-  test/unit/apikey.c
   test/unit/dispatch-table-get.c
   test/unit/event-queue-put.c
   test/unit/event-queue-get.c

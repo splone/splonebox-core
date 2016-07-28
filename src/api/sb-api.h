@@ -49,11 +49,3 @@
 int api_run(string pluginkey, string function_name, uint64_t callid,
     struct message_object args, struct connection *con,
     uint32_t msgid, struct api_error *api_error);
-
-/**
- * Generates an plugin key using /dev/urandom. The length of the key
- * depends on the length of the string.
- * @param[in] key string to store the API key.
- * @return 0 in case of success otherwise -1
- */
-int api_get_key(string key);
