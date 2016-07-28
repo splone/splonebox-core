@@ -236,8 +236,8 @@ struct queue_entry {
 };
 
 /* hashmap declarations */
-MAP_DECLS(uint64_t, string)
-MAP_DECLS(string, ptr_t)
+MAP_DECLS(uint64_t, uint64_t)
+MAP_DECLS(uint64_t, ptr_t)
 MAP_DECLS(cstr_t, ptr_t)
 MAP_DECLS(string, dispatch_info)
 
