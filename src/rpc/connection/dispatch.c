@@ -62,7 +62,7 @@ int handle_register(connection_request_event_info *info)
 {
   array *meta = NULL;
   array functions;
-  string pluginlongtermpk, name, description, author, license;
+  string name, description, author, license;
 
   struct message_request *request = &info->request;
   struct api_error *api_error = &info->api_error;
@@ -87,7 +87,7 @@ int handle_register(connection_request_event_info *info)
 
   /*
    * meta params:
-   * [pluginlongtermpk, name, description, author, license]
+   * [name, description, author, license]
    */
 
   if (!meta) {

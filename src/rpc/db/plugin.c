@@ -78,24 +78,3 @@ int db_plugin_verify(unsigned char pluginkey[8])
 
   return (0);
 }
-
-
-int db_pluginlongtermpk_add(string pluginlongtermpk)
-{
-  redisReply *reply;
-
-  if (!rc)
-    return (-1);
-
-  reply = redisCommand(rc, "HMSET %s  name ''", pluginlongtermpk.str);
-
-  if (reply->type == REDIS_REPLY_ERROR) {
-    LOG_WARNING("Redis failed to add string value to plugin: %s", reply->str);
-    freeReplyObject(reply);
-    return (-1);
-  }
-
-  freeReplyObject(reply);
-
-  return (0);
-}
