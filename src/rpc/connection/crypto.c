@@ -450,7 +450,7 @@ int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data)
   cc->receivednonce = packetnonce;
 
   cc->state = TUNNEL_ESTABLISHED;
-  memcpy(cc->pluginkey, clientlongtermpk[24], 8);
+  memcpy(cc->pluginkey, &clientlongtermpk[24], 8);
 
   sbmemzero(cookie, sizeof cookie);
   sbmemzero(servershorttermsk, sizeof servershorttermsk);
