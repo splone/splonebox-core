@@ -96,7 +96,7 @@ int handle_register(connection_request_event_info *info)
     return (-1);
   }
 
-  if (meta->size != 5) {
+  if (meta->size != 4) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid meta params size");
     return (-1);
@@ -106,16 +106,14 @@ int handle_register(connection_request_event_info *info)
   if ((meta->obj[0].type != OBJECT_TYPE_STR) ||
       (meta->obj[1].type != OBJECT_TYPE_STR) ||
       (meta->obj[2].type != OBJECT_TYPE_STR) ||
-      (meta->obj[3].type != OBJECT_TYPE_STR) ||
-      (meta->obj[4].type != OBJECT_TYPE_STR)) {
+      (meta->obj[3].type != OBJECT_TYPE_STR)) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. meta element has wrong type");
     return (-1);
   }
 
   if (!meta->obj[0].data.string.str || !meta->obj[1].data.string.str ||
-      !meta->obj[2].data.string.str || !meta->obj[3].data.string.str ||
-      !meta->obj[4].data.string.str) {
+      !meta->obj[2].data.string.str || !meta->obj[3].data.string.str) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid meta params size");
     return (-1);
