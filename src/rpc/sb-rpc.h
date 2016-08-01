@@ -551,14 +551,7 @@ extern int db_plugin_add(unsigned char *pluginkey, string name, string desc, str
  * @param[in] pluginkey  key to check
  * returns 0 if key is valid otherwise -1
  */
-extern int db_pluginkey_verify(unsigned char *pluginkey);
-
-/**
- * Stores a plugin key in the database.
- * @param[in] key to store
- * returns 0 on success otherwise -1
- */
-extern int db_pluginkey_add(unsigned char *pluginkey);
+extern int db_plugin_verify(unsigned char *pluginkey);
 
 /**
  * Adds a plugin's long-term public key to the list of authorized plugins.
