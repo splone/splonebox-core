@@ -125,6 +125,9 @@ struct message_response {
  * the rpc connection layer. No non-rpc connection layer code should be      *
  * using this structure in any way.                                          *
  *****************************************************************************/
+#define PLUGINKEY_ARRAY_SIZE 8
+#define CLIENTLONGTERMPK_ARRAY_SIZE 32
+
 struct crypto_context {
   crypto_state state;
   uint64_t nonce;
@@ -135,7 +138,7 @@ struct crypto_context {
   unsigned char servershorttermsk[32];
   unsigned char minutekey[32];
   unsigned char lastminutekey[32];
-  unsigned char pluginkey[8];
+  unsigned char pluginkey[PLUGINKEY_ARRAY_SIZE];
 };
 
 struct connection {
@@ -263,11 +266,11 @@ int connection_init(void);
  */
 int connection_create(uv_stream_t *stream);
 
-struct callinfo * connection_send_request(unsigned char pluginkey[8], string method,
+struct callinfo * connection_send_request(unsigned char *pluginkey, string method,
     array params, struct api_error *api_error);
 int connection_send_response(struct connection *con, uint32_t msgid,
     array params, struct api_error *api_error);
-int connection_hashmap_put(unsigned char pluginkey[8], struct connection *con);
+int connection_hashmap_put(unsigned char *pluginkey, struct connection *con);
 struct callinfo *loop_wait_for_response(struct connection *con,
     struct message_request *request);
 int connection_teardown(void);
@@ -517,7 +520,7 @@ extern void db_close(void);
  * @param[in] func    array of functions to actually store
  * @return 0 on success otherwise -1
  */
-extern int db_function_add(unsigned char pluginkey[8], array *func);
+extern int db_function_add(unsigned char *pluginkey, array *func);
 
 /**
  * Verifies whether the corresponding function is called correctly. To
@@ -528,7 +531,7 @@ extern int db_function_add(unsigned char pluginkey[8], array *func);
  * @param[in] args    function arguments
  * @return 0 if call is valid, otherwise -1
  */
-extern int db_function_verify(unsigned char pluginkey[8], string name,
+extern int db_function_verify(unsigned char *pluginkey, string name,
   array *args);
 
 /**
@@ -540,7 +543,7 @@ extern int db_function_verify(unsigned char pluginkey[8], string name,
  * @param[in] license the plugin's license text
  * returns -1 in case of error otherwise 0
  */
-extern int db_plugin_add(unsigned char pluginkey[8], string name, string desc, string author,
+extern int db_plugin_add(unsigned char *pluginkey, string name, string desc, string author,
     string license);
 
 /**
@@ -548,21 +551,21 @@ extern int db_plugin_add(unsigned char pluginkey[8], string name, string desc, s
  * @param[in] pluginkey  key to check
  * returns 0 if key is valid otherwise -1
  */
-extern int db_pluginkey_verify(unsigned char pluginkey[8]);
+extern int db_pluginkey_verify(unsigned char *pluginkey);
 
 /**
  * Stores a plugin key in the database.
  * @param[in] key to store
  * returns 0 on success otherwise -1
  */
-extern int db_pluginkey_add(unsigned char pluginkey[8]);
+extern int db_pluginkey_add(unsigned char *pluginkey);
 
 /**
  * Adds a plugin's long-term public key to the list of authorized plugins.
  * @param[in] key to store
  * returns 0 on success otherwise -1
  */
-int db_authorized_add(unsigned char pluginlongtermpk[32]);
+int db_authorized_add(unsigned char *pluginlongtermpk);
 
 /**
  * Checks whether a plugin's long-term public key is in the list of
@@ -570,7 +573,7 @@ int db_authorized_add(unsigned char pluginlongtermpk[32]);
  * @param[in] key to store
  * returns 0 on success otherwise -1
  */
-int db_authorized_verify(unsigned char pluginlongtermpk[32]);
+int db_authorized_verify(unsigned char *pluginlongtermpk);
 
 /**
  * Currently only loads the server private key.

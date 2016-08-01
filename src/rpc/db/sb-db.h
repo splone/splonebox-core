@@ -48,7 +48,7 @@ extern void db_close(void);
  * @param[in] func    array of functions to actually store
  * @return 0 on success otherwise -1
  */
-extern int db_function_add(unsigned char pluginkey[8], array *func);
+extern int db_function_add(unsigned char *pluginkey, array *func);
 
 /**
  * Verifies whether the corresponding function is called correctly. To
@@ -59,7 +59,7 @@ extern int db_function_add(unsigned char pluginkey[8], array *func);
  * @param[in] args    function arguments
  * @return 0 if call is valid, otherwise -1
  */
-extern int db_function_verify(unsigned char pluginkey[8], string name,
+extern int db_function_verify(unsigned char *pluginkey, string name,
   array *args);
 
 /**
@@ -71,7 +71,7 @@ extern int db_function_verify(unsigned char pluginkey[8], string name,
  * @param[in] license the plugin's license text
  * returns -1 in case of error otherwise 0
  */
-extern int db_plugin_add(unsigned char pluginkey[8], string name, string desc, string author,
+extern int db_plugin_add(unsigned char *pluginkey, string name, string desc, string author,
     string license);
 
 /**
@@ -79,21 +79,21 @@ extern int db_plugin_add(unsigned char pluginkey[8], string name, string desc, s
  * @param[in] pluginkey  key to check
  * returns 0 if key is valid otherwise -1
  */
-extern int db_pluginkey_verify(unsigned char pluginkey[8]);
+extern int db_pluginkey_verify(unsigned char *pluginkey);
 
 /**
  * Stores an API key in the database.
  * @param[in] key to store
  * returns 0 on success otherwise -1
  */
-extern int db_pluginkey_add(unsigned char pluginkey[8]);
+extern int db_pluginkey_add(unsigned char *pluginkey);
 
 /**
  * Adds a plugin's long-term public key to the list of authorized plugins.
  * @param[in] key to store
  * returns 0 on success otherwise -1
  */
-int db_authorized_add(unsigned char pluginlongtermpk[32]);
+int db_authorized_add(unsigned char *pluginlongtermpk);
 
 /**
  * Checks whether a plugin's long-term public key is in the list of
@@ -101,6 +101,6 @@ int db_authorized_add(unsigned char pluginlongtermpk[32]);
  * @param[in] key to store
  * returns 0 on success otherwise -1
  */
-int db_authorized_verify(unsigned char pluginlongtermpk[32]);
+int db_authorized_verify(unsigned char *pluginlongtermpk);
 
 

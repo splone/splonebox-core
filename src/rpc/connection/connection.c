@@ -327,14 +327,14 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
   return (0);
 }
 
-int connection_hashmap_put(unsigned char pluginkey[8], struct connection *con)
+int connection_hashmap_put(unsigned char *pluginkey, struct connection *con)
 {
   hashmap_put(uint64_t, ptr_t)(connections, (uint64_t) pluginkey, con);
 
   return (0);
 }
 
-struct callinfo * connection_send_request(unsigned char pluginkey[8], string method,
+struct callinfo * connection_send_request(unsigned char *pluginkey, string method,
     array params, struct api_error *api_error)
 {
   struct connection *con;

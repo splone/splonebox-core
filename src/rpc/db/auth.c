@@ -23,14 +23,14 @@
 #include "rpc/db/sb-db.h"
 #include "sb-common.h"
 
-int db_authorized_add(unsigned char pluginlongtermpk[32])
+int db_authorized_add(unsigned char *pluginlongtermpk)
 {
   redisReply *reply;
 
   if (!rc)
     return (-1);
 
-  reply = redisCommand(rc, "SADD authorized %b ", pluginlongtermpk, sizeof(pluginlongtermpk));
+  reply = redisCommand(rc, "SADD authorized %b ", pluginlongtermpk, CLIENTLONGTERMPK_ARRAY_SIZE);
 
   if (reply->type == REDIS_REPLY_ERROR) {
     LOG_WARNING("Redis failed to add string value to plugin: %s", reply->str);
@@ -43,15 +43,17 @@ int db_authorized_add(unsigned char pluginlongtermpk[32])
   return (0);
 }
 
-int db_authorized_verify(unsigned char pluginlongtermpk[32])
+int db_authorized_verify(unsigned char *pluginlongtermpk)
 {
+  return (0);
+
   redisReply *reply;
   bool valid = false;
 
   if (!rc)
     return (-1);
 
-  reply = redisCommand(rc, "SISMEMBER authorized %b", pluginlongtermpk, sizeof(pluginlongtermpk));
+  reply = redisCommand(rc, "SISMEMBER authorized %b", pluginlongtermpk, CLIENTLONGTERMPK_ARRAY_SIZE);
 
   if (reply->type != REDIS_REPLY_INTEGER)
     LOG_WARNING("Redis failed to query plugin key existence: %s", reply->str);

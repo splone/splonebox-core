@@ -239,7 +239,7 @@ int handle_run(connection_request_event_info *info)
   args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
   //TODO is the targetpluginkey the correct one?
-  hashmap_put(uint64_t, uint64_t)(callids, callid, targetpluginkey);
+  hashmap_put(uint64_t, uint64_t)(callids, callid, (uint64_t) targetpluginkey);
 
   if (api_run(targetpluginkey, function_name, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
