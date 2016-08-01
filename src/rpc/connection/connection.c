@@ -329,7 +329,7 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
 
 int connection_hashmap_put(unsigned char pluginkey[8], struct connection *con)
 {
-  hashmap_put(uint64_t, ptr_t)((uint64_t) connections, pluginkey, con);
+  hashmap_put(uint64_t, ptr_t)(connections, (uint64_t) pluginkey, con);
 
   return (0);
 }
@@ -342,7 +342,7 @@ struct callinfo * connection_send_request(unsigned char pluginkey[8], string met
   struct message_request request;
   struct callinfo *cinfo;
 
-  con = hashmap_get(uint64_t, ptr_t)(connections, pluginkey);
+  con = hashmap_get(uint64_t, ptr_t)(connections, (uint64_t) pluginkey);
 
   /*
    * if no connection is available for the key, set the connection to the
