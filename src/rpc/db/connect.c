@@ -22,8 +22,6 @@
 #include "rpc/db/sb-db.h"
 #include "sb-common.h"
 
-redisContext *rc;
-
 int db_connect(const char *ip, int port, const struct timeval tv,
     const char * password)
 {

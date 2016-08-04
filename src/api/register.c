@@ -17,8 +17,8 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+#include "rpc/db/sb-db.h"
 #include "api/sb-api.h"
-#include "sb-common.h"
 
 int api_register(string name, string desc,
     string author, string license, array functions, struct connection *con,

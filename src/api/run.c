@@ -17,8 +17,8 @@
 #include <stdlib.h>
 #include <stddef.h>
 
+#include "rpc/db/sb-db.h"
 #include "api/sb-api.h"
-#include "sb-common.h"
 
 int api_run(unsigned char *targetpluginkey, string function_name, uint64_t callid,
     struct message_object args, struct connection *con,

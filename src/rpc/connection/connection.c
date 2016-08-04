@@ -45,7 +45,6 @@
 #include "rpc/sb-rpc.h"
 #include "rpc/connection/connection.h"
 #include "api/sb-api.h"
-#include "sb-common.h"
 
 STATIC int parse_cb(inputstream *istream, void *data, bool eof);
 STATIC void close_cb(uv_handle_t *handle);

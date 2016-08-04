@@ -18,12 +18,9 @@
 
 #include "rpc/sb-rpc.h"
 
+redisContext *rc;
 
-/* Extern */
-
-extern redisContext *rc;
-
-/* Functions */
+/* DB functions */
 
 /**
  * Connects to Redis database.
