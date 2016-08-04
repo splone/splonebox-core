@@ -450,7 +450,16 @@ int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data)
   cc->receivednonce = packetnonce;
 
   cc->state = TUNNEL_ESTABLISHED;
-  memcpy(cc->pluginkey, &clientlongtermpk[24], 8);
+
+  char *pluginkey_base16_encoded = MALLOC_ARRAY((PLUGINKEY_SIZE*2) + 1, char);
+  if (!pluginkey_base16_encoded) {
+    LOG_VERBOSE(VERBOSE_LEVEL_0, "Failed to alloc mem for pluginkey_base16_encoded.\n");
+    goto fail;
+  }
+
+  base16_encode(pluginkey_base16_encoded, (PLUGINKEY_SIZE*2) + 1,
+    &clientlongtermpk[24], PLUGINKEY_SIZE);
+  cc->pluginkey = cstring_to_string(pluginkey_base16_encoded);
 
   sbmemzero(cookie, sizeof cookie);
   sbmemzero(servershorttermsk, sizeof servershorttermsk);

@@ -415,37 +415,37 @@ const char * eat_whitespace(const char *s)
   }
 }
 
-/** Given a hexadecimal string of <b>srclen</b> bytes in <b>src</b>, decode
- * it and store the result in the <b>destlen</b>-byte buffer at <b>dest</b>.
- * Return the number of bytes decoded on success, -1 on failure. If
- * <b>destlen</b> is greater than INT_MAX or less than half of
- * <b>srclen</b>, -1 is returned. */
-int base16_decode(char *dest, size_t destlen, const char *src, size_t srclen)
+/** Encode the <b>srclen</b> bytes at <b>src</b> in a NUL-terminated,
+ * uppercase hexadecimal string; store it in the <b>destlen</b>-byte buffer
+ * <b>dest</b>.
+ */
+void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
 {
   const char *end;
-  char *dest_orig = dest;
-  int v1,v2;
+  char *cp;
 
-  if ((srclen % 2) != 0)
-    return -1;
-  if (destlen < srclen/2 || destlen > INT_MAX)
-    return -1;
+  sbassert(destlen >= srclen*2+1);
+  sbassert(destlen < (size_t)(SSIZE_MAX-16));
 
   /* Make sure we leave no uninitialized data in the destination buffer. */
   memset(dest, 0, destlen);
 
+  cp = dest;
   end = src+srclen;
   while (src<end) {
-    v1 = hex_decode_digit(*src);
-    v2 = hex_decode_digit(*(src+1));
-    if (v1<0||v2<0)
-      return -1;
-    *(uint8_t*)dest = (v1<<4)|v2;
-    ++dest;
-    src+=2;
+    *cp++ = "0123456789ABCDEF"[ (*(const uint8_t*)src) >> 4 ];
+    *cp++ = "0123456789ABCDEF"[ (*(const uint8_t*)src) & 0xf ];
+    ++src;
   }
+  *cp = '\0';
+}
 
-  sbassert((dest-dest_orig) <= (ptrdiff_t) destlen);
-
-  return (int) (dest-dest_orig);
+/** Convert all alphabetic characters to uppercase */
+void string_to_upper(string s)
+{
+  char *i = s.str;
+  while (*i) {
+    *i = toupper(*i);;
+    ++i;
+  }
 }

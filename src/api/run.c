@@ -20,7 +20,7 @@
 #include "rpc/db/sb-db.h"
 #include "api/sb-api.h"
 
-int api_run(unsigned char *targetpluginkey, string function_name, uint64_t callid,
+int api_run(string targetpluginkey, string function_name, uint64_t callid,
     struct message_object args, struct connection *con,
     uint32_t msgid, struct api_error *api_error)
 {
