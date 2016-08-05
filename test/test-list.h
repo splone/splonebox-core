@@ -30,7 +30,6 @@ void unit_pack_bool(void **state);
 void unit_unpack_string(void **state);
 void unit_unpack_uint(void **state);
 void unit_unpack_array(void **state);
-void unit_api_get_key(void **state);
 void unit_dispatch_table_get(void **state);
 void unit_event_queue_put(void **state);
 void unit_event_queue_get(void **state);
@@ -48,8 +47,6 @@ void unit_message_is_response(void **state);
 void functional_client_connect(void **state);
 void functional_db_connect(void **state);
 void functional_db_plugin_add(void **state);
-void functional_db_apikey_add(void **state);
-void functional_db_apikey_verify(void **state);
 void functional_db_function_add(void **state);
 void functional_db_function_verify(void **state);
 void functional_db_function_flush_args(void **state);
@@ -72,7 +69,6 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_pack_bool),
   cmocka_unit_test(unit_pack_array),
   cmocka_unit_test(unit_regression_issue_60),
-  cmocka_unit_test(unit_api_get_key),
   cmocka_unit_test(unit_event_queue_put),
   cmocka_unit_test(unit_message_deserialize_request),
   cmocka_unit_test(unit_message_deserialize_response),
@@ -84,8 +80,6 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_message_is_response),
   cmocka_unit_test(functional_db_connect),
   cmocka_unit_test(functional_db_plugin_add),
-  cmocka_unit_test(functional_db_apikey_add),
-  cmocka_unit_test(functional_db_apikey_verify),
   cmocka_unit_test(functional_db_function_add),
   cmocka_unit_test(functional_db_function_verify),
   cmocka_unit_test(functional_db_function_flush_args),
