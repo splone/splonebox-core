@@ -264,6 +264,7 @@ set(TEST-SOURCES
   test/unit/message-is-response.c
   test/functional/db-connect.c
   test/functional/db-plugin-add.c
+  test/functional/db-pluginkey-verify.c
   test/functional/db-function-register.c
   test/functional/db-function-verify.c
   test/functional/db-function-flush-args.c

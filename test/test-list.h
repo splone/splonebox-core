@@ -47,6 +47,7 @@ void unit_message_is_response(void **state);
 void functional_client_connect(void **state);
 void functional_db_connect(void **state);
 void functional_db_plugin_add(void **state);
+void functional_db_pluginkey_verify(void **state);
 void functional_db_function_add(void **state);
 void functional_db_function_verify(void **state);
 void functional_db_function_flush_args(void **state);
@@ -80,6 +81,7 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_message_is_response),
   cmocka_unit_test(functional_db_connect),
   cmocka_unit_test(functional_db_plugin_add),
+  cmocka_unit_test(functional_db_pluginkey_verify),
   cmocka_unit_test(functional_db_function_add),
   cmocka_unit_test(functional_db_function_verify),
   cmocka_unit_test(functional_db_function_flush_args),
