@@ -232,6 +232,7 @@ set(TEST-SOURCES
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
   src/rpc/db/function.c
+  src/rpc/db/auth.c
   test/main.c
   test/test-list.h
   test/helper-unix.h
