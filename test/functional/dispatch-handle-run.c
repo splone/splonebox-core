@@ -22,17 +22,16 @@
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 
-#define KEY "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"
-#define FUNC "test_function"
-#define ARG1 "test arg1"
-#define ARG2 "test arg2"
-
 static string apikey;
 static string pluginname;
 static string description;
 static string author;
 static string license;
 
+#define KEY "AB1BF3H4C2BA3194"
+#define FUNC "test_function"
+#define ARG1 "test arg1"
+#define ARG2 "test arg2"
 
 int validate_run_response(const unsigned long data1,
   UNUSED(const unsigned long data2))
@@ -148,12 +147,11 @@ static void register_test_function(void)
   array *meta, *functions, *func1, *args;
   struct api_error err = ERROR_INIT;
 
-  apikey = (string) {.str = "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2",
-    .length = sizeof("vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2") - 1};
-  pluginname = (string) {.str = "plugin name", .length = sizeof("plugin name") - 1};
-  description = (string) {.str = "register a plugin", .length = sizeof("register a plugin") - 1};
-  author = (string) {.str = "test", .length = sizeof("test") - 1};
-  license = (string) {.str = "none", .length = sizeof("none") - 1};
+  string pluginkey = cstring_copy_string(KEY);
+  string pluginname = cstring_copy_string("register");
+  string description = cstring_copy_string("register a plugin");
+  string author = cstring_copy_string("test");
+  string license = cstring_copy_string("none");
 
   info.request.msgid = 1;
   register_request = &info.request;
@@ -162,11 +160,13 @@ static void register_test_function(void)
   info.api_error = err;
 
   info.con = MALLOC(struct connection);
-  info.con->closed = true;
-  info.con->msgid = 1;
   assert_non_null(info.con);
 
-  connect_and_create(apikey);
+  info.con->closed = true;
+  info.con->msgid = 1;
+  info.con->cc.pluginkey = pluginkey;
+
+  connect_and_create(pluginkey);
   assert_int_equal(0, connection_init());
 
   /* first level arrays:
@@ -187,18 +187,16 @@ static void register_test_function(void)
    * [license]
    */
   meta = &register_request->params.obj[0].data.params;
-  meta->size = 5;
-  meta->obj = CALLOC(5, struct message_object);
+  meta->size = 4;
+  meta->obj = CALLOC(meta->size, struct message_object);
   meta->obj[0].type = OBJECT_TYPE_STR;
-  meta->obj[0].data.string = apikey;
+  meta->obj[0].data.string = pluginname;
   meta->obj[1].type = OBJECT_TYPE_STR;
-  meta->obj[1].data.string = pluginname;
+  meta->obj[1].data.string = description;
   meta->obj[2].type = OBJECT_TYPE_STR;
-  meta->obj[2].data.string = description;
+  meta->obj[2].data.string = author;
   meta->obj[3].type = OBJECT_TYPE_STR;
-  meta->obj[3].data.string = author;
-  meta->obj[4].type = OBJECT_TYPE_STR;
-  meta->obj[4].data.string = license;
+  meta->obj[3].data.string = license;
 
   functions = &register_request->params.obj[1].data.params;
   functions->size = 1;
@@ -209,11 +207,9 @@ static void register_test_function(void)
   func1->size = 3;
   func1->obj = CALLOC(3, struct message_object);
   func1->obj[0].type = OBJECT_TYPE_STR;
-  func1->obj[0].data.string = (string) {.str = "test_function",
-      .length = sizeof("test_function") - 1};
+  func1->obj[0].data.string = cstring_copy_string("test_function");
   func1->obj[1].type = OBJECT_TYPE_STR;
-  func1->obj[1].data.string = (string) {.str = "test_function desc",
-      .length = sizeof("test_function desc") - 1};
+  func1->obj[1].data.string = cstring_copy_string("test_function desc");
   func1->obj[2].type = OBJECT_TYPE_ARRAY;
 
   /* function arguments */
@@ -221,11 +217,9 @@ static void register_test_function(void)
   args->size = 2;
   args->obj = CALLOC(2, struct message_object);
   args->obj[0].type = OBJECT_TYPE_STR;
-  args->obj[0].data.string = (string) {.str = "test arg1",
-      .length = sizeof("test arg1") - 1};
+  args->obj[0].data.string = cstring_copy_string("test arg1");
   args->obj[1].type = OBJECT_TYPE_STR;
-  args->obj[1].data.string = (string) {.str = "test arg2",
-      .length = sizeof("test arg2") - 1};
+  args->obj[1].data.string = cstring_copy_string("test arg2");
 
   /* before running function, it must be registered successfully */
   info.api_error.isset = false;
