@@ -22,7 +22,7 @@
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 
-static string apikey;
+static string pluginkey;
 static string pluginname;
 static string description;
 static string author;
@@ -147,11 +147,11 @@ static void register_test_function(void)
   array *meta, *functions, *func1, *args;
   struct api_error err = ERROR_INIT;
 
-  string pluginkey = cstring_copy_string(KEY);
-  string pluginname = cstring_copy_string("register");
-  string description = cstring_copy_string("register a plugin");
-  string author = cstring_copy_string("test");
-  string license = cstring_copy_string("none");
+  pluginkey = cstring_copy_string(KEY);
+  pluginname = cstring_copy_string("register");
+  description = cstring_copy_string("register a plugin");
+  author = cstring_copy_string("test");
+  license = cstring_copy_string("none");
 
   info.request.msgid = 1;
   register_request = &info.request;

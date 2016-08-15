@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/db/sb-db.h"
 #include "rpc/connection/crypto.h"
 #include "tweetnacl.h"
 
@@ -458,7 +459,7 @@ int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data)
   }
 
   base16_encode(pluginkey_base16_encoded, (PLUGINKEY_SIZE*2) + 1,
-    &clientlongtermpk[24], PLUGINKEY_SIZE);
+    (char *)&clientlongtermpk[24], PLUGINKEY_SIZE);
   cc->pluginkey = cstring_to_string(pluginkey_base16_encoded);
 
   sbmemzero(cookie, sizeof cookie);

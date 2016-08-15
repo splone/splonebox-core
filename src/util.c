@@ -48,6 +48,8 @@
  *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <ctype.h>
+
 #include "sb-common.h"
 #include "util.h"
 
@@ -419,7 +421,8 @@ const char * eat_whitespace(const char *s)
  * uppercase hexadecimal string; store it in the <b>destlen</b>-byte buffer
  * <b>dest</b>.
  */
-void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen)
+void base16_encode(char *dest, size_t destlen,
+  const char *src, size_t srclen)
 {
   const char *end;
   char *cp;
@@ -445,7 +448,7 @@ void string_to_upper(string s)
 {
   char *i = s.str;
   while (*i) {
-    *i = toupper(*i);;
+    *i = (char)toupper(*i);;
     ++i;
   }
 }

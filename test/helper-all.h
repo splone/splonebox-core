@@ -17,6 +17,7 @@
 #pragma once
 
 #include "sb-common.h"
+#include "rpc/db/sb-db.h"
 
 void connect_to_db(void);
 void connect_and_create(string apikey);

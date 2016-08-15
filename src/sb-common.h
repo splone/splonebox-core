@@ -283,7 +283,8 @@ static inline int ISXDIGIT(char c) {
     return !!(ISXDIGIT_TABLE[(u >> 5) & 7] & (1u << (u & 31)));
 }
 
-void base16_encode(char *dest, size_t destlen, const char *src, size_t srclen);
+void base16_encode(char *dest, size_t destlen,
+  const char *src, size_t srclen);
 
 #define ISODIGIT(c) ('0' <= (c) && (c) <= '7')
 
