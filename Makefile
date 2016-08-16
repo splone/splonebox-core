@@ -26,7 +26,7 @@ endif
 
 BUILD_CMD = $(BUILD_TOOL) $(VERBOSE_FLAG)
 
-all: sb test sb-makekey
+all: sb test sb-makekey sb-pluginkey
 
 sb:
 	test -d $(BUILD_DIR) || mkdir $(BUILD_DIR)
@@ -42,6 +42,11 @@ sb-makekey:
 	test -d $(BUILD_DIR) || mkdir $(BUILD_DIR)
 	cd out && cmake -G '$(BUILD_TYPE)' $(FLAGS) $(EXTRA_FLAGS) ..
 	$(BUILD_CMD) -C out sb-makekey
+
+sb-pluginkey:
+	test -d $(BUILD_DIR) || mkdir $(BUILD_DIR)
+	cd out && cmake -G '$(BUILD_TYPE)' $(FLAGS) $(EXTRA_FLAGS) ..
+	$(BUILD_CMD) -C out sb-pluginkey
 
 clean:
 	+test -d out && $(BUILD_CMD) -C out clean || true
