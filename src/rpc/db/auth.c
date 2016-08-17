@@ -29,9 +29,6 @@ int db_authorized_add(unsigned char *pluginlongtermpk)
 {
   redisReply *reply;
 
-  if (!rc)
-    return (-1);
-
   reply = redisCommand(rc, "SADD authorized %b ", pluginlongtermpk, CLIENTLONGTERMPK_ARRAY_SIZE);
 
   if (reply->type == REDIS_REPLY_ERROR) {
@@ -49,9 +46,6 @@ bool db_authorized_verify(unsigned char *pluginlongtermpk)
 {
   redisReply *reply;
   bool valid = false;
-
-  if (!rc)
-    return (-1);
 
   reply = redisCommand(rc, "SISMEMBER authorized %b", pluginlongtermpk,
     CLIENTLONGTERMPK_ARRAY_SIZE);
