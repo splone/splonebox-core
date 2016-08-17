@@ -43,7 +43,6 @@ void unit_message_serialize_error_response(void **state);
 void unit_message_is_request(void **state);
 void unit_message_is_response(void **state);
 
-
 void functional_client_connect(void **state);
 void functional_db_connect(void **state);
 void functional_db_plugin_add(void **state);
@@ -57,6 +56,7 @@ void functional_dispatch_handle_register(void **state);
 void functional_dispatch_handle_run(void **state);
 void functional_crypto(void **state);
 void functional_confparse(void **state);
+void functional_db_whitelist(UNUSED(void **state));
 
 const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_dispatch_table_get),
@@ -91,4 +91,5 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(functional_dispatch_handle_run),
   cmocka_unit_test(functional_crypto),
   cmocka_unit_test(functional_confparse),
+  cmocka_unit_test(functional_db_whitelist),
 };

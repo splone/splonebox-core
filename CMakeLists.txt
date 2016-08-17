@@ -274,6 +274,7 @@ set(TEST-SOURCES
   test/functional/dispatch-handle-run.c
   test/functional/crypto.c
   test/functional/confparse.c
+  test/functional/db-whitelist.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
