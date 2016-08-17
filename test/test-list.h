@@ -56,7 +56,7 @@ void functional_dispatch_handle_register(void **state);
 void functional_dispatch_handle_run(void **state);
 void functional_crypto(void **state);
 void functional_confparse(void **state);
-void functional_db_whitelist(UNUSED(void **state));
+void functional_db_whitelist(void **state);
 
 const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_dispatch_table_get),
