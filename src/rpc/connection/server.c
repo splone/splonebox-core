@@ -56,6 +56,10 @@ int server_init(void)
   if (!servers)
     return (-1);
 
+  /* for now, we allow all plugins to connect */
+  if (0 > db_authorized_set_whitelist_all())
+    return (-1);
+
   return (0);
 }
 

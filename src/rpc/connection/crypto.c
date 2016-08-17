@@ -426,7 +426,9 @@ int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data)
 
   memcpy(clientlongtermpk, initiatebox + 32, 32);
 
-  if (db_authorized_verify(clientlongtermpk) == -1) {
+  /* verify that the plugin is authorized to connecting */
+  if (!db_authorized_whitelist_all_is_set() &&
+      !db_authorized_verify(clientlongtermpk)) {
     LOG_VERBOSE(VERBOSE_LEVEL_0, "Failed to verify plugin long-term public key.\n");
     goto fail;
   }
