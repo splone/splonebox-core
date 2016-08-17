@@ -227,11 +227,7 @@ static void register_test_function(void)
   assert_int_equal(0, handle_register(&info));
   assert_false(info.api_error.isset);
 
-  FREE(args->obj);
-  FREE(func1->obj);
-  FREE(functions->obj);
-  FREE(meta->obj);
-  FREE(register_request->params.obj);
+  free_params(register_request->params);
 }
 
 void run_request_helper(struct message_request *rr, string key,

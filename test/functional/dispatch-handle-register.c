@@ -247,6 +247,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   info.api_error.isset = false;
   functions->size = 2;
 
+  free_string(pluginkey);
   free_params(request->params);
   connection_teardown();
   FREE(err);

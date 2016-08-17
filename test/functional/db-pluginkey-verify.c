@@ -50,6 +50,10 @@ void functional_db_pluginkey_verify(UNUSED(void **state))
   assert_int_not_equal(0, db_plugin_verify(empty));
 
   free_string(pluginkey);
+  free_string(name);
+  free_string(desc);
+  free_string(author);
+  free_string(license);
   free_string(invalid);
   free_string(empty);
 

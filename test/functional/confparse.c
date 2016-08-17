@@ -20,6 +20,12 @@
 
 void functional_confparse(UNUSED(void **state))
 {
+  options *globaloptions;
+
   assert_int_equal(0, options_init_from_boxrc());
+  globaloptions = options_get();
   assert_non_null(options_get());
+
+  options_free(globaloptions);
+
 }
