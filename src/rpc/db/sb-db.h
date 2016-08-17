@@ -89,8 +89,20 @@ int db_authorized_add(unsigned char *pluginlongtermpk);
  * Checks whether a plugin's long-term public key is in the list of
  * authorized plugins.
  * @param[in] key to store
+ * returns true in success
+ */
+bool db_authorized_verify(unsigned char *pluginlongtermpk);
+
+/**
+ * Whitelists all plugins via the whitelist-all-symbol.
  * returns 0 on success otherwise -1
  */
-int db_authorized_verify(unsigned char *pluginlongtermpk);
+int db_authorized_set_whitelist_all(void);
+
+/**
+ * Checks whether all plugins are authorized via a whitelist-all-symbol.
+ * returns true if so
+ */
+bool db_authorized_whitelist_all_is_set(void);
 
 

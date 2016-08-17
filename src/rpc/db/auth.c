@@ -23,6 +23,8 @@
 #include "rpc/db/sb-db.h"
 #include "sb-common.h"
 
+#define DB_AUTH_WHITELIST_ALL_SYM "*"
+
 int db_authorized_add(unsigned char *pluginlongtermpk)
 {
   redisReply *reply;
@@ -43,17 +45,16 @@ int db_authorized_add(unsigned char *pluginlongtermpk)
   return (0);
 }
 
-int db_authorized_verify(unsigned char *pluginlongtermpk)
+bool db_authorized_verify(unsigned char *pluginlongtermpk)
 {
-  return (0);
-
   redisReply *reply;
   bool valid = false;
 
   if (!rc)
     return (-1);
 
-  reply = redisCommand(rc, "SISMEMBER authorized %b", pluginlongtermpk, CLIENTLONGTERMPK_ARRAY_SIZE);
+  reply = redisCommand(rc, "SISMEMBER authorized %b", pluginlongtermpk,
+    CLIENTLONGTERMPK_ARRAY_SIZE);
 
   if (reply->type != REDIS_REPLY_INTEGER)
     LOG_WARNING("Redis failed to query plugin key existence: %s", reply->str);
@@ -62,10 +63,42 @@ int db_authorized_verify(unsigned char *pluginlongtermpk)
 
   freeReplyObject(reply);
 
-  if (!valid)
-    return -1;
+  return valid;
+}
+
+int db_authorized_set_whitelist_all(void)
+{
+  redisReply *reply;
+
+  reply = redisCommand(rc, "SADD authorized %s ", DB_AUTH_WHITELIST_ALL_SYM);
+
+  if (reply->type == REDIS_REPLY_ERROR) {
+    LOG_WARNING("Redis failed to add string value to plugin: %s", reply->str);
+    freeReplyObject(reply);
+    return (-1);
+  }
+
+  freeReplyObject(reply);
 
   return (0);
+
+}
+
+bool db_authorized_whitelist_all_is_set(void)
+{
+  redisReply *reply;
+  bool valid = false;
+
+  reply = redisCommand(rc, "SISMEMBER authorized %s", DB_AUTH_WHITELIST_ALL_SYM);
+
+  if (reply->type != REDIS_REPLY_INTEGER)
+    LOG_WARNING("Redis failed to query plugin key existence: %s", reply->str);
+  else
+    valid = reply->integer == 1;
+
+  freeReplyObject(reply);
+
+  return valid;
 }
 
 
