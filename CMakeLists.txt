@@ -67,7 +67,7 @@ endif()
 if(CLANG_ANALYZER)
   # Note that the default location of ccc-analyzer on Archlinux is used. this
   # may be different in other environments.
-  set(CMAKE_C_COMPILER /usr/lib/clang-analyzer/scan-build/ccc-analyzer)
+  set(CMAKE_C_COMPILER /usr/lib/clang/ccc-analyzer)
 endif()
 
 if((CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_THREAD_SANITIZER)
