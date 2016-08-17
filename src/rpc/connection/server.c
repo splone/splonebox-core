@@ -23,6 +23,7 @@
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/db/sb-db.h"
 #include "rpc/connection/server.h"
 
 
