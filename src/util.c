@@ -49,6 +49,7 @@
  */
 
 #include <ctype.h>
+#include <stdarg.h>
 
 #include "sb-common.h"
 #include "util.h"
