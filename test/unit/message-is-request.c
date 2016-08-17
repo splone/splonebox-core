@@ -31,7 +31,7 @@ void unit_message_is_request(UNUSED(void **state))
   msgpack_sbuffer_init(&sbuf);
   msgpack_zone_init(&mempool, 2048);
 
-  /* positive test */
+  /* positiv test */
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
   msgpack_pack_array(&pk, 4);
   msgpack_pack_uint8(&pk, 0);
