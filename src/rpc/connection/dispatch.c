@@ -198,7 +198,8 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  if (!meta->obj[0].data.string.str || meta->obj[0].data.string.length != 16) {
+  if (!meta->obj[0].data.string.str ||
+    meta->obj[0].data.string.length != (PLUGINKEY_SIZE * 2)) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid meta params size");
     return (-1);
