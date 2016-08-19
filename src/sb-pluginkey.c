@@ -13,6 +13,7 @@
  *    You should have received a copy of the GNU Affero General Public License
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+#include <unistd.h>
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
@@ -30,18 +31,19 @@ int main(int argc, char **argv)
 {
   unsigned char clientlongtermpk[CLIENTLONGTERMPK_ARRAY_SIZE];
   char *pluginkey = NULL;
-  FILE *fd;
+  int fd;
 
   if (argc <= 1) {
     print_usage(argv[0]);
     return (1);
   }
 
-  fd = fopen(argv[1], "rb");
+  fd = filesystem_open_read(argv[1]);
   if (!fd)
     LOG_ERROR("Failed to open file.\n");
 
-  if (0 == fread(clientlongtermpk, CLIENTLONGTERMPK_ARRAY_SIZE, 1, fd)) {
+  if (0 > filesystem_read_all(fd, clientlongtermpk,
+    CLIENTLONGTERMPK_ARRAY_SIZE)) {
     LOG("Failed to read enough bytes from key file. Maybe it is not a key file?\n");
     goto fail;
   }
@@ -60,7 +62,7 @@ fail:
   if (pluginkey)
     FREE(pluginkey);
 
-  if (0 > fclose(fd))
+  if (0 > close(fd))
     LOG_ERROR("Failed to close file.\n");
 
   return (0);

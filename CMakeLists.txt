@@ -163,6 +163,7 @@ set(SB-PLUGINKEY-SOURCES
   src/confparse.c
   src/parse.c
   src/reallocarray.c
+  src/filesystem.c
 )
 
 # sb-makekey target sources
