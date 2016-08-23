@@ -241,8 +241,7 @@ struct queue_entry {
 
 /* hashmap declarations */
 MAP_DECLS(uint64_t, ptr_t) /* maps callid <> pluginkey */
-MAP_DECLS(ptr_t, ptr_t) /* maps pluginkey <> connection */
-MAP_DECLS(cstr_t, ptr_t)
+MAP_DECLS(cstr_t, ptr_t) /* maps pluginkey <> connection */
 MAP_DECLS(string, dispatch_info)
 
 /* define global root event queue */
