@@ -1,5 +1,5 @@
 /**
- *    Copyright (C) 2015 splone UG
+ *    Copyright (C) 2016 splone UG
  *
  *    This program is free software: you can redistribute it and/or  modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -16,13 +16,13 @@
 
 #pragma once
 
-#define STRINGIFY(v) STR_VALUE(v)
-#define STR_VALUE(arg) #arg
+#include "rpc/sb-rpc.h"
 
-#define VERSION_MAJOR 0
-#define VERSION_MINOR 1
-#define VERSION_REVISION 5
-
-#define VERSION STRINGIFY(VERSION_MAJOR) "." \
-                STRINGIFY(VERSION_MINOR) "." \
-                STRINGIFY(VERSION_REVISION)
+STATIC void close_cb(uv_handle_t *handle);
+STATIC int connection_handle_request(struct connection *con,
+    msgpack_object *obj);
+STATIC int connection_handle_response(struct connection *con,
+    msgpack_object *obj);
+STATIC void connection_request_event(connection_request_event_info *info);
+STATIC void connection_close(struct connection *con);
+STATIC int parse_cb(inputstream *istream, void *data, bool eof);

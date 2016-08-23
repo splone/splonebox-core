@@ -52,7 +52,7 @@ static int add_plugin(void)
   if (api_get_key(apikey) < 0)
     LOG_ERROR("Failed to generate api key!\n");
 
-  if (db_connect(db_ip, DB_PORT, timeout, db_auth) < 0)
+  if (db_connect(DB_IP, DB_PORT, timeout, DB_AUTH) < 0)
     LOG_ERROR("Failed to connect do database!\n");
 
   if (db_apikey_add(apikey) < 0)

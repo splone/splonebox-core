@@ -25,20 +25,14 @@
 void functional_db_connect(UNUSED(void **state))
 {
   struct timeval timeout = { 1, 500000 };
-  string db_ip_one = cstring_copy_string("127.0.0.1");
-  string db_ip_two = cstring_copy_string("127.0.0.2");
-  string db_auth = cstring_copy_string(
-      "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2");
-  string password = cstring_copy_string("wrong password");
 
-  assert_int_equal(0, db_connect(db_ip_one, DB_PORT, timeout, db_auth));
+  assert_int_equal(0, db_connect("127.0.0.1", DB_PORT, timeout,
+      "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"));
   db_close();
-  assert_int_not_equal(0, db_connect(db_ip_two, DB_PORT, timeout, db_auth));
-  assert_int_not_equal(0, db_connect(db_ip_one, 1234, timeout, db_auth));
-  assert_int_not_equal(0, db_connect(db_ip_one, DB_PORT, timeout, password));
-
-  free_string(db_ip_one);
-  free_string(db_ip_two);
-  free_string(db_auth);
-  free_string(password);
+  assert_int_not_equal(0, db_connect("127.0.0.2", DB_PORT, timeout,
+      "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"));
+  assert_int_not_equal(0, db_connect("127.0.0.1", 1234, timeout,
+      "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"));
+  assert_int_not_equal(0, db_connect("127.0.0.1", DB_PORT, timeout,
+      "wrong password"));
 }

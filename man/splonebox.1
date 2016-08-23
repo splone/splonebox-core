@@ -1,11 +1,11 @@
-.Dd 2015-09-07
-.Dt splonebox 1
+.Dd 2016-06-14
+.Dt sb
 .Os
 .\" ------------ NAME ------------
 .Sh NAME
-.Nm splonebox
-- the server aka 'the core' application of the splonebox reconnaissance
-tool.
+.Nm sb
+\- the server aka 'the core' application of the splonebox network
+  analysis tool.
 
 .\" ------------ SYNOBSIS ------------
 .Sh SYNOBSIS
@@ -16,10 +16,12 @@ tool.
 .Sh DESCRIPTION
 The
 .Nm
-is the core application of the splonebox reconnaissance tool chain. It
+is the core application of the splonebox network analysis toolchain. It
 orchestrates multiple
 .Nm
-plugins.
+agents. Each agent consists of at least one plugin. An agent can be
+seen as physical network entity while a plugin is an executable which
+runs on the agent.
 
 .\" ------------ OPTIONS ------------
 .Sh OPTIONS
@@ -37,18 +39,19 @@ prints help
 .It Fl "-version"
 returns version
 
-.\" ------------ ENVIRONMENT ------------
-.Sh ENVIRONMENT
+.\" ------------ FILES ------------
+.Sh FILES
 
 .Bl -tag -width indent
-.It Ev SPLONEBOX_LISTEN_ADDRES
-The address
+.It Ev .boxrc
+The file to configure the
 .Nm
-listens to. This can be either a TCP address or a named pipe. If no
-valid address pattern found (
-.Ar IP:PORT
-), a pipe of the corresponding name is assumed.
+core.
 
+.\" ------------ SEE ALSO ------------
+.Sh SEE ALSO
+
+boxrc(1)
 
 .\" ------------ AUTHOR ------------
 .Sh AUTHOR

@@ -1,5 +1,5 @@
 /**
- *    Copyright (C) 2015 splone UG
+ *    Copyright (C) 2016 splone UG
  *
  *    This program is free software: you can redistribute it and/or  modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -16,13 +16,8 @@
 
 #pragma once
 
-#define STRINGIFY(v) STR_VALUE(v)
-#define STR_VALUE(arg) #arg
+#include "sb-common.h"
 
-#define VERSION_MAJOR 0
-#define VERSION_MINOR 1
-#define VERSION_REVISION 5
-
-#define VERSION STRINGIFY(VERSION_MAJOR) "." \
-                STRINGIFY(VERSION_MINOR) "." \
-                STRINGIFY(VERSION_REVISION)
+STATIC void box_addr_from_ipv6_bytes(boxaddr *dest, const char *ipv6_bytes);
+STATIC void box_addr_from_in6(boxaddr *dest, const struct in6_addr *in6);
+STATIC void box_addr_from_ipv4n(boxaddr *dest, uint32_t v4addr);

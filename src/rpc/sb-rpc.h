@@ -43,7 +43,7 @@
 /* Typedefs */
 typedef struct outputstream   outputstream;
 typedef struct inputstream inputstream;
-typedef void (*inputstream_cb)(inputstream *inputstream, void *data, bool eof);
+typedef int (*inputstream_cb)(inputstream *inputstream, void *data, bool eof);
 typedef struct api_event api_event;
 typedef struct equeue equeue;
 typedef struct queue_entry queue_entry;
@@ -236,8 +236,9 @@ struct queue_entry {
 };
 
 /* hashmap declarations */
-MAP_DECLS(uint64_t, ptr_t)
+MAP_DECLS(uint64_t, string)
 MAP_DECLS(string, ptr_t)
+MAP_DECLS(cstr_t, ptr_t)
 MAP_DECLS(string, dispatch_info)
 
 /* define global root event queue */
@@ -385,6 +386,8 @@ int server_init(void);
  * @returns 0 if successful, -1 otherwise.
  */
 int server_start(string endpoint);
+int server_start_tcp(boxaddr *addr, uint16_t port);
+int server_start_pipe(char *name);
 
 /**
  * Stop listening on the address specified by `endpoint`
@@ -393,7 +396,7 @@ int server_start(string endpoint);
  *                 pipe)
  * @return 0 if successful, -1 otherwise
  */
-int server_stop(string endpoint);
+int server_stop(char * endpoint);
 int server_close(void);
 
 int event_initialize(void);
@@ -463,6 +466,7 @@ int dispatch_teardown(void);
 dispatch_info dispatch_table_get(string method);
 void dispatch_table_put(string method, dispatch_info info);
 int handle_run(connection_request_event_info *info);
+int handle_result(connection_request_event_info *info);
 int handle_register(connection_request_event_info *info);
 int handle_error(connection_request_event_info *info);
 
@@ -498,7 +502,8 @@ struct message_object message_object_copy(struct message_object obj);
  * @param[in]   password  password to authenticate against redis db
  * @return    0 on success otherwise -1
  */
-extern int db_connect(string ip, int port, const struct timeval tv, string password);
+extern int db_connect(const char *ip, int port, const struct timeval tv,
+    const char *password);
 
 /**
  * Disconnects from Redis db and frees Context object.

@@ -3,8 +3,8 @@ language: c
 matrix:
   include:
     - os: linux
-      compiler: clang-3.6
-      env: GCOV=llvm-cov-3.6 EXTRA_FLAGS="-DUSE_COVERAGE=ON -DCLANG_ADDRESS_SANITIZER=ON"
+      compiler: clang
+      env: GCOV=llvm-cov-3.4 EXTRA_FLAGS="-DUSE_COVERAGE=ON -DCLANG_ADDRESS_SANITIZER=ON"
 
 before_install:
   # cmocka
@@ -28,13 +28,13 @@ before_install:
 addons:
   apt:
     sources:
-      - llvm-toolchain-precise-3.6
+      - deadsnakes
       - ubuntu-toolchain-r-test
     packages:
       - autoconf
       - automake
       - build-essential
-      - clang-3.6
+      - clang-3.4
       - cmake
       - g++-5-multilib
       - g++-multilib
@@ -43,7 +43,7 @@ addons:
       - gdb
       - libc6-dev-i386
       - libtool
-      - llvm-3.6-dev
+      - llvm-3.4-dev
       - ninja-build
       - pkg-config
       - libbsd-dev

@@ -1,5 +1,5 @@
 /**
- *    Copyright (C) 2015 splone UG
+ *    Copyright (C) 2016 splone UG
  *
  *    This program is free software: you can redistribute it and/or  modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -16,13 +16,8 @@
 
 #pragma once
 
-#define STRINGIFY(v) STR_VALUE(v)
-#define STR_VALUE(arg) #arg
+#include "rpc/sb-rpc.h"
 
-#define VERSION_MAJOR 0
-#define VERSION_MINOR 1
-#define VERSION_REVISION 5
-
-#define VERSION STRINGIFY(VERSION_MAJOR) "." \
-                STRINGIFY(VERSION_MINOR) "." \
-                STRINGIFY(VERSION_REVISION)
+STATIC void inputstream_alloc_cb(uv_handle_t *, size_t, uv_buf_t *);
+STATIC void inputstream_read_cb(uv_stream_t *, ssize_t, const uv_buf_t *);
+STATIC void inputstream_close_cb(uv_handle_t *handle);

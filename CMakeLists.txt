@@ -20,7 +20,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wconversion")
 
 add_definitions(-Wall -Wextra -pedantic -Wstrict-prototypes -std=gnu99
-    -Wvariadic-macros -Wcast-align -Wcast-qual -Wshadow
+    -Wvariadic-macros -Wcast-align -Wshadow
     -Wmissing-field-initializers -Wmissing-format-attribute -Wfloat-equal
     -Wundef -Wpointer-arith -Wstrict-overflow=5 -Wswitch-default -Wswitch-enum
     -Wunreachable-code -Wformat-security)
@@ -106,11 +106,22 @@ set(SPLONEBOX-SOURCES
   src/hashmap.c
   src/random.c
   src/optparser.c
+  src/optparser.h
   src/signal.c
   src/filesystem.c
   src/devurandom.c
   src/tweetnacl.h
   src/tweetnacl.c
+  src/options.c
+  src/options.h
+  src/confparse.c
+  src/confparse.h
+  src/parse.c
+  src/parse.h
+  src/util.c
+  src/util.h
+  src/address.c
+  src/address.h
   src/sbmemzero.c
   src/api/sb-api.h
   src/api/apikey.c
@@ -118,14 +129,21 @@ set(SPLONEBOX-SOURCES
   src/api/run.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
+  src/rpc/connection/event.h
   src/rpc/connection/streamhandle.c
+  src/rpc/connection/streamhandle.h
   src/rpc/connection/inputstream.c
+  src/rpc/connection/inputstream.h
   src/rpc/connection/outputstream.c
+  src/rpc/connection/outputstream.h
   src/rpc/connection/server.c
-  src/rpc/connection/loop.c
+  src/rpc/connection/server.h
   src/rpc/connection/connection.c
+  src/rpc/connection/connection.h
   src/rpc/connection/dispatch.c
   src/rpc/connection/crypto.c
+  src/rpc/connection/crypto.h
+  src/rpc/connection/loop.c
   src/rpc/msgpack/sb-msgpack-rpc.h
   src/rpc/msgpack/message.c
   src/rpc/msgpack/pack.c
@@ -170,11 +188,22 @@ set(TEST-SOURCES
   src/hashmap.c
   src/random.c
   src/optparser.c
+  src/optparser.h
   src/signal.c
   src/filesystem.c
   src/devurandom.c
   src/tweetnacl.h
   src/tweetnacl.c
+  src/options.c
+  src/options.h
+  src/confparse.c
+  src/confparse.h
+  src/parse.c
+  src/parse.h
+  src/util.c
+  src/util.h
+  src/address.c
+  src/address.h
   src/sbmemzero.c
   src/api/sb-api.h
   src/api/apikey.c
@@ -182,13 +211,21 @@ set(TEST-SOURCES
   src/api/run.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
+  src/rpc/connection/event.h
   src/rpc/connection/streamhandle.c
+  src/rpc/connection/streamhandle.h
   src/rpc/connection/inputstream.c
+  src/rpc/connection/inputstream.h
   src/rpc/connection/outputstream.c
+  src/rpc/connection/outputstream.h
   src/rpc/connection/server.c
+  src/rpc/connection/server.h
   src/rpc/connection/connection.c
+  src/rpc/connection/connection.h
   src/rpc/connection/dispatch.c
   src/rpc/connection/crypto.c
+  src/rpc/connection/crypto.h
+  src/rpc/connection/loop.c
   src/rpc/msgpack/sb-msgpack-rpc.h
   src/rpc/msgpack/message.c
   src/rpc/msgpack/pack.c
@@ -206,8 +243,12 @@ set(TEST-SOURCES
   test/unit/server-start.c
   test/unit/server-stop.c
   test/unit/pack-string.c
-  test/unit/pack-uint64.c
+  test/unit/pack-int.c
+  test/unit/pack-uint.c
   test/unit/pack-array.c
+  test/unit/pack-nil.c
+  test/unit/pack-float.c
+  test/unit/pack-bool.c
   test/unit/regression-issue-60.c
   test/unit/unpack-string.c
   test/unit/unpack-uint.c
@@ -236,6 +277,7 @@ set(TEST-SOURCES
   test/functional/dispatch-handle-register.c
   test/functional/dispatch-handle-run.c
   test/functional/crypto.c
+  test/functional/confparse.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
@@ -268,6 +310,7 @@ add_executable(sb-test ${TEST-SOURCES})
 
 # wrap some functions for testing
 set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response,--wrap=crypto_write ")
+set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DBOX_UNIT_TESTS ")
 
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}
@@ -284,13 +327,13 @@ endif()
 
 if(CLANG_ADDRESS_SANITIZER)
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover=undefined,integer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
+  set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover=undefined,integer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
+  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb-plugin APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover=undefined,integer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
+  set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
 elseif(CLANG_MEMORY_SANITIZER)
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")

@@ -22,64 +22,71 @@
 #include "tweetnacl.h"
 #include "rpc/sb-rpc.h"
 
-#define ENV_VAR_LISTEN_ADDRESS    "SPLONEBOX_LISTEN_ADDRESS"
-
-#define DB_IP "127.0.0.1"
-#define DB_PORT 6378
-#define DB_PASSWORD "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"
-
 int8_t verbose_level;
 uv_loop_t loop;
 
 int main(int argc, char **argv)
 {
+  options *globaloptions;
+
   optparser(argc, argv);
+
+  if (options_init_from_boxrc() < 0) {
+      LOG_ERROR("Reading config failed--see warnings above. "
+              "For usage, try -h.");
+      abort();
+  }
 
   uv_loop_init(&loop);
 
   crypto_init();
 
-  string db_ip = cstring_copy_string(DB_IP);
-  string db_auth = cstring_copy_string(DB_PASSWORD);
   struct timeval timeout = { 1, 500000 };
 
-  if (db_connect(db_ip, DB_PORT, timeout, db_auth) < 0) {
+  globaloptions = options_get();
+
+  /* connect to database */
+  if (db_connect(fmt_addr(&globaloptions->RedisDatabaseListenAddr),
+      globaloptions->RedisDatabaseListenPort, timeout,
+      globaloptions->RedisDatabaseAuth) < 0) {
     LOG_ERROR("Failed to connect to database");
-    return EXIT_FAILURE;
+    abort();
   }
 
   /* initialize signal handler */
   if (signal_init() == -1) {
     LOG_ERROR("Failed to initialize signal handler.");
+    abort();
   }
 
   /* initialize event queue */
   if (event_initialize() == -1) {
     LOG_ERROR("Failed to initialize event queue.");
+    abort();
   }
 
   /* initialize connections */
   if (connection_init() == -1) {
     LOG_ERROR("Failed to initialise connections.");
-  }
-
-  /* initialize server */
-  string env = cstring_to_string(getenv(ENV_VAR_LISTEN_ADDRESS));
-
-  if (!env.str) {
-    LOG_ERROR(
-      "Environment Variable 'SPLONEBOX_LISTEN_ADDRESS' is not set, abort.");
+    abort();
   }
 
   if (server_init() == -1) {
     LOG_ERROR("Failed to initialise server.");
+    abort();
   }
 
-  if (server_start(env) == -1) {
-    LOG_ERROR("Failed to start server.");
+  /* initialize server */
+  if (globaloptions->apitype == SERVER_TYPE_TCP) {
+    server_start_tcp(&globaloptions->ApiTransportListenAddr,
+        globaloptions->ApiTransportListenPort);
+  } else if (globaloptions->apitype == SERVER_TYPE_PIPE) {
+    server_start_pipe(globaloptions->ApiNamedPipeListen);
   }
 
   uv_run(&loop, UV_RUN_DEFAULT);
+
+  options_free(globaloptions);
 
   return (0);
 }

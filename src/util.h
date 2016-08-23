@@ -1,5 +1,5 @@
 /**
- *    Copyright (C) 2015 splone UG
+ *    Copyright (C) 2016 splone UG
  *
  *    This program is free software: you can redistribute it and/or  modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -16,13 +16,11 @@
 
 #pragma once
 
-#define STRINGIFY(v) STR_VALUE(v)
-#define STR_VALUE(arg) #arg
+#include "sb-common.h"
 
-#define VERSION_MAJOR 0
-#define VERSION_MINOR 1
-#define VERSION_REVISION 5
-
-#define VERSION STRINGIFY(VERSION_MAJOR) "." \
-                STRINGIFY(VERSION_MINOR) "." \
-                STRINGIFY(VERSION_REVISION)
+STATIC int digit_to_num(char d);
+STATIC int scan_unsigned(const char **bufp, unsigned long *out, int width,
+    int base);
+STATIC int scan_signed(const char **bufp, long *out, int width);
+STATIC int scan_double(const char **bufp, double *out, int width);
+STATIC int scan_string(const char **bufp, char *out, int width);

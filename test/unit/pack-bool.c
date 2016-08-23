@@ -14,15 +14,24 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include <msgpack.h>
 
-#define STRINGIFY(v) STR_VALUE(v)
-#define STR_VALUE(arg) #arg
+#include "sb-common.h"
+#include "rpc/msgpack/sb-msgpack-rpc.h"
+#include "helper-unix.h"
 
-#define VERSION_MAJOR 0
-#define VERSION_MINOR 1
-#define VERSION_REVISION 5
 
-#define VERSION STRINGIFY(VERSION_MAJOR) "." \
-                STRINGIFY(VERSION_MINOR) "." \
-                STRINGIFY(VERSION_REVISION)
+void unit_pack_bool(UNUSED(void **state))
+{
+  msgpack_sbuffer sbuf;
+  msgpack_packer pk;
+
+  msgpack_sbuffer_init(&sbuf);
+  msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+
+  assert_int_equal(0, pack_bool(&pk, true));
+  assert_int_equal(0, pack_bool(&pk, false));
+  assert_int_not_equal(0, pack_bool(NULL, true));
+
+  msgpack_sbuffer_destroy(&sbuf);
+}

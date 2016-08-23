@@ -14,15 +14,12 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#pragma once
+#include "helper-unix.h"
+#include "sb-common.h"
 
-#define STRINGIFY(v) STR_VALUE(v)
-#define STR_VALUE(arg) #arg
 
-#define VERSION_MAJOR 0
-#define VERSION_MINOR 1
-#define VERSION_REVISION 5
-
-#define VERSION STRINGIFY(VERSION_MAJOR) "." \
-                STRINGIFY(VERSION_MINOR) "." \
-                STRINGIFY(VERSION_REVISION)
+void functional_confparse(UNUSED(void **state))
+{
+  assert_int_equal(0, options_init_from_boxrc());
+  assert_non_null(options_get());
+}

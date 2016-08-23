@@ -18,8 +18,9 @@
 
 #include "sb-common.h"
 #include "version.h"
+#include "optparser.h"
 
-static void print_usage(string name)
+STATIC void print_usage(string name)
 {
   LOG("Usage: %s [OPTION]\n\n"
     "Mandatory arguments to long options are mandatory for short options too.\n"
@@ -28,7 +29,7 @@ static void print_usage(string name)
     "  --version  print version\n", name.str);
 }
 
-static void print_version(void)
+STATIC void print_version(void)
 {
   LOG("%s\n", VERSION);
 }
