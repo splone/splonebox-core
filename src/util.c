@@ -445,9 +445,9 @@ void base16_encode(char *dest, size_t destlen,
 }
 
 /** Convert all alphabetic characters to uppercase */
-void string_to_upper(string s)
+void to_upper(char *s)
 {
-  char *i = s.str;
+  char *i = s;
   while (*i) {
     *i = (char)toupper(*i);;
     ++i;

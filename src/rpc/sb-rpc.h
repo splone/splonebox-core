@@ -126,6 +126,7 @@ struct message_response {
  * using this structure in any way.                                          *
  *****************************************************************************/
 #define PLUGINKEY_SIZE 8
+#define PLUGINKEY_STRING_SIZE ((PLUGINKEY_SIZE * 2) + 1)
 #define CLIENTLONGTERMPK_ARRAY_SIZE 32
 
 struct crypto_context {
@@ -138,7 +139,7 @@ struct crypto_context {
   unsigned char servershorttermsk[32];
   unsigned char minutekey[32];
   unsigned char lastminutekey[32];
-  string pluginkey;
+  char pluginkeystring[PLUGINKEY_STRING_SIZE];
 };
 
 struct connection {
@@ -239,8 +240,8 @@ struct queue_entry {
 };
 
 /* hashmap declarations */
-MAP_DECLS(uint64_t, string) /* maps callid <> pluginkey */
-MAP_DECLS(string, ptr_t) /* maps pluginkey <> connection */
+MAP_DECLS(uint64_t, ptr_t) /* maps callid <> pluginkey */
+MAP_DECLS(ptr_t, ptr_t) /* maps pluginkey <> connection */
 MAP_DECLS(cstr_t, ptr_t)
 MAP_DECLS(string, dispatch_info)
 
@@ -266,11 +267,11 @@ int connection_init(void);
  */
 int connection_create(uv_stream_t *stream);
 
-struct callinfo * connection_send_request(string  pluginkey, string method,
+struct callinfo * connection_send_request(char *pluginkey, string method,
     array params, struct api_error *api_error);
 int connection_send_response(struct connection *con, uint32_t msgid,
     array params, struct api_error *api_error);
-int connection_hashmap_put(string pluginkey, struct connection *con);
+int connection_hashmap_put(char *pluginkey, struct connection *con);
 struct callinfo *loop_wait_for_response(struct connection *con,
     struct message_request *request);
 int connection_teardown(void);

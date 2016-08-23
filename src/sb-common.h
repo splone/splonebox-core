@@ -286,6 +286,8 @@ static inline int ISXDIGIT(char c) {
 void base16_encode(char *dest, size_t destlen,
   const char *src, size_t srclen);
 
+void to_upper(char *s);
+
 #define ISODIGIT(c) ('0' <= (c) && (c) <= '7')
 
 /* check if number is odd */
@@ -456,7 +458,6 @@ define UNUSED(x) x
 /* Functions */
 void *reallocarray(void *optr, size_t nmemb, size_t size);
 
-void string_to_upper(string s);
 string cstring_to_string(char *str);
 string cstring_copy_string(const char *str);
 void free_string(string str);

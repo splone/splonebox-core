@@ -47,7 +47,7 @@ void connect_to_db(void)
   options_free(globaloptions);
 }
 
-void connect_and_create(string pluginkey)
+void connect_and_create(char *pluginkey)
 {
   string name = cstring_copy_string("my new plugin");
   string desc = cstring_copy_string("Lorem ipsum");

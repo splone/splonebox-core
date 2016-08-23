@@ -22,7 +22,7 @@
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 
-static string pluginkey;
+static char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
 static string pluginname;
 static string description;
 static string author;
@@ -147,7 +147,6 @@ static void register_test_function(void)
   array *meta, *functions, *func1, *args;
   struct api_error err = ERROR_INIT;
 
-  pluginkey = cstring_copy_string(KEY);
   pluginname = cstring_copy_string("register");
   description = cstring_copy_string("register a plugin");
   author = cstring_copy_string("test");
@@ -164,7 +163,7 @@ static void register_test_function(void)
 
   info.con->closed = true;
   info.con->msgid = 1;
-  info.con->cc.pluginkey = pluginkey;
+  memcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE);
 
   connect_and_create(pluginkey);
   assert_int_equal(0, connection_init());
@@ -230,7 +229,7 @@ static void register_test_function(void)
   free_params(register_request->params);
 }
 
-void run_request_helper(struct message_request *rr, string key,
+void run_request_helper(struct message_request *rr, char *key,
     string function_name, message_object_type metaarraytype,
     message_object_type functionnametype, message_object_type argstype,
     size_t metasize, message_object_type metaclientidtype,
@@ -251,7 +250,7 @@ void run_request_helper(struct message_request *rr, string key,
   meta->size = metasize;
   meta->obj = CALLOC(meta->size, struct message_object);
   meta->obj[0].type = metaclientidtype;
-  meta->obj[0].data.string = cstring_copy_string(key.str);
+  meta->obj[0].data.string = cstring_copy_string(key);
   meta->obj[1].type = metacallidtype;
 
   rr->params.obj[1].data.string = cstring_copy_string(function_name.str);
@@ -270,7 +269,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
 {
   connection_request_event_info info;
   struct api_error err = ERROR_INIT;
-  string key, functionname, invalidfunctionname;
+  string functionname, invalidfunctionname;
 
   register_test_function();
 
@@ -278,9 +277,9 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   assert_false(info.api_error.isset);
   info.con = MALLOC(struct connection);
   info.con->closed = true;
+  memcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE);
   assert_non_null(info.con);
 
-  key = cstring_copy_string(KEY);
   functionname = cstring_copy_string(FUNC);
 
   expect_check(__wrap_crypto_write, &deserialized, validate_run_request, NULL);
@@ -291,7 +290,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
    * verifies, that the forwarded run request by the server is of proper
    * format.
    * */
-  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
 
   assert_int_equal(0, handle_run(&info));
@@ -306,7 +305,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
 
   /* calling not registered function should fail */
   invalidfunctionname = cstring_copy_string("invalid func name");
-  run_request_helper(&info.request, key, invalidfunctionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, pluginkey, invalidfunctionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
 
   assert_false(info.api_error.isset);
@@ -318,7 +317,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   free_params(info.request.params);
 
   /* object has wrong type */
-  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_STR,
+  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_STR,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
@@ -331,7 +330,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   free_params(info.request.params);
 
   /* meta has wrong size */
-  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 3, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
@@ -342,7 +341,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   free_params(info.request.params);
 
   /* client2_id has wrong type */
-  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_BIN, OBJECT_TYPE_NIL);
 
   assert_false(info.api_error.isset);
@@ -354,7 +353,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   free_params(info.request.params);
 
   /* call_id has wrong type */
-  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_BIN, OBJECT_TYPE_BIN);
 
   assert_false(info.api_error.isset);
@@ -365,7 +364,6 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   free_params(info.request.params);
 
   free_string(invalidfunctionname);
-  free_string(key);
   free_string(functionname);
   FREE(info.con);
   connection_teardown();

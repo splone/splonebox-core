@@ -26,7 +26,7 @@
 #define MIN_LEN_NAME 3
 
 
-int db_plugin_add(string pluginkey, string name, string desc, string author,
+int db_plugin_add(char *pluginkey, string name, string desc, string author,
     string license)
 {
   redisReply *reply;
@@ -42,7 +42,7 @@ int db_plugin_add(string pluginkey, string name, string desc, string author,
   }
 
   reply = redisCommand(rc, "HMSET %s name %s desc %s author %s license %s",
-          pluginkey.str, name.str, desc.str, author.str, license.str);
+          pluginkey, name.str, desc.str, author.str, license.str);
 
   if (reply->type == REDIS_REPLY_ERROR) {
     LOG_WARNING("Redis failed to add string value to plugin: %s\n", reply->str);
@@ -56,7 +56,7 @@ int db_plugin_add(string pluginkey, string name, string desc, string author,
 }
 
 
-int db_plugin_verify(string pluginkey)
+int db_plugin_verify(char *pluginkey)
 {
   redisReply *reply;
   bool valid = false;
@@ -64,7 +64,7 @@ int db_plugin_verify(string pluginkey)
   if (!rc)
     return (-1);
 
-  reply = redisCommand(rc, "Exists %s", pluginkey.str);
+  reply = redisCommand(rc, "Exists %s", pluginkey);
 
   if (reply->type != REDIS_REPLY_INTEGER)
     LOG_WARNING("Redis failed to query plugin key existence: %s", reply->str);
@@ -74,7 +74,7 @@ int db_plugin_verify(string pluginkey)
   freeReplyObject(reply);
 
   if (!valid)
-    return -1;
+    return (-1);
 
   return (0);
 }

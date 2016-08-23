@@ -38,7 +38,7 @@
 
 static msgpack_sbuffer sbuf;
 static hashmap(string, dispatch_info) *dispatch_table = NULL;
-static hashmap(uint64_t, string) *callids = NULL;
+static hashmap(uint64_t, ptr_t) *callids = NULL;
 
 int handle_error(connection_request_event_info *info)
 {
@@ -151,7 +151,7 @@ int handle_run(connection_request_event_info *info)
   uint64_t callid;
   array *meta = NULL;
   string function_name;
-  string targetpluginkey;
+  char targetpluginkey[PLUGINKEY_STRING_SIZE];
 
   struct message_object args_object;
   struct message_request *request;
@@ -199,14 +199,14 @@ int handle_run(connection_request_event_info *info)
   }
 
   if (!meta->obj[0].data.string.str ||
-    meta->obj[0].data.string.length != (PLUGINKEY_SIZE * 2)) {
+    meta->obj[0].data.string.length+1 != PLUGINKEY_STRING_SIZE) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid meta params size");
     return (-1);
   }
 
-  targetpluginkey = meta->obj[0].data.string;
-  string_to_upper(targetpluginkey);
+  memcpy(targetpluginkey, meta->obj[0].data.string.str, PLUGINKEY_STRING_SIZE);
+  to_upper(targetpluginkey);
 
   if (meta->obj[1].type != OBJECT_TYPE_NIL) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -237,7 +237,7 @@ int handle_run(connection_request_event_info *info)
   args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
   //TODO is the targetpluginkey the correct one?
-  hashmap_put(uint64_t, string)(callids, callid, targetpluginkey);
+  hashmap_put(uint64_t, ptr_t)(callids, callid, targetpluginkey);
 
   if (api_run(targetpluginkey, function_name, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
@@ -264,7 +264,7 @@ dispatch_info dispatch_table_get(string method)
 int dispatch_teardown(void)
 {
   hashmap_free(string, dispatch_info)(dispatch_table);
-  hashmap_free(uint64_t, string)(callids);
+  hashmap_free(uint64_t, ptr_t)(callids);
 
   return (0);
 }
@@ -282,7 +282,7 @@ int dispatch_table_init(void)
   msgpack_sbuffer_init(&sbuf);
 
   dispatch_table = hashmap_new(string, dispatch_info)();
-  callids = hashmap_new(uint64_t, string)();
+  callids = hashmap_new(uint64_t, ptr_t)();
 
   if (!dispatch_table || !callids)
     return (-1);

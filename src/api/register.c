@@ -33,7 +33,7 @@ int api_register(string name, string desc,
     return (-1);
   }
 
-  if (db_plugin_add(con->cc.pluginkey, name, desc, author, license) == -1) {
+  if (db_plugin_add(con->cc.pluginkeystring, name, desc, author, license) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Failed to register plugin in database.");
     return (-1);
@@ -48,7 +48,7 @@ int api_register(string name, string desc,
       continue;
     }
 
-    if (db_function_add(con->cc.pluginkey, &func->data.params) == -1) {
+    if (db_function_add(con->cc.pluginkeystring, &func->data.params) == -1) {
       error_set(api_error, API_ERROR_TYPE_VALIDATION,
           "Failed to register function in database.");
       continue;
@@ -58,7 +58,7 @@ int api_register(string name, string desc,
   if (api_error->isset)
     return (-1);
 
-  connection_hashmap_put(con->cc.pluginkey, con);
+  connection_hashmap_put(con->cc.pluginkeystring, con);
 
   if (connection_send_response(con, msgid, params, api_error) < 0) {
     return (-1);

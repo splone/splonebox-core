@@ -56,14 +56,14 @@ STATIC int connection_handle_response(struct connection *con,
 STATIC void connection_request_event(connection_request_event_info *info);
 STATIC void connection_close(struct connection *con);
 
-static hashmap(string, ptr_t) *connections = NULL;
+static hashmap(ptr_t, ptr_t) *connections = NULL;
 static msgpack_sbuffer sbuf;
 equeue *equeue_root;
 uv_loop_t loop;
 
 int connection_init(void)
 {
-  connections = hashmap_new(string, ptr_t)();
+  connections = hashmap_new(ptr_t, ptr_t)();
 
   if (dispatch_table_init() == -1)
     return (-1);
@@ -88,7 +88,7 @@ int connection_teardown(void)
     FREE(con);
   });
 
-  hashmap_free(string, ptr_t)(connections);
+  hashmap_free(ptr_t, ptr_t)(connections);
   dispatch_teardown();
   msgpack_sbuffer_destroy(&sbuf);
 
@@ -326,14 +326,14 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
   return (0);
 }
 
-int connection_hashmap_put(string pluginkey, struct connection *con)
+int connection_hashmap_put(char *pluginkey, struct connection *con)
 {
-  hashmap_put(string, ptr_t)(connections, pluginkey, con);
+  hashmap_put(ptr_t, ptr_t)(connections, pluginkey, con);
 
   return (0);
 }
 
-struct callinfo * connection_send_request(string pluginkey, string method,
+struct callinfo * connection_send_request(char *pluginkey, string method,
     array params, struct api_error *api_error)
 {
   struct connection *con;
@@ -341,7 +341,7 @@ struct callinfo * connection_send_request(string pluginkey, string method,
   struct message_request request;
   struct callinfo *cinfo;
 
-  con = hashmap_get(string, ptr_t)(connections, pluginkey);
+  con = hashmap_get(ptr_t, ptr_t)(connections, pluginkey);
 
   /*
    * if no connection is available for the key, set the connection to the

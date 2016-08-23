@@ -1,0 +1,37 @@
+Binary file rpc/connection/.crypto.c.swp matches
+rpc/connection/crypto.c:142:  cc->nonce += 2;
+rpc/connection/crypto.c:144:  if (cc->nonce)
+rpc/connection/crypto.c:225:  memcpy(cc->lastminutekey, cc->minutekey, sizeof cc->lastminutekey);
+rpc/connection/crypto.c:226:  randombytes(cc->minutekey, sizeof cc->minutekey);
+rpc/connection/crypto.c:247:  if ((packetnonce <= cc->receivednonce) || !ISODD(packetnonce))
+rpc/connection/crypto.c:257:      cc->clientshortservershort) != 0)
+rpc/connection/crypto.c:260:  cc->receivednonce = packetnonce;
+rpc/connection/crypto.c:292:  if ((packetnonce <= cc->receivednonce) || !ISODD(packetnonce))
+rpc/connection/crypto.c:296:  memcpy(cc->clientshorttermpk, data + 8, 32);
+rpc/connection/crypto.c:298:  crypto_box_beforenm(clientshortserverlong, cc->clientshorttermpk,
+rpc/connection/crypto.c:315:  if (crypto_box_keypair(cc->servershorttermpk, cc->servershorttermsk) != 0)
+rpc/connection/crypto.c:318:  memcpy(cookiebox + 96, cc->clientshorttermpk, 32);
+rpc/connection/crypto.c:319:  memcpy(cookiebox + 128, cc->servershorttermsk, 32);
+rpc/connection/crypto.c:328:  if (crypto_secretbox(cookiebox + 64, cookiebox + 64, 96, nonce, cc->minutekey)
+rpc/connection/crypto.c:333:  memcpy(cookiebox + 32, cc->servershorttermpk, 32);
+rpc/connection/crypto.c:348:  cc->state = TUNNEL_COOKIE_SENT;
+rpc/connection/crypto.c:360:  sbmemzero(cc->servershorttermpk, sizeof cc->servershorttermpk);
+rpc/connection/crypto.c:361:  sbmemzero(cc->clientshorttermpk, sizeof cc->clientshorttermpk);
+rpc/connection/crypto.c:393:  if (crypto_secretbox_open(cookie, cookie, 96, nonce, cc->minutekey)) {
+rpc/connection/crypto.c:397:    if (crypto_secretbox_open(cookie, cookie, 96, nonce, cc->lastminutekey))
+rpc/connection/crypto.c:402:  if (!byte_isequal(cc->clientshorttermpk, 32, cookie + 32))
+rpc/connection/crypto.c:408:  crypto_box_beforenm(cc->clientshortservershort, cc->clientshorttermpk,
+rpc/connection/crypto.c:414:  if ((packetnonce <= cc->receivednonce) || !ISODD(packetnonce))
+rpc/connection/crypto.c:424:      cc->clientshortservershort))
+rpc/connection/crypto.c:447:  if (!byte_isequal(initiatebox + 96, 32, cc->clientshorttermpk))
+rpc/connection/crypto.c:450:  if (!byte_isequal(initiatebox + 128, 32, cc->servershorttermpk))
+rpc/connection/crypto.c:453:  cc->receivednonce = packetnonce;
+rpc/connection/crypto.c:455:  cc->state = TUNNEL_ESTABLISHED;
+rpc/connection/crypto.c:457:  base16_encode(cc->pluginkeystring, (PLUGINKEY_SIZE*2) + 1,
+rpc/connection/crypto.c:513:  uint64_pack(nonce + 16, cc->nonce);
+rpc/connection/crypto.c:521:      cc->clientshortservershort) != 0)
+rpc/connection/crypto.c:538:  uint64_pack(nonce + 16, cc->nonce);
+rpc/connection/crypto.c:541:      cc->clientshortservershort) != 0)
+rpc/connection/crypto.c:587:  uint64_pack(nonce + 16, cc->receivednonce + 2);
+rpc/connection/crypto.c:603:      cc->clientshortservershort) != 0)
+rpc/connection/crypto.c:609:  cc->receivednonce += 2;

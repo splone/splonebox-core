@@ -45,7 +45,7 @@ extern void db_close(void);
  * @param[in] func    array of functions to actually store
  * @return 0 on success otherwise -1
  */
-extern int db_function_add(string luginkey, array *func);
+extern int db_function_add(char *pluginkey, array *func);
 
 /**
  * Verifies whether the corresponding function is called correctly. To
@@ -56,7 +56,7 @@ extern int db_function_add(string luginkey, array *func);
  * @param[in] args    function arguments
  * @return 0 if call is valid, otherwise -1
  */
-extern int db_function_verify(string pluginkey, string name,
+extern int db_function_verify(char *pluginkey, string name,
   array *args);
 
 /**
@@ -68,7 +68,7 @@ extern int db_function_verify(string pluginkey, string name,
  * @param[in] license the plugin's license text
  * returns -1 in case of error otherwise 0
  */
-extern int db_plugin_add(string pluginkey, string name, string desc, string author,
+extern int db_plugin_add(char *pluginkey, string name, string desc, string author,
     string license);
 
 /**
@@ -76,7 +76,7 @@ extern int db_plugin_add(string pluginkey, string name, string desc, string auth
  * @param[in] pluginkey  key to check
  * returns 0 if key is valid otherwise -1
  */
-extern int db_plugin_verify(string pluginkey);
+extern int db_plugin_verify(char *pluginkey);
 
 /**
  * Adds a plugin's long-term public key to the list of authorized plugins.

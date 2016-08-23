@@ -25,10 +25,10 @@
 
 void functional_db_pluginkey_verify(UNUSED(void **state))
 {
-  string invalid;
-  string empty;
+  char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
+  char invalid_pluginkey[PLUGINKEY_STRING_SIZE] = "FFFFFFFFFFFFFFFF";
+  char empty_pluginkey[1] = "";
 
-  string pluginkey = cstring_copy_string("mykey");
   string name = cstring_copy_string("myname");
   string desc = cstring_copy_string("mydesc");
   string author = cstring_copy_string("myauthor");
@@ -43,19 +43,14 @@ void functional_db_pluginkey_verify(UNUSED(void **state))
   assert_int_equal(0, db_plugin_verify(pluginkey));
 
   /* verify incorrect keys should fail */
-  invalid = cstring_copy_string("foobar");
-  assert_int_not_equal(0, db_plugin_verify(invalid));
+  assert_int_not_equal(0, db_plugin_verify(invalid_pluginkey));
 
-  empty = cstring_copy_string("");
-  assert_int_not_equal(0, db_plugin_verify(empty));
+  assert_int_not_equal(0, db_plugin_verify(empty_pluginkey));
 
-  free_string(pluginkey);
   free_string(name);
   free_string(desc);
   free_string(author);
   free_string(license);
-  free_string(invalid);
-  free_string(empty);
 
   db_close();
 }

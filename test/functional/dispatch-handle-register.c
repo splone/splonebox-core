@@ -62,8 +62,8 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   struct message_request *request;
   array *meta, *functions, *func1, *func2, *args;
   struct api_error *err = MALLOC(struct api_error);
+  char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
 
-  string pluginkey = cstring_copy_string("VBXBG3WKKlVA3194");
   string name = cstring_copy_string("register");
   string description = cstring_copy_string("register a plugin");
   string author = cstring_copy_string("test");
@@ -81,10 +81,10 @@ void functional_dispatch_handle_register(UNUSED(void **state))
 
   info.con = MALLOC(struct connection);
   info.con->closed = true;
-  info.con->cc.pluginkey = pluginkey;
+  memcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE);
   assert_non_null(info.con);
 
-  connect_and_create(pluginkey);
+  connect_and_create(info.con->cc.pluginkeystring);
   assert_int_equal(0, connection_init());
 
   /* first level arrays:
@@ -247,7 +247,6 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   info.api_error.isset = false;
   functions->size = 2;
 
-  free_string(pluginkey);
   free_params(request->params);
   connection_teardown();
   FREE(err);
