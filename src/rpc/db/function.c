@@ -246,6 +246,7 @@ static int db_function_typecheck(char *pluginkey, string name,
     return (-1);
   }
 
+  /* check whether enough arguments are passed */
   if (((argc = db_function_get_argc(pluginkey, name)) < 0) ||
       ((size_t)argc != (size_t)args->size)) {
     LOG_WARNING("Invalid argument count!");
@@ -255,9 +256,12 @@ static int db_function_typecheck(char *pluginkey, string name,
   reply = redisCommand(rc, "LRANGE %s:func:%s:args 0 %d", pluginkey,
             name.str, argc);
 
+  /* check every single argument */
   if (reply->type == REDIS_REPLY_ARRAY)
     for (size_t j = reply->elements, k = 0; j != 0; j--, k++) {
 
+      /* The argument types are of type int. However, they are stored
+       * in a redis list and redis list items are of type string. */
       if (reply->element[j-1]->type != REDIS_REPLY_STRING) {
         LOG_WARNING("Redis returned list element has wrong type.");
         freeReplyObject(reply);
@@ -265,7 +269,6 @@ static int db_function_typecheck(char *pluginkey, string name,
       }
 
       errno = 0;
-
       val = strtol(reply->element[j-1]->str, &endptr, 10);
 
       if (((errno == ERANGE) && ((val == LONG_MAX) || (val == LONG_MIN))) ||
