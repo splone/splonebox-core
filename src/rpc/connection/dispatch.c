@@ -151,7 +151,7 @@ int handle_run(connection_request_event_info *info)
   uint64_t callid;
   array *meta = NULL;
   string function_name;
-  char targetpluginkey[PLUGINKEY_STRING_SIZE];
+  char *targetpluginkey;
 
   struct message_object args_object;
   struct message_request *request;
@@ -205,7 +205,7 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  memcpy(targetpluginkey, meta->obj[0].data.string.str, PLUGINKEY_STRING_SIZE);
+  targetpluginkey = meta->obj[0].data.string.str;
   to_upper(targetpluginkey);
 
   if (meta->obj[1].type != OBJECT_TYPE_NIL) {
