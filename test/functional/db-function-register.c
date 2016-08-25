@@ -25,8 +25,7 @@
 
 void functional_db_function_add(UNUSED(void **state))
 {
-  string apikey = cstring_copy_string(
-      "bkAhXpRUwuwdeTx0tc24xXDPl6RdIH1uVgQUGRhAZTTjdYiYqkmTmVXgZmRSWuKi");
+  char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
   string name = cstring_copy_string(
       "name of function");
   string desc = cstring_copy_string(
@@ -49,35 +48,34 @@ void functional_db_function_add(UNUSED(void **state))
   params.obj[2].data.params.obj[0].type = OBJECT_TYPE_INT;
   params.obj[2].data.params.obj[0].data.uinteger = 6;
 
-  connect_and_create(apikey);
+  connect_and_create(pluginkey);
 
   /* valid function params should work */
-  assert_int_equal(0, db_function_add(apikey, &params));
+  assert_int_equal(0, db_function_add(pluginkey, &params));
 
   /* empty function params should not work */
   params.size = 0;
-  assert_int_not_equal(0, db_function_add(apikey, &params));
+  assert_int_not_equal(0, db_function_add(pluginkey, &params));
 
   /* function without arguments should work */
   params.size = 4;
   params.obj[2].data.params.size = 0;
-  assert_int_equal(0, db_function_add(apikey, &params));
+  assert_int_equal(0, db_function_add(pluginkey, &params));
 
   /* function without name should not work */
   params.size = 4;
   params.obj[2].data.params.size = 1;
   params.obj[0].data.string = cstring_copy_string("");
-  assert_int_not_equal(0, db_function_add(apikey, &params));
+  assert_int_not_equal(0, db_function_add(pluginkey, &params));
   free_string(params.obj[0].data.string);
 
   /* function without description should work */
   params.obj[0].data.string = name;
   params.obj[1].data.string = cstring_copy_string("");
-  assert_int_equal(0, db_function_add(apikey, &params));
+  assert_int_equal(0, db_function_add(pluginkey, &params));
 
   db_close();
 
   free_params(params);
-  free_string(apikey);
   free_string(desc);
 }

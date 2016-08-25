@@ -23,6 +23,7 @@
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/db/sb-db.h"
 #include "rpc/connection/server.h"
 
 
@@ -54,6 +55,10 @@ int server_init(void)
   servers = hashmap_new(cstr_t, ptr_t)();
 
   if (!servers)
+    return (-1);
+
+  /* for now, we allow all plugins to connect */
+  if (0 > db_authorized_set_whitelist_all())
     return (-1);
 
   return (0);

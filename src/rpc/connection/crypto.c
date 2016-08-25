@@ -2,6 +2,7 @@
 #include <unistd.h>
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/db/sb-db.h"
 #include "rpc/connection/crypto.h"
 #include "tweetnacl.h"
 
@@ -425,6 +426,13 @@ int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data)
 
   memcpy(clientlongtermpk, initiatebox + 32, 32);
 
+  /* verify that the plugin is authorized to connecting */
+  if (!db_authorized_whitelist_all_is_set() &&
+      !db_authorized_verify(clientlongtermpk)) {
+    LOG_VERBOSE(VERBOSE_LEVEL_0, "Failed to verify plugin long-term public key.\n");
+    goto fail;
+  }
+
   crypto_box_beforenm(clientlongserverlong, clientlongtermpk, serverlongtermsk);
 
   memcpy(nonce, CRYPTO_PREFIX_VNONCE, 8);
@@ -445,6 +453,9 @@ int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data)
   cc->receivednonce = packetnonce;
 
   cc->state = TUNNEL_ESTABLISHED;
+
+  base16_encode(cc->pluginkeystring, PLUGINKEY_STRING_SIZE,
+    (char *)&clientlongtermpk[24], PLUGINKEY_SIZE);
 
   sbmemzero(cookie, sizeof cookie);
   sbmemzero(servershorttermsk, sizeof servershorttermsk);

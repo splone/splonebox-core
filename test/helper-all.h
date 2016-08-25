@@ -17,10 +17,11 @@
 #pragma once
 
 #include "sb-common.h"
+#include "rpc/db/sb-db.h"
 
 void connect_to_db(void);
-void connect_and_create(string apikey);
+void connect_and_create(char *apikey);
 int validate_register_response(const unsigned long data1, const unsigned long data2);
 int validate_run_response(const unsigned long data1, const unsigned long data2);
 int validate_crypto_cookie_packet(unsigned char *buffer, uint64_t length);
-int validate_crypto_write(char *buffer, uint64_t length);
+int validate_crypto_write(unsigned char *buffer, uint64_t length);

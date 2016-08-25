@@ -62,9 +62,8 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   struct message_request *request;
   array *meta, *functions, *func1, *func2, *args;
   struct api_error *err = MALLOC(struct api_error);
+  char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
 
-  string apikey = cstring_copy_string(
-      "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2");
   string name = cstring_copy_string("register");
   string description = cstring_copy_string("register a plugin");
   string author = cstring_copy_string("test");
@@ -82,9 +81,10 @@ void functional_dispatch_handle_register(UNUSED(void **state))
 
   info.con = MALLOC(struct connection);
   info.con->closed = true;
+  memcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE);
   assert_non_null(info.con);
 
-  connect_and_create(apikey);
+  connect_and_create(info.con->cc.pluginkeystring);
   assert_int_equal(0, connection_init());
 
   /* first level arrays:
@@ -105,18 +105,16 @@ void functional_dispatch_handle_register(UNUSED(void **state))
    * [license]
    */
   meta = &request->params.obj[0].data.params;
-  meta->size = 5;
-  meta->obj = CALLOC(5, struct message_object);
+  meta->size = 4;
+  meta->obj = CALLOC(meta->size, struct message_object);
   meta->obj[0].type = OBJECT_TYPE_STR;
-  meta->obj[0].data.string = apikey;
+  meta->obj[0].data.string = name;
   meta->obj[1].type = OBJECT_TYPE_STR;
-  meta->obj[1].data.string = name;
+  meta->obj[1].data.string = description;
   meta->obj[2].type = OBJECT_TYPE_STR;
-  meta->obj[2].data.string = description;
+  meta->obj[2].data.string = author;
   meta->obj[3].type = OBJECT_TYPE_STR;
-  meta->obj[3].data.string = author;
-  meta->obj[4].type = OBJECT_TYPE_STR;
-  meta->obj[4].data.string = license;
+  meta->obj[3].data.string = license;
 
   functions = &request->params.obj[1].data.params;
   functions->size = 2;
@@ -174,17 +172,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
-  meta->size = 5;
-
-  /* plugin long term key is wrong */
-  meta->obj[0].data.string = cstring_copy_string("foobar");
-  assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_register(&info));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-  free_string(meta->obj[0].data.string);
-  meta->obj[0].data.string = apikey;
+  meta->size = 4;
 
   /* plugin name is very long and contains same random bytes. since
    * there are no real constrains for the plugin name, this should work.
@@ -193,13 +181,13 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   unsigned char *buf = MALLOC_ARRAY(len, unsigned char);
   assert_non_null(buf);
   randombytes(buf, len);
-  meta->obj[1].data.string.str = (char*) buf;
-  meta->obj[1].data.string.length = len;
+  meta->obj[0].data.string.str = (char*) buf;
+  meta->obj[0].data.string.length = len;
   assert_false(info.api_error.isset);
   expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
   assert_int_equal(0, handle_register(&info));
   assert_false(info.api_error.isset);
-  meta->obj[1].data.string = name;
+  meta->obj[0].data.string = name;
   FREE(buf);
 
   /* no function description field should fail */

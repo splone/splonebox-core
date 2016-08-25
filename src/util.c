@@ -48,6 +48,9 @@
  *    OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <ctype.h>
+#include <stdarg.h>
+
 #include "sb-common.h"
 #include "util.h"
 
@@ -412,5 +415,41 @@ const char * eat_whitespace(const char *s)
       while (*s && *s != '\n')
         ++s;
     }
+  }
+}
+
+/** Encode the <b>srclen</b> bytes at <b>src</b> in a NUL-terminated,
+ * uppercase hexadecimal string; store it in the <b>destlen</b>-byte buffer
+ * <b>dest</b>.
+ */
+void base16_encode(char *dest, size_t destlen,
+  const char *src, size_t srclen)
+{
+  const char *end;
+  char *cp;
+
+  sbassert(destlen >= srclen*2+1);
+  sbassert(destlen < (size_t)(SSIZE_MAX-16));
+
+  /* Make sure we leave no uninitialized data in the destination buffer. */
+  memset(dest, 0, destlen);
+
+  cp = dest;
+  end = src+srclen;
+  while (src<end) {
+    *cp++ = "0123456789ABCDEF"[ (*(const uint8_t*)src) >> 4 ];
+    *cp++ = "0123456789ABCDEF"[ (*(const uint8_t*)src) & 0xf ];
+    ++src;
+  }
+  *cp = '\0';
+}
+
+/** Convert all alphabetic characters to uppercase */
+void to_upper(char *s)
+{
+  char *i = s;
+  while (*i) {
+    *i = (char)toupper(*i);;
+    ++i;
   }
 }

@@ -16,7 +16,7 @@
 
 #include <hiredis/hiredis.h>
 
-#include "rpc/sb-rpc.h"
+#include "rpc/db/sb-db.h"
 #include "sb-common.h"
 #include "helper-unix.h"
 

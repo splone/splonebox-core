@@ -1,5 +1,5 @@
 /**
- *    Copyright (C) 2015 splone UG
+ *    Copyright (C) 2016 splone UG
  *
  *    This program is free software: you can redistribute it and/or  modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -14,27 +14,19 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "helper-unix.h"
-#include "helper-all.h"
 #include "sb-common.h"
-#include "api/sb-api.h"
 #include "rpc/db/sb-db.h"
+#include "helper-all.h"
+#include "helper-unix.h"
 
-void functional_db_apikey_add(UNUSED(void **state))
+void functional_db_whitelist(UNUSED(void **state))
 {
-  string apikey;
-  size_t n = 64;
-
-  apikey.str = MALLOC_ARRAY(n, char);
-  if (!apikey.str)
-    LOG_ERROR("Failed to allocate mem for api key string.");
-  apikey.length = n;
-
-  assert_int_equal(0, api_get_key(apikey));
   connect_to_db();
 
-  assert_int_equal(0, db_apikey_add(apikey));
+  assert_false(db_authorized_whitelist_all_is_set());
+  assert_int_equal(0, db_authorized_set_whitelist_all());
+  assert_true(db_authorized_whitelist_all_is_set());
 
   db_close();
-  free_string(apikey);
 }
+
