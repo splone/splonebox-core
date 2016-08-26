@@ -4,7 +4,7 @@ matrix:
   include:
     - os: linux
       compiler: clang
-      env: EXTRA_FLAGS="-DUSE_COVERAGE=ON -DCLANG_ADDRESS_SANITIZER=ON"
+      env: EXTRA_FLAGS="-DCLANG_ADDRESS_SANITIZER=ON"
     - os: linux
       compiler: gcc-5
       env: GCOV=gcov-5 EXTRA_FLAGS="-DUSE_COVERAGE=ON"
