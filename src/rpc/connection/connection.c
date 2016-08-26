@@ -367,16 +367,15 @@ struct callinfo * connection_send_request(char *pluginkey, string method,
   message_serialize_request(&request, &packer);
   free_params(params);
 
-  /* if error is set, generate an error response message */
-  if (api_error->isset)
-    return (NULL);
-
   if (crypto_write(&con->cc, sbuf.data, sbuf.size, con->streams.write) != 0)
     return (NULL);
 
   cinfo = loop_wait_for_response(con, &request);
 
   msgpack_sbuffer_clear(&sbuf);
+
+  if (cinfo->errorresponse)
+    return (NULL);
 
   return cinfo;
 }
