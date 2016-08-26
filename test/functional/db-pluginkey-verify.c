@@ -23,36 +23,34 @@
 #include "rpc/db/sb-db.h"
 #include "api/sb-api.h"
 
-void functional_db_apikey_verify(UNUSED(void **state))
+void functional_db_pluginkey_verify(UNUSED(void **state))
 {
-  string apikey;
-  string invalid;
-  string empty;
-  size_t n = 64;
+  char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
+  char invalid_pluginkey[PLUGINKEY_STRING_SIZE] = "FFFFFFFFFFFFFFFF";
+  char empty_pluginkey[1] = "";
 
-  apikey.str = MALLOC_ARRAY(n, char);
-  if (!apikey.str)
-    LOG_ERROR("Failed to allocate mem for api key string.");
-  apikey.length = n;
+  string name = cstring_copy_string("myname");
+  string desc = cstring_copy_string("mydesc");
+  string author = cstring_copy_string("myauthor");
+  string license = cstring_copy_string("mylicense");
 
-  assert_int_equal(0, api_get_key(apikey));
   connect_to_db();
 
-  assert_int_equal(0, db_apikey_add(apikey));
+  assert_int_equal(0, db_plugin_add(
+    pluginkey, name, desc, author, license));
 
   /* verify correct key should succeed */
-  assert_int_equal(0, db_apikey_verify(apikey));
+  assert_int_equal(0, db_plugin_verify(pluginkey));
 
   /* verify incorrect keys should fail */
-  invalid = cstring_copy_string("foobar");
-  assert_int_not_equal(0, db_apikey_verify(invalid));
+  assert_int_not_equal(0, db_plugin_verify(invalid_pluginkey));
 
-  empty = cstring_copy_string("");
-  assert_int_not_equal(0, db_apikey_verify(empty));
+  assert_int_not_equal(0, db_plugin_verify(empty_pluginkey));
 
-  free_string(apikey);
-  free_string(invalid);
-  free_string(empty);
+  free_string(name);
+  free_string(desc);
+  free_string(author);
+  free_string(license);
 
   db_close();
 }

@@ -1,0 +1,20 @@
+## Configuration file for a typical splonebox core setup
+##
+## Last updated: 18 March 2016 by @stze
+##
+## Lines that begin with "## " try to explain what's going on. Lines
+## that begin with just "#" are disabled commands: you can enable them
+## by removing the "#" symbol.
+
+## API Listen Address
+ApiTransportListen 127.0.0.1:6666
+
+## API named pipe (fifo)
+#ApiNamedPipeListen /tmp/foobar123
+
+## Redis Database Connection
+RedisDatabaseListen 127.0.0.1:6378
+RedisDatabaseAuth vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2
+
+## Contact info
+ContactInfo 0xFFFFFFFF Random Person <nobody AT example dot com>

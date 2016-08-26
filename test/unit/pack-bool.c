@@ -14,27 +14,24 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "helper-unix.h"
-#include "helper-all.h"
+#include <msgpack.h>
+
 #include "sb-common.h"
-#include "api/sb-api.h"
-#include "rpc/db/sb-db.h"
+#include "rpc/msgpack/sb-msgpack-rpc.h"
+#include "helper-unix.h"
 
-void functional_db_apikey_add(UNUSED(void **state))
+
+void unit_pack_bool(UNUSED(void **state))
 {
-  string apikey;
-  size_t n = 64;
+  msgpack_sbuffer sbuf;
+  msgpack_packer pk;
 
-  apikey.str = MALLOC_ARRAY(n, char);
-  if (!apikey.str)
-    LOG_ERROR("Failed to allocate mem for api key string.");
-  apikey.length = n;
+  msgpack_sbuffer_init(&sbuf);
+  msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
 
-  assert_int_equal(0, api_get_key(apikey));
-  connect_to_db();
+  assert_int_equal(0, pack_bool(&pk, true));
+  assert_int_equal(0, pack_bool(&pk, false));
+  assert_int_not_equal(0, pack_bool(NULL, true));
 
-  assert_int_equal(0, db_apikey_add(apikey));
-
-  db_close();
-  free_string(apikey);
+  msgpack_sbuffer_destroy(&sbuf);
 }

@@ -23,24 +23,21 @@
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/db/sb-db.h"
+#include "rpc/connection/server.h"
 
 
 #define ADDRESS_MAX_SIZE 256
 #define MAX_CONNECTIONS 16
 #define NUL '\000'
 
-typedef enum {
-  SERVER_TYPE_TCP,
-  SERVER_TYPE_PIPE,
-  SERVER_TYPE_UNKNOWN
-} server_type;
 
 struct server {
   server_type type;
   union {
     struct {
       uv_tcp_t handle;
-      struct sockaddr_in addr;
+      struct sockaddr addr;
     } tcp;
     struct {
       uv_pipe_t handle;
@@ -49,92 +46,118 @@ struct server {
   } socket;
 };
 
-static server_type type = SERVER_TYPE_TCP;
-
-static hashmap(string, ptr_t) *servers = NULL;
-static server_type server_get_endpoint_type(string endpoint,
-    struct server *server);
-static void connection_cb(uv_stream_t *server_stream, int status);
-static void client_free_cb(uv_handle_t *handle);
-static void server_free_cb(uv_handle_t *handle);
+static hashmap(cstr_t, ptr_t) *servers = NULL;
 
 uv_loop_t loop;
 
 int server_init(void)
 {
-  servers = hashmap_new(string, ptr_t)();
+  servers = hashmap_new(cstr_t, ptr_t)();
 
   if (!servers)
+    return (-1);
+
+  /* for now, we allow all plugins to connect */
+  if (0 > db_authorized_set_whitelist_all())
     return (-1);
 
   return (0);
 }
 
-
-int server_start(string endpoint)
+int server_start_tcp(boxaddr *addr, uint16_t port)
 {
   int result;
   struct server *server = NULL;
 
-  if (endpoint.length >= ADDRESS_MAX_SIZE) {
-    LOG("endpoint too large");
-    return (-1);
-  }
-
-  if (hashmap_has(string, ptr_t)(servers, endpoint)) {
-    LOG("Already listening on %s", endpoint.str);
-    return (-1);
-  }
+  sbassert(addr);
 
   server = MALLOC(struct server);
+
+  if (hashmap_has(cstr_t, ptr_t)(servers, fmt_addr(addr))) {
+    LOG("Already listening on %s", fmt_addr(addr));
+    return (-1);
+  }
 
   if (server == NULL)
     return (-1);
 
-  type = server_get_endpoint_type(endpoint, server);
   uv_stream_t *stream = NULL;
 
-  if (type == SERVER_TYPE_TCP) {
-    uv_tcp_init(&loop, &server->socket.tcp.handle);
-    result = uv_tcp_bind(&server->socket.tcp.handle,
-        (const struct sockaddr *)&server->socket.tcp.addr, 0);
+  box_addr_to_sockaddr(addr, port, &server->socket.tcp.addr,
+      sizeof(struct sockaddr_in));
 
-    if (result) {
-      LOG("Failed to bind Socket %s", endpoint.str);
-      return (-1);
-    }
-
-    stream = (uv_stream_t *)&server->socket.tcp.handle;
-  } else {
-    if (strlcpy(server->socket.pipe.addr, endpoint.str,
-        sizeof(server->socket.pipe.addr)) >= sizeof(server->socket.pipe.addr)) {
-      LOG("Failed to store addr in socket.pipe.addr!");
-      return (-1);
-    }
-
-    uv_pipe_init(&loop, &server->socket.pipe.handle, 0);
-    result =
-        uv_pipe_bind(&server->socket.pipe.handle, server->socket.pipe.addr);
-
-    if (result) {
-      LOG("Binding the pipe \"%s\" to a file path failed", endpoint.str);
-      return (-1);
-    }
-
-    stream = (uv_stream_t *)&server->socket.pipe.handle;
-  }
-
-  result = uv_listen(stream, MAX_CONNECTIONS, connection_cb);
+  uv_tcp_init(&loop, &server->socket.tcp.handle);
+  result = uv_tcp_bind(&server->socket.tcp.handle,
+      (const struct sockaddr *)&server->socket.tcp.addr, 0);
 
   if (result) {
-    LOG("Already listening on %s\n", endpoint.str);
+    LOG_WARNING("Failed to bind Socket %s", fmt_addr(addr));
     return (-1);
   }
 
-  server->type = type;
+  stream = (uv_stream_t *)&server->socket.tcp.handle;
+  result = uv_listen(stream, MAX_CONNECTIONS, connection_cb);
+
+  if (result) {
+    LOG_WARNING("Already listening on %s\n", fmt_addr(addr));
+    return (-1);
+  }
+
+  server->type = SERVER_TYPE_TCP;
   stream->data = server;
 
-  hashmap_put(string, ptr_t)(servers, endpoint, server);
+  hashmap_put(cstr_t, ptr_t)(servers, fmt_addr(addr), server);
+
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "Listening on %s:%d..\n", fmt_addr(addr), port);
+  return (0);
+}
+
+
+int server_start_pipe(char *name)
+{
+  int result;
+  struct server *server = NULL;
+
+  sbassert(name);
+
+  server = MALLOC(struct server);
+
+  if (hashmap_has(cstr_t, ptr_t)(servers, name)) {
+    LOG("Already listening on %s", name);
+    return (-1);
+  }
+
+  if (server == NULL)
+    return (-1);
+
+  uv_stream_t *stream = NULL;
+
+  if (strlcpy(server->socket.pipe.addr, name, sizeof(server->socket.pipe.addr))
+      >= sizeof(server->socket.pipe.addr)) {
+    LOG_WARNING("Failed to store addr in socket.pipe.addr!");
+    return (-1);
+  }
+
+  uv_pipe_init(&loop, &server->socket.pipe.handle, 0);
+  result = uv_pipe_bind(&server->socket.pipe.handle, server->socket.pipe.addr);
+
+  if (result) {
+    LOG_WARNING("Binding the pipe \"%s\" to a file path failed", name);
+    return (-1);
+  }
+
+  stream = (uv_stream_t *)&server->socket.pipe.handle;
+  result = uv_listen(stream, MAX_CONNECTIONS, connection_cb);
+
+  if (result) {
+    LOG("Already listening on %s\n", name);
+    return (-1);
+  }
+
+  server->type = SERVER_TYPE_PIPE;
+  stream->data = server;
+
+  hashmap_put(cstr_t, ptr_t)(servers, name, server);
 
   return (0);
 }
@@ -151,76 +174,28 @@ int server_close(void)
       uv_close((uv_handle_t *)&server->socket.pipe.handle, server_free_cb);
   });
 
-  hashmap_free(string, ptr_t)(servers);
+  hashmap_free(cstr_t, ptr_t)(servers);
 
   return (0);
 }
 
-int server_stop(string endpoint)
+int server_stop(char * endpoint)
 {
   struct server *server;
 
-  server = hashmap_get(string, ptr_t)(servers, endpoint);
+  server = hashmap_get(cstr_t, ptr_t)(servers, endpoint);
 
   if (server->type == SERVER_TYPE_TCP)
     uv_close((uv_handle_t *)&server->socket.tcp.handle, server_free_cb);
   else
     uv_close((uv_handle_t *)&server->socket.pipe.handle, server_free_cb);
 
-  hashmap_del(string, ptr_t)(servers, endpoint);
+  hashmap_del(cstr_t, ptr_t)(servers, endpoint);
 
   return (0);
 }
 
-
-static server_type server_get_endpoint_type(string endpoint,
-    struct server *server)
-{
-  char ip[16] = "";
-  char *endpoint_colon_char;
-  int port;
-  long lport;
-  size_t ip_addr_len;
-
-  type = SERVER_TYPE_TCP;
-  port = -1;
-
-  /* ip address and port handling */
-  endpoint_colon_char = strrchr(endpoint.str, ':');
-
-  if (!endpoint_colon_char)
-    endpoint_colon_char = strchr(endpoint.str, NUL);
-
-  ip_addr_len = (size_t)(endpoint_colon_char - endpoint.str);
-
-  if (ip_addr_len > sizeof(ip) - 1)
-    ip_addr_len = sizeof(ip) - 1;
-
-  if (*endpoint_colon_char == ':') {
-    lport = strtol(endpoint_colon_char + 1, NULL, 10);
-
-    if ((lport <= 0) || (lport > 0xffff)) {
-      /*
-       * port is not in a valid range, 0-65535. so we treat it as a named pipe
-       * a unix socket
-       */
-      type = SERVER_TYPE_PIPE;
-    } else if (strlcpy(ip, endpoint.str, ip_addr_len + 1) >= sizeof(ip))
-      type = SERVER_TYPE_PIPE;
-
-    port = (int)lport;
-  }
-
-  if (type == SERVER_TYPE_TCP)
-    if (uv_ip4_addr(ip, port, &server->socket.tcp.addr)) {
-      /* ip is not valid, so we treat it as a named pipe or a unix socket */
-      type = SERVER_TYPE_PIPE;
-    }
-
-  return type;
-}
-
-static void connection_cb(uv_stream_t *server_stream, int status)
+STATIC void connection_cb(uv_stream_t *server_stream, int status)
 {
   int result;
   int namelen;
@@ -231,7 +206,7 @@ static void connection_cb(uv_stream_t *server_stream, int status)
   size_t hbuflen;
 
   if (status == -1) {
-    LOG("error on_write_end");
+    LOG_ERROR("error on_write_end");
     return;
   }
 
@@ -252,7 +227,7 @@ static void connection_cb(uv_stream_t *server_stream, int status)
   result = uv_accept(server_stream, client);
 
   if (result) {
-    LOG("Failed to accept connection: %s", uv_strerror(result));
+    LOG_ERROR("Failed to accept connection: %s", uv_strerror(result));
     uv_close((uv_handle_t *)client, client_free_cb);
     return;
   }
@@ -286,13 +261,13 @@ static void connection_cb(uv_stream_t *server_stream, int status)
 }
 
 
-static void client_free_cb(uv_handle_t *handle)
+STATIC void client_free_cb(uv_handle_t *handle)
 {
   FREE(handle);
 }
 
 
-static void server_free_cb(uv_handle_t *handle)
+STATIC void server_free_cb(uv_handle_t *handle)
 {
   struct server *server = (struct server*) handle->data;
 

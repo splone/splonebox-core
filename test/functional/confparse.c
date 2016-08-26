@@ -14,36 +14,18 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "sb-common.h"
-#include "api/sb-api.h"
 #include "helper-unix.h"
+#include "sb-common.h"
 
-static int validate_apikey(const size_t n)
+
+void functional_confparse(UNUSED(void **state))
 {
-  string apikey;
+  options *globaloptions;
 
-  apikey.str = MALLOC_ARRAY(n, char);
-  if (!apikey.str) {
-    LOG_WARNING("Failed to allocate mem for api key string.");
-    return (-1);
-  }
+  assert_int_equal(0, options_init_from_boxrc());
+  globaloptions = options_get();
+  assert_non_null(options_get());
 
-  apikey.length = n;
+  options_free(globaloptions);
 
-  assert_int_equal(0, api_get_key(apikey));
-  assert_true(apikey.str[n-1] == '\0');
-
-  LOG("generated key: %s\n", apikey.str);
-
-  free_string(apikey);
-  return (0);
-}
-
-
-void unit_api_get_key(UNUSED(void **state))
-{
-  assert_int_equal(0, validate_apikey(10));
-  assert_int_equal(0, validate_apikey(32));
-  assert_int_equal(0, validate_apikey(64));
-  assert_int_equal(0, validate_apikey(128));
 }

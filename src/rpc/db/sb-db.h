@@ -18,12 +18,9 @@
 
 #include "rpc/sb-rpc.h"
 
+redisContext *rc;
 
-/* Extern */
-
-extern redisContext *rc;
-
-/* Functions */
+/* DB functions */
 
 /**
  * Connects to Redis database.
@@ -33,7 +30,8 @@ extern redisContext *rc;
  * @param[in]   password  password to authenticate against redis db
  * @return    0 on success otherwise -1
  */
-extern int db_connect(string ip, int port, const struct timeval tv, string password);
+extern int db_connect(const char *ip, int port, const struct timeval tv,
+    const char *password);
 
 /**
  * Disconnects from Redis db and frees Context object.
@@ -42,47 +40,69 @@ extern void db_close(void);
 
 /**
  * Stores a function in database associated with the corresponding module.
- * @param[in] apikey  key of the module that provides the corresponding
+ * @param[in] pluginkey  key of the module that provides the corresponding
  *                    function
  * @param[in] func    array of functions to actually store
  * @return 0 on success otherwise -1
  */
-extern int db_function_add(string apikey, array *func);
+extern int db_function_add(char *pluginkey, array *func);
 
 /**
  * Verifies whether the corresponding function is called correctly. To
  * do so, it verifies the name of the function and the arguments' type.
- * @param[in] apikey  key of the module that provides the corresponding
+ * @param[in] pluginkey  key of the module that provides the corresponding
  *                    function
  * @param[in] name    name of the function to call
  * @param[in] args    function arguments
  * @return 0 if call is valid, otherwise -1
  */
-extern int db_function_verify(string apikey, string name,
+extern int db_function_verify(char *pluginkey, string name,
   array *args);
 
 /**
- * Creates a plugin entry in the database and uses the API key as key.
- * @param[in] apikey buffer to contain the API key
+ * Creates a plugin entry in the database and uses the plugin key as key.
+ * @param[in] pluginkey string that contains the plugin key
  * @param[in] name    name of plugin
  * @param[in] desc    description of the plugin
  * @param[in] author  author of the plugin
  * @param[in] license the plugin's license text
  * returns -1 in case of error otherwise 0
  */
-extern int db_plugin_add(string apikey, string name, string desc, string author,
+extern int db_plugin_add(char *pluginkey, string name, string desc, string author,
     string license);
 
 /**
- * Checks whether the passed API key is assigned to a plugin.
- * @param[in] apikey  key to check
+ * Checks whether the passed plugin key is assigned to a plugin.
+ * @param[in] pluginkey  key to check
  * returns 0 if key is valid otherwise -1
  */
-extern int db_apikey_verify(string apikey);
+extern int db_plugin_verify(char *pluginkey);
 
 /**
- * Stores an API key in the database.
+ * Adds a plugin's long-term public key to the list of authorized plugins.
  * @param[in] key to store
  * returns 0 on success otherwise -1
  */
-extern int db_apikey_add(string apikey);
+int db_authorized_add(unsigned char *pluginlongtermpk);
+
+/**
+ * Checks whether a plugin's long-term public key is in the list of
+ * authorized plugins.
+ * @param[in] key to store
+ * returns true in success
+ */
+bool db_authorized_verify(unsigned char *pluginlongtermpk);
+
+/**
+ * Whitelists all plugins via the whitelist-all-symbol.
+ * returns 0 on success otherwise -1
+ */
+int db_authorized_set_whitelist_all(void);
+
+/**
+ * Checks whether all plugins are authorized via a whitelist-all-symbol.
+ * returns true if so
+ */
+bool db_authorized_whitelist_all_is_set(void);
+
+

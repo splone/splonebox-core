@@ -24,10 +24,9 @@
 #include "sb-common.h"
 
 #define MIN_LEN_NAME 3
-#define MIN_LEN_APIKEY 32
 
 
-int db_plugin_add(string apikey, string name, string desc, string author,
+int db_plugin_add(char *pluginkey, string name, string desc, string author,
     string license)
 {
   redisReply *reply;
@@ -43,7 +42,7 @@ int db_plugin_add(string apikey, string name, string desc, string author,
   }
 
   reply = redisCommand(rc, "HMSET %s name %s desc %s author %s license %s",
-          apikey.str, name.str, desc.str, author.str, license.str);
+          pluginkey, name.str, desc.str, author.str, license.str);
 
   if (reply->type == REDIS_REPLY_ERROR) {
     LOG_WARNING("Redis failed to add string value to plugin: %s\n", reply->str);
@@ -57,7 +56,7 @@ int db_plugin_add(string apikey, string name, string desc, string author,
 }
 
 
-int db_apikey_verify(string apikey)
+int db_plugin_verify(char *pluginkey)
 {
   redisReply *reply;
   bool valid = false;
@@ -65,43 +64,17 @@ int db_apikey_verify(string apikey)
   if (!rc)
     return (-1);
 
-  reply = redisCommand(rc, "Exists %s", apikey.str);
+  reply = redisCommand(rc, "Exists %s", pluginkey);
 
   if (reply->type != REDIS_REPLY_INTEGER)
-    LOG_WARNING("Redis failed to query api key existence: %s", reply->str);
+    LOG_WARNING("Redis failed to query plugin key existence: %s", reply->str);
   else
     valid = reply->integer == 1;
 
   freeReplyObject(reply);
 
   if (!valid)
-    return -1;
-
-  return (0);
-}
-
-
-int db_apikey_add(string apikey)
-{
-  redisReply *reply;
-
-  if (!rc)
     return (-1);
-
-  if (apikey.length < MIN_LEN_APIKEY) {
-    LOG_WARNING("API key length should be greater than %d.", MIN_LEN_APIKEY);
-    return (-1);
-  }
-
-  reply = redisCommand(rc, "HMSET %s  name ''",apikey.str);
-
-  if (reply->type == REDIS_REPLY_ERROR) {
-    LOG_WARNING("Redis failed to add string value to plugin: %s", reply->str);
-    freeReplyObject(reply);
-    return (-1);
-  }
-
-  freeReplyObject(reply);
 
   return (0);
 }

@@ -62,7 +62,7 @@ int handle_register(connection_request_event_info *info)
 {
   array *meta = NULL;
   array functions;
-  string pluginlongtermpk, name, description, author, license;
+  string name, description, author, license;
 
   struct message_request *request = &info->request;
   struct api_error *api_error = &info->api_error;
@@ -87,7 +87,7 @@ int handle_register(connection_request_event_info *info)
 
   /*
    * meta params:
-   * [pluginlongtermpk, name, description, author, license]
+   * [name, description, author, license]
    */
 
   if (!meta) {
@@ -96,7 +96,7 @@ int handle_register(connection_request_event_info *info)
     return (-1);
   }
 
-  if (meta->size != 5) {
+  if (meta->size != 4) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid meta params size");
     return (-1);
@@ -106,26 +106,23 @@ int handle_register(connection_request_event_info *info)
   if ((meta->obj[0].type != OBJECT_TYPE_STR) ||
       (meta->obj[1].type != OBJECT_TYPE_STR) ||
       (meta->obj[2].type != OBJECT_TYPE_STR) ||
-      (meta->obj[3].type != OBJECT_TYPE_STR) ||
-      (meta->obj[4].type != OBJECT_TYPE_STR)) {
+      (meta->obj[3].type != OBJECT_TYPE_STR)) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. meta element has wrong type");
     return (-1);
   }
 
   if (!meta->obj[0].data.string.str || !meta->obj[1].data.string.str ||
-      !meta->obj[2].data.string.str || !meta->obj[3].data.string.str ||
-      !meta->obj[4].data.string.str) {
+      !meta->obj[2].data.string.str || !meta->obj[3].data.string.str) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid meta params size");
     return (-1);
   }
 
-  pluginlongtermpk = meta->obj[0].data.string;
-  name = meta->obj[1].data.string;
-  description = meta->obj[2].data.string;
-  author = meta->obj[3].data.string;
-  license = meta->obj[4].data.string;
+  name = meta->obj[0].data.string;
+  description = meta->obj[1].data.string;
+  author = meta->obj[2].data.string;
+  license = meta->obj[3].data.string;
 
   if (request->params.obj[1].type != OBJECT_TYPE_ARRAY) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -135,7 +132,7 @@ int handle_register(connection_request_event_info *info)
 
   functions = request->params.obj[1].data.params;
 
-  if (api_register(pluginlongtermpk, name, description, author, license,
+  if (api_register(name, description, author, license,
       functions, info->con, info->request.msgid, api_error) == -1) {
 
     if (!api_error->isset)
@@ -153,7 +150,9 @@ int handle_run(connection_request_event_info *info)
 {
   uint64_t callid;
   array *meta = NULL;
-  string pluginlongtermpk, function_name;
+  string function_name;
+  char *targetpluginkey;
+
   struct message_object args_object;
   struct message_request *request;
   struct api_error *api_error;
@@ -185,7 +184,7 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  /* meta = [pluginlongtermpk, nil]*/
+  /* meta = [targetpluginkey, nil]*/
   if (meta->size != 2) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid meta params size");
@@ -199,13 +198,15 @@ int handle_run(connection_request_event_info *info)
     return (-1);
   }
 
-  if (!meta->obj[0].data.string.str) {
+  if (!meta->obj[0].data.string.str ||
+    meta->obj[0].data.string.length+1 != PLUGINKEY_STRING_SIZE) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid meta params size");
     return (-1);
   }
 
-  pluginlongtermpk = meta->obj[0].data.string;
+  targetpluginkey = meta->obj[0].data.string.str;
+  to_upper(targetpluginkey);
 
   if (meta->obj[1].type != OBJECT_TYPE_NIL) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -235,10 +236,10 @@ int handle_run(connection_request_event_info *info)
 
   args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
-  hashmap_put(uint64_t, string)(callids, callid,
-      cstring_copy_string(pluginlongtermpk.str));
 
-  if (api_run(pluginlongtermpk, function_name, callid, args_object, info->con,
+  hashmap_put(uint64_t, ptr_t)(callids, callid, targetpluginkey);
+
+  if (api_run(targetpluginkey, function_name, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error executing run API request.");
@@ -334,7 +335,7 @@ dispatch_info dispatch_table_get(string method)
 int dispatch_teardown(void)
 {
   string value;
-  
+
   hashmap_free(string, dispatch_info)(dispatch_table);
 
   hashmap_foreach_value(callids, value, {

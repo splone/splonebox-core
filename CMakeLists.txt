@@ -20,7 +20,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wconversion")
 
 add_definitions(-Wall -Wextra -pedantic -Wstrict-prototypes -std=gnu99
-    -Wvariadic-macros -Wcast-align -Wcast-qual -Wshadow
+    -Wvariadic-macros -Wcast-align -Wshadow
     -Wmissing-field-initializers -Wmissing-format-attribute -Wfloat-equal
     -Wundef -Wpointer-arith -Wstrict-overflow=5 -Wswitch-default -Wswitch-enum
     -Wunreachable-code -Wformat-security)
@@ -67,7 +67,7 @@ endif()
 if(CLANG_ANALYZER)
   # Note that the default location of ccc-analyzer on Archlinux is used. this
   # may be different in other environments.
-  set(CMAKE_C_COMPILER /usr/lib/clang-analyzer/scan-build/ccc-analyzer)
+  set(CMAKE_C_COMPILER /usr/lib/clang/ccc-analyzer)
 endif()
 
 if((CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_THREAD_SANITIZER)
@@ -106,27 +106,44 @@ set(SPLONEBOX-SOURCES
   src/hashmap.c
   src/random.c
   src/optparser.c
+  src/optparser.h
   src/signal.c
   src/filesystem.c
   src/devurandom.c
   src/tweetnacl.h
   src/tweetnacl.c
+  src/options.c
+  src/options.h
+  src/confparse.c
+  src/confparse.h
+  src/parse.c
+  src/parse.h
+  src/util.c
+  src/util.h
+  src/address.c
+  src/address.h
   src/sbmemzero.c
   src/api/sb-api.h
-  src/api/apikey.c
   src/api/register.c
   src/api/result.c
   src/api/run.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
+  src/rpc/connection/event.h
   src/rpc/connection/streamhandle.c
+  src/rpc/connection/streamhandle.h
   src/rpc/connection/inputstream.c
+  src/rpc/connection/inputstream.h
   src/rpc/connection/outputstream.c
+  src/rpc/connection/outputstream.h
   src/rpc/connection/server.c
-  src/rpc/connection/loop.c
+  src/rpc/connection/server.h
   src/rpc/connection/connection.c
+  src/rpc/connection/connection.h
   src/rpc/connection/dispatch.c
   src/rpc/connection/crypto.c
+  src/rpc/connection/crypto.h
+  src/rpc/connection/loop.c
   src/rpc/msgpack/sb-msgpack-rpc.h
   src/rpc/msgpack/message.c
   src/rpc/msgpack/pack.c
@@ -135,22 +152,22 @@ set(SPLONEBOX-SOURCES
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
   src/rpc/db/function.c
+  src/rpc/db/auth.c
 )
 
-# sb-plugin target sources
-set(SB-PLUGIN-SOURCES
-  src/sb-plugin.c
+# sb-pluginkey target sources
+set(SB-PLUGINKEY-SOURCES
+  src/sb-pluginkey.c
   src/sb-common.h
-  src/string.c
+  src/rpc/sb-rpc.h
+  src/util.c
+  src/confparse.c
+  src/parse.c
   src/reallocarray.c
-  src/api/sb-api.h
-  src/api/apikey.c
-  src/rpc/db/sb-db.h
-  src/rpc/db/connect.c
-  src/rpc/db/plugin.c
+  src/filesystem.c
 )
 
-# sb-plugin target sources
+# sb-makekey target sources
 set(SB-MAKEKEY-SOURCES
   src/sb-common.h
   src/reallocarray.c
@@ -171,26 +188,44 @@ set(TEST-SOURCES
   src/hashmap.c
   src/random.c
   src/optparser.c
+  src/optparser.h
   src/signal.c
   src/filesystem.c
   src/devurandom.c
   src/tweetnacl.h
   src/tweetnacl.c
+  src/options.c
+  src/options.h
+  src/confparse.c
+  src/confparse.h
+  src/parse.c
+  src/parse.h
+  src/util.c
+  src/util.h
+  src/address.c
+  src/address.h
   src/sbmemzero.c
   src/api/sb-api.h
-  src/api/apikey.c
   src/api/register.c
   src/api/run.c
   src/api/result.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
+  src/rpc/connection/event.h
   src/rpc/connection/streamhandle.c
+  src/rpc/connection/streamhandle.h
   src/rpc/connection/inputstream.c
+  src/rpc/connection/inputstream.h
   src/rpc/connection/outputstream.c
+  src/rpc/connection/outputstream.h
   src/rpc/connection/server.c
+  src/rpc/connection/server.h
   src/rpc/connection/connection.c
+  src/rpc/connection/connection.h
   src/rpc/connection/dispatch.c
   src/rpc/connection/crypto.c
+  src/rpc/connection/crypto.h
+  src/rpc/connection/loop.c
   src/rpc/msgpack/sb-msgpack-rpc.h
   src/rpc/msgpack/message.c
   src/rpc/msgpack/pack.c
@@ -199,6 +234,7 @@ set(TEST-SOURCES
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
   src/rpc/db/function.c
+  src/rpc/db/auth.c
   test/main.c
   test/test-list.h
   test/helper-unix.h
@@ -208,13 +244,16 @@ set(TEST-SOURCES
   test/unit/server-start.c
   test/unit/server-stop.c
   test/unit/pack-string.c
-  test/unit/pack-uint64.c
+  test/unit/pack-int.c
+  test/unit/pack-uint.c
   test/unit/pack-array.c
+  test/unit/pack-nil.c
+  test/unit/pack-float.c
+  test/unit/pack-bool.c
   test/unit/regression-issue-60.c
   test/unit/unpack-string.c
   test/unit/unpack-uint.c
   test/unit/unpack-array.c
-  test/unit/apikey.c
   test/unit/dispatch-table-get.c
   test/unit/event-queue-put.c
   test/unit/event-queue-get.c
@@ -228,8 +267,7 @@ set(TEST-SOURCES
   test/unit/message-is-response.c
   test/functional/db-connect.c
   test/functional/db-plugin-add.c
-  test/functional/db-apikey-verify.c
-  test/functional/db-apikey-store.c
+  test/functional/db-pluginkey-verify.c
   test/functional/db-function-register.c
   test/functional/db-function-verify.c
   test/functional/db-function-flush-args.c
@@ -239,6 +277,8 @@ set(TEST-SOURCES
   test/functional/dispatch-handle-run.c
   test/functional/dispatch-handle-result.c
   test/functional/crypto.c
+  test/functional/confparse.c
+  test/functional/db-whitelist.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
@@ -258,10 +298,6 @@ target_link_libraries(sb
   ${HIREDIS_LIBRARIES}
 )
 
-# sb-plugin target
-add_executable(sb-plugin ${SB-PLUGIN-SOURCES})
-target_link_libraries(sb-plugin ${BSD_LIBRARIES} ${HIREDIS_LIBRARIES})
-
 # sb-makekey target
 add_executable(sb-makekey ${SB-MAKEKEY-SOURCES})
 target_link_libraries(sb-makekey ${BSD_LIBRARIES})
@@ -269,8 +305,12 @@ target_link_libraries(sb-makekey ${BSD_LIBRARIES})
 # sb-test target
 add_executable(sb-test ${TEST-SOURCES})
 
+# sb-pluginkey target
+add_executable(sb-pluginkey ${SB-PLUGINKEY-SOURCES})
+
 # wrap some functions for testing
 set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response,--wrap=crypto_write ")
+set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DBOX_UNIT_TESTS ")
 
 target_link_libraries(sb-test
   ${BSD_LIBRARIES}
@@ -287,32 +327,33 @@ endif()
 
 if(CLANG_ADDRESS_SANITIZER)
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover=undefined,integer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
+  set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover=undefined,integer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover=undefined,integer -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
+  set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
+
 elseif(CLANG_MEMORY_SANITIZER)
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -fno-optimize-sibling-calls ")
   set_property(TARGET sb APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -fno-optimize-sibling-calls ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -fno-optimize-sibling-calls ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -fno-optimize-sibling-calls ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins ")
 elseif(CLANG_TSAN)
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=thread ")
   set_property(TARGET sb APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=thread ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=thread ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=thread ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=thread ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=thread ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=thread ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=thread ")
 endif()

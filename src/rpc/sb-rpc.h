@@ -43,7 +43,7 @@
 /* Typedefs */
 typedef struct outputstream   outputstream;
 typedef struct inputstream inputstream;
-typedef void (*inputstream_cb)(inputstream *inputstream, void *data, bool eof);
+typedef int (*inputstream_cb)(inputstream *inputstream, void *data, bool eof);
 typedef struct api_event api_event;
 typedef struct equeue equeue;
 typedef struct queue_entry queue_entry;
@@ -56,7 +56,6 @@ typedef struct connection_request_event_info connection_request_event_info;
 #define MESSAGE_TYPE_REQUEST 0
 #define MESSAGE_TYPE_RESPONSE 1
 #define MESSAGE_RESPONSE_UNKNOWN UINT32_MAX
-#define MESSAGE_APIKEY_LENGTH 64
 
 #define STREAM_BUFFER_SIZE 0xffff
 
@@ -126,6 +125,10 @@ struct message_response {
  * the rpc connection layer. No non-rpc connection layer code should be      *
  * using this structure in any way.                                          *
  *****************************************************************************/
+#define PLUGINKEY_SIZE 8
+#define PLUGINKEY_STRING_SIZE ((PLUGINKEY_SIZE * 2) + 1)
+#define CLIENTLONGTERMPK_ARRAY_SIZE 32
+
 struct crypto_context {
   crypto_state state;
   uint64_t nonce;
@@ -136,6 +139,7 @@ struct crypto_context {
   unsigned char servershorttermsk[32];
   unsigned char minutekey[32];
   unsigned char lastminutekey[32];
+  char pluginkeystring[PLUGINKEY_STRING_SIZE];
 };
 
 struct connection {
@@ -238,6 +242,8 @@ struct queue_entry {
 /* hashmap declarations */
 MAP_DECLS(uint64_t, string)
 MAP_DECLS(string, ptr_t)
+MAP_DECLS(uint64_t, ptr_t) /* maps callid <> pluginkey */
+MAP_DECLS(cstr_t, ptr_t) /* maps pluginkey <> connection */
 MAP_DECLS(string, dispatch_info)
 
 /* define global root event queue */
@@ -262,11 +268,11 @@ int connection_init(void);
  */
 int connection_create(uv_stream_t *stream);
 
-struct callinfo * connection_send_request(string pluginlongtermpk, string method,
+struct callinfo * connection_send_request(char *pluginkey, string method,
     array params, struct api_error *api_error);
 int connection_send_response(struct connection *con, uint32_t msgid,
     array params, struct api_error *api_error);
-int connection_hashmap_put(string pluginlongtermpk, struct connection *con);
+int connection_hashmap_put(char *pluginkey, struct connection *con);
 struct callinfo *loop_wait_for_response(struct connection *con,
     struct message_request *request);
 int connection_teardown(void);
@@ -385,6 +391,8 @@ int server_init(void);
  * @returns 0 if successful, -1 otherwise.
  */
 int server_start(string endpoint);
+int server_start_tcp(boxaddr *addr, uint16_t port);
+int server_start_pipe(char *name);
 
 /**
  * Stop listening on the address specified by `endpoint`
@@ -393,7 +401,7 @@ int server_start(string endpoint);
  *                 pipe)
  * @return 0 if successful, -1 otherwise
  */
-int server_stop(string endpoint);
+int server_stop(char * endpoint);
 int server_close(void);
 
 int event_initialize(void);
@@ -463,6 +471,7 @@ int dispatch_teardown(void);
 dispatch_info dispatch_table_get(string method);
 void dispatch_table_put(string method, dispatch_info info);
 int handle_run(connection_request_event_info *info);
+int handle_result(connection_request_event_info *info);
 int handle_register(connection_request_event_info *info);
 int handle_error(connection_request_event_info *info);
 
@@ -488,69 +497,6 @@ bool message_is_error_response(msgpack_object *obj);
 struct message_object message_object_copy(struct message_object obj);
 
 
-/* DB functions */
-
-/**
- * Connects to Redis database.
- * @param[in]   ip    ip address the redis server listens to
- * @param[in]   port  port the redis server listens to
- * @param[in]   tv    timeout for redis connection
- * @param[in]   password  password to authenticate against redis db
- * @return    0 on success otherwise -1
- */
-extern int db_connect(string ip, int port, const struct timeval tv, string password);
-
-/**
- * Disconnects from Redis db and frees Context object.
- */
-extern void db_close(void);
-
-/**
- * Stores a function in database associated with the corresponding module.
- * @param[in] apikey  key of the module that provides the corresponding
- *                    function
- * @param[in] func    array of functions to actually store
- * @return 0 on success otherwise -1
- */
-extern int db_function_add(string apikey, array *func);
-
-/**
- * Verifies whether the corresponding function is called correctly. To
- * do so, it verifies the name of the function and the arguments' type.
- * @param[in] apikey  key of the module that provides the corresponding
- *                    function
- * @param[in] name    name of the function to call
- * @param[in] args    function arguments
- * @return 0 if call is valid, otherwise -1
- */
-extern int db_function_verify(string apikey, string name,
-  array *args);
-
-/**
- * Creates a plugin entry in the database and uses the API key as key.
- * @param[in] apikey buffer to contain the API key
- * @param[in] name    name of plugin
- * @param[in] desc    description of the plugin
- * @param[in] author  author of the plugin
- * @param[in] license the plugin's license text
- * returns -1 in case of error otherwise 0
- */
-extern int db_plugin_add(string apikey, string name, string desc, string author,
-    string license);
-
-/**
- * Checks whether the passed API key is assigned to a plugin.
- * @param[in] apikey  key to check
- * returns 0 if key is valid otherwise -1
- */
-extern int db_apikey_verify(string apikey);
-
-/**
- * Stores an API key in the database.
- * @param[in] key to store
- * returns 0 on success otherwise -1
- */
-extern int db_apikey_add(string apikey);
 
 /**
  * Currently only loads the server private key.

@@ -29,9 +29,25 @@ void unit_pack_uint(UNUSED(void **state))
   msgpack_sbuffer_init(&sbuf);
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
 
+  assert_int_equal(0, pack_uint8(&pk, 0));
+  assert_int_equal(0, pack_uint8(&pk, 1));
+  assert_int_equal(0, pack_uint8(&pk, 11));
+  assert_int_not_equal(0, pack_uint8(NULL, 11));
+
+  assert_int_equal(0, pack_uint16(&pk, 0));
+  assert_int_equal(0, pack_uint16(&pk, 1));
+  assert_int_equal(0, pack_uint16(&pk, 11));
+  assert_int_not_equal(0, pack_uint16(NULL, 11));
+
+  assert_int_equal(0, pack_uint32(&pk, 0));
+  assert_int_equal(0, pack_uint32(&pk, 1));
+  assert_int_equal(0, pack_uint32(&pk, 11));
+  assert_int_not_equal(0, pack_uint32(NULL, 11));
+
   assert_int_equal(0, pack_uint64(&pk, 0));
   assert_int_equal(0, pack_uint64(&pk, 1));
   assert_int_equal(0, pack_uint64(&pk, 11));
+  assert_int_not_equal(0, pack_uint64(NULL, 11));
 
   msgpack_sbuffer_destroy(&sbuf);
 }

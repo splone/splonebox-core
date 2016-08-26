@@ -2,6 +2,8 @@
 #include <unistd.h>
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/db/sb-db.h"
+#include "rpc/connection/crypto.h"
 #include "tweetnacl.h"
 
 #define CRYPTO_PREFIX_SPLONEBOXCLIENT	"splonebox-client"
@@ -24,10 +26,10 @@ static uint64_t counterhigh;
 static unsigned char flagkeyloaded;
 static unsigned char noncekey[32];
 
-static int crypto_block(unsigned char *out, const unsigned char *in,
+STATIC int crypto_block(unsigned char *out, const unsigned char *in,
     const unsigned char *k);
-static int safenonce(unsigned char *y, int flaglongterm);
-static void nonce_update(struct crypto_context *cc);
+STATIC int safenonce(unsigned char *y, int flaglongterm);
+STATIC void nonce_update(struct crypto_context *cc);
 
 int crypto_init(void)
 {
@@ -39,11 +41,11 @@ int crypto_init(void)
 }
 
 
-static int safenonce(unsigned char *y, int flaglongterm)
+STATIC int safenonce(unsigned char *y, int flaglongterm)
 {
   unsigned char data[16];
 
-  assert(y);
+  sbassert(y);
 
   if (!flagkeyloaded) {
     int fdlock;
@@ -102,15 +104,14 @@ static int safenonce(unsigned char *y, int flaglongterm)
   return 0;
 }
 
-
-static int crypto_block(unsigned char *out, const unsigned char *in,
+STATIC int crypto_block(unsigned char *out, const unsigned char *in,
     const unsigned char *k)
 {
   int i;
 
-  assert(out);
-  assert(in);
-  assert(k);
+  sbassert(out);
+  sbassert(in);
+  sbassert(k);
 
   uint64_t v0 = uint64_unpack(in + 0);
   uint64_t v1 = uint64_unpack(in + 8);
@@ -134,9 +135,9 @@ static int crypto_block(unsigned char *out, const unsigned char *in,
 }
 
 
-static void nonce_update(struct crypto_context *cc)
+STATIC void nonce_update(struct crypto_context *cc)
 {
-  assert(cc);
+  sbassert(cc);
 
   cc->nonce += 2;
 
@@ -151,9 +152,9 @@ static void nonce_update(struct crypto_context *cc)
 
 int byte_isequal(const void *yv, long long ylen, const void *xv)
 {
-  assert(yv);
-  assert(ylen);
-  assert(xv);
+  sbassert(yv);
+  sbassert(ylen);
+  sbassert(xv);
 
   const unsigned char *y = yv;
   const unsigned char *x = xv;
@@ -170,7 +171,7 @@ int byte_isequal(const void *yv, long long ylen, const void *xv)
 
 void uint64_pack(unsigned char *y, uint64_t x)
 {
-  assert(y);
+  sbassert(y);
 
   *y++ = (unsigned char)x;
   x >>= 8;
@@ -195,7 +196,7 @@ uint64_t uint64_unpack(const unsigned char *x)
 {
   uint64_t result;
 
-  assert(x);
+  sbassert(x);
 
   result = x[7];
   result <<= 8;
@@ -219,7 +220,7 @@ uint64_t uint64_unpack(const unsigned char *x)
 
 void crypto_update_minutekey(struct crypto_context *cc)
 {
-  assert(cc);
+  sbassert(cc);
 
   memcpy(cc->lastminutekey, cc->minutekey, sizeof cc->lastminutekey);
   randombytes(cc->minutekey, sizeof cc->minutekey);
@@ -233,9 +234,9 @@ int crypto_verify_header(struct crypto_context *cc, unsigned char *data,
   unsigned char lengthpacked[40] = {0};
   unsigned char nonce[crypto_box_NONCEBYTES];
 
-  assert(cc);
-  assert(data);
-  assert(length);
+  sbassert(cc);
+  sbassert(data);
+  sbassert(length);
 
   if (!(byte_isequal(data, 8, CRYPTO_ID_MESSAGE_CLIENT)))
     return -1;
@@ -277,9 +278,9 @@ int crypto_recv_hello_send_cookie(struct crypto_context *cc,
   unsigned char cookiepacket[168];
   uint64_t packetnonce;
 
-  assert(cc);
-  assert(data);
-  assert(out);
+  sbassert(cc);
+  sbassert(data);
+  sbassert(out);
 
   /* check if first 8 byte of packet identifier are correct */
   if (!(byte_isequal(data, 8, CRYPTO_ID_HELLO_CLIENT)))
@@ -319,8 +320,10 @@ int crypto_recv_hello_send_cookie(struct crypto_context *cc,
 
   memcpy(nonce, CRYPTO_MINUTE_KEY, 8);
 
-  if (safenonce(nonce + 8, 1) == -1)
+  if (safenonce(nonce + 8, 1) == -1) {
     LOG_ERROR("nonce-generation disaster");
+    goto fail;
+  }
 
   if (crypto_secretbox(cookiebox + 64, cookiebox + 64, 96, nonce, cc->minutekey)
       != 0)
@@ -374,8 +377,8 @@ int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data)
   unsigned char clientlongserverlong[32];
   uint64_t packetnonce;
 
-  assert(cc);
-  assert(data);
+  sbassert(cc);
+  sbassert(data);
 
   /* check if first 8 byte of packet identifier are correct */
   if (!(byte_isequal(data, 8, CRYPTO_ID_INITIATE_CLIENT)))
@@ -423,6 +426,13 @@ int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data)
 
   memcpy(clientlongtermpk, initiatebox + 32, 32);
 
+  /* verify that the plugin is authorized to connecting */
+  if (!db_authorized_whitelist_all_is_set() &&
+      !db_authorized_verify(clientlongtermpk)) {
+    LOG_VERBOSE(VERBOSE_LEVEL_0, "Failed to verify plugin long-term public key.\n");
+    goto fail;
+  }
+
   crypto_box_beforenm(clientlongserverlong, clientlongtermpk, serverlongtermsk);
 
   memcpy(nonce, CRYPTO_PREFIX_VNONCE, 8);
@@ -443,6 +453,9 @@ int crypto_recv_initiate(struct crypto_context *cc, unsigned char *data)
   cc->receivednonce = packetnonce;
 
   cc->state = TUNNEL_ESTABLISHED;
+
+  base16_encode(cc->pluginkeystring, PLUGINKEY_STRING_SIZE,
+    (char *)&clientlongtermpk[24], PLUGINKEY_SIZE);
 
   sbmemzero(cookie, sizeof cookie);
   sbmemzero(servershorttermsk, sizeof servershorttermsk);
@@ -475,9 +488,9 @@ int crypto_write(struct crypto_context *cc, char *data,
   unsigned char nonce[crypto_box_NONCEBYTES];
   uint64_t blocklen;
 
-  assert(cc);
-  assert(data);
-  assert(out);
+  sbassert(cc);
+  sbassert(data);
+  sbassert(out);
 
   /*
    * add 8 byte for identifier, 24 byte for boxed length and 8 byte for
@@ -563,10 +576,10 @@ int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
   uint64_t ciphertextlen;
   uint64_t blocklen;
 
-  assert(cc);
-  assert(in);
-  assert(out);
-  assert(plaintextlen);
+  sbassert(cc);
+  sbassert(in);
+  sbassert(out);
+  sbassert(plaintextlen);
 
   /* nonce is prefixed with 16-byte string "splonbox-client" */
 

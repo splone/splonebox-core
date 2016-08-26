@@ -23,11 +23,11 @@
 
 void unit_pack_array(UNUSED(void **state))
 {
-  array params;
+  array params = ARRAY_INIT;
   msgpack_sbuffer sbuf;
   msgpack_packer pk;
 
-  params.size = 4;
+  params.size = 5;
   params.obj =  CALLOC(params.size, struct message_object);
 
   params.obj[0].type = OBJECT_TYPE_UINT;
@@ -43,8 +43,19 @@ void unit_pack_array(UNUSED(void **state))
   params.obj[2].data.params.obj[0].type = OBJECT_TYPE_INT;
   params.obj[2].data.params.obj[0].data.uinteger = 6;
 
+  params.obj[3].type = OBJECT_TYPE_BOOL;
+  params.obj[3].data.boolean = true;
+
+  params.obj[4].type = OBJECT_TYPE_FLOAT;
+  params.obj[4].data.floating = 1.2345;
+
   msgpack_sbuffer_init(&sbuf);
   msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
 
   assert_int_equal(0, pack_params(&pk, params));
+  assert_int_not_equal(0, pack_params(NULL, params));
+
+  msgpack_sbuffer_destroy(&sbuf);
+
+  free_params(params);
 }

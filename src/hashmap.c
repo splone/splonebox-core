@@ -38,6 +38,9 @@
 #define uint32_t_hash kh_int_hash_func
 #define uint32_t_eq kh_int_hash_equal
 
+#define cstr_t_eq kh_str_hash_equal
+#define cstr_t_hash kh_str_hash_func
+
 #if defined(ARCH_64)
 #define ptr_t_hash(key) uint64_t_hash((uint64_t)key)
 #define ptr_t_eq(a, b) uint64_t_eq((uint64_t)a, (uint64_t)b)
@@ -129,11 +132,12 @@
     return rv;                                                                \
   }                                                                           \
                                                                               \
-  void hashmap_##T##_##U##_clear(hashmap(T, U) *map)                              \
+  void hashmap_##T##_##U##_clear(hashmap(T, U) *map)                          \
   {                                                                           \
     kh_clear(T##_##U##_map, map->table);                                      \
   }
 
-MAP_IMPL(string, ptr_t, DEFAULT_INITIALIZER)
+MAP_IMPL(cstr_t, ptr_t, DEFAULT_INITIALIZER) /* maps pluginkey <> connection */
 MAP_IMPL(string, dispatch_info, {.func = NULL, .async = false, .name = {.str = NULL, .length = 0}})
 MAP_IMPL(uint64_t, string, {.str = NULL, .length = 0})
+MAP_IMPL(uint64_t, ptr_t, DEFAULT_INITIALIZER) /* maps callid <> pluginkey */
