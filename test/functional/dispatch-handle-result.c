@@ -22,6 +22,7 @@
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 
+static char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
 #define KEY "vBXBg3Wkq3ESULkYWtijxfS5UvBpWb-2mZHpKAKpyRuTmvdy4WR7cTJqz-vi2BA2"
 #define FUNC "test_function"
 #define ARG1 "test arg1"
@@ -145,7 +146,7 @@ int validate_result_request(const unsigned long data1,
   UNUSED(const unsigned long data2))
 {
   struct msgpack_object *deserialized = (struct msgpack_object *) data1;
-  struct message_object meta, request, func, args;
+  struct message_object meta, request;
   array params;
 
   assert_int_equal(0, unpack_params(deserialized, &params));
@@ -216,7 +217,9 @@ static void register_test_function(void)
   info.con->msgid = 1;
   assert_non_null(info.con);
 
-  connect_and_create(apikey);
+  memcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE);
+
+  connect_and_create(pluginkey);
   assert_int_equal(0, connection_init());
 
   /* first level arrays:
@@ -236,19 +239,17 @@ static void register_test_function(void)
    * [author]
    * [license]
    */
-  meta = &register_request->params.obj[0].data.params;
-  meta->size = 5;
-  meta->obj = CALLOC(5, struct message_object);
-  meta->obj[0].type = OBJECT_TYPE_STR;
-  meta->obj[0].data.string = apikey;
-  meta->obj[1].type = OBJECT_TYPE_STR;
-  meta->obj[1].data.string = pluginname;
-  meta->obj[2].type = OBJECT_TYPE_STR;
-  meta->obj[2].data.string = description;
-  meta->obj[3].type = OBJECT_TYPE_STR;
-  meta->obj[3].data.string = author;
-  meta->obj[4].type = OBJECT_TYPE_STR;
-  meta->obj[4].data.string = license;
+   meta = &register_request->params.obj[0].data.params;
+   meta->size = 4;
+   meta->obj = CALLOC(meta->size, struct message_object);
+   meta->obj[0].type = OBJECT_TYPE_STR;
+   meta->obj[0].data.string = pluginname;
+   meta->obj[1].type = OBJECT_TYPE_STR;
+   meta->obj[1].data.string = description;
+   meta->obj[2].type = OBJECT_TYPE_STR;
+   meta->obj[2].data.string = author;
+   meta->obj[3].type = OBJECT_TYPE_STR;
+   meta->obj[3].data.string = license;
 
   functions = &register_request->params.obj[1].data.params;
   functions->size = 1;
@@ -290,7 +291,7 @@ static void register_test_function(void)
   FREE(register_request->params.obj);
 }
 
-static void run_request_helper(struct message_request *rr, string key,
+static void run_request_helper(struct message_request *rr, char *key,
     string function_name, message_object_type metaarraytype,
     message_object_type functionnametype, message_object_type argstype,
     size_t metasize, message_object_type metaclientidtype,
@@ -311,10 +312,10 @@ static void run_request_helper(struct message_request *rr, string key,
   meta->size = metasize;
   meta->obj = CALLOC(meta->size, struct message_object);
   meta->obj[0].type = metaclientidtype;
-  meta->obj[0].data.string = cstring_copy_string(KEY);
+  meta->obj[0].data.string = cstring_copy_string(key);
   meta->obj[1].type = metacallidtype;
 
-  rr->params.obj[1].data.string = cstring_copy_string(FUNC);
+  rr->params.obj[1].data.string = cstring_copy_string(function_name.str);
 
   argsarray.size = 2;
   argsarray.obj = CALLOC(argsarray.size, struct message_object);
@@ -322,6 +323,7 @@ static void run_request_helper(struct message_request *rr, string key,
   argsarray.obj[0].data.string = cstring_copy_string(ARG1);
   argsarray.obj[1].type = OBJECT_TYPE_STR; /* second argument */
   argsarray.obj[1].data.string = cstring_copy_string(ARG2);
+
   rr->params.obj[2].data.params = argsarray;
 }
 
@@ -360,7 +362,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
 {
   connection_request_event_info info;
   struct api_error err = ERROR_INIT;
-  string key, functionname;
+  string functionname;
 
   register_test_function();
 
@@ -368,15 +370,15 @@ void functional_dispatch_handle_result(UNUSED(void **state))
   assert_false(info.api_error.isset);
   info.con = MALLOC(struct connection);
   info.con->closed = true;
+  memcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE);
   assert_non_null(info.con);
 
-  key = cstring_copy_string(KEY);
   functionname = cstring_copy_string(FUNC);
 
   expect_check(__wrap_crypto_write, &deserialized, validate_run, NULL);
   expect_check(__wrap_crypto_write, &deserialized, validate_run_response, NULL);
 
-  run_request_helper(&info.request, key, functionname, OBJECT_TYPE_ARRAY,
+  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_ARRAY,
       OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
 
   assert_int_equal(0, handle_run(&info));
@@ -412,7 +414,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
 
   free_params(info.request.params);
 
-  free_string(key);
+  //free_string(key);
   free_string(functionname);
   FREE(info.con);
   connection_teardown();

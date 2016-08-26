@@ -20,7 +20,7 @@
 #include "api/sb-api.h"
 #include "sb-common.h"
 
-int api_result(string pluginlongtermpk, uint64_t callid,
+int api_result(char *targetpluginkey, uint64_t callid,
     struct message_object args, struct connection *con, uint32_t msgid,
     struct api_error *api_error)
 {
@@ -65,7 +65,7 @@ int api_result(string pluginlongtermpk, uint64_t callid,
 
   /* send request */
   result = (string) {.str = "result", .length = sizeof("result") - 1};
-  cinfo = connection_send_request(pluginlongtermpk, result, result_params,
+  cinfo = connection_send_request(targetpluginkey, result, result_params,
       api_error);
 
   if (cinfo == NULL) {

@@ -38,7 +38,7 @@
 
 static msgpack_sbuffer sbuf;
 static hashmap(string, dispatch_info) *dispatch_table = NULL;
-static hashmap(uint64_t, string) *callids = NULL;
+static hashmap(uint64_t, ptr_t) *callids = NULL;
 
 int handle_error(connection_request_event_info *info)
 {
@@ -237,7 +237,7 @@ int handle_run(connection_request_event_info *info)
   args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
 
-  hashmap_put(uint64_t, ptr_t)(callids, callid, targetpluginkey);
+  hashmap_put(uint64_t, ptr_t)(callids, callid, info->con->cc.pluginkeystring);
 
   if (api_run(targetpluginkey, function_name, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
@@ -256,7 +256,7 @@ int handle_result(connection_request_event_info *info)
   struct message_object args_object;
   struct message_request *request;
   struct api_error *api_error;
-  string pluginlongtermpk;
+  char * targetpluginkey;
 
   request = &info->request;
   api_error = &info->api_error;
@@ -267,7 +267,7 @@ int handle_result(connection_request_event_info *info)
   /* check params size */
   if (request->params.size != 2) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API request. Invalid params size");
+        "Error dispatching result API request. Invalid params size");
     return (-1);
   }
 
@@ -275,27 +275,27 @@ int handle_result(connection_request_event_info *info)
     meta = &request->params.obj[0].data.params;
   else {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API request. meta params has wrong type");
+        "Error dispatching result API request. meta params has wrong type");
     return (-1);
   }
 
   if (!meta) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API request. meta params is NULL");
+        "Error dispatching result API request. meta params is NULL");
     return (-1);
   }
 
   /* meta = [callid]*/
   if (meta->size != 1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API request. Invalid meta params size");
+        "Error dispatching result API request. Invalid meta params size");
     return (-1);
   }
 
   /* extract meta information */
   if (meta->obj[0].type != OBJECT_TYPE_UINT) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API request. meta elements have wrong type");
+        "Error dispatching result API request. meta elements have wrong type");
     return (-1);
   }
 
@@ -303,18 +303,18 @@ int handle_result(connection_request_event_info *info)
 
   if (request->params.obj[1].type != OBJECT_TYPE_ARRAY) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API request. function string has wrong type");
+        "Error dispatching result API request. function string has wrong type");
     return (-1);
   }
 
   args_object = request->params.obj[1];
 
-  pluginlongtermpk = hashmap_get(uint64_t, string)(callids, callid);
+  targetpluginkey = hashmap_get(uint64_t, ptr_t)(callids, callid);
 
-  if (api_result(pluginlongtermpk, callid, args_object, info->con,
+  if (api_result(targetpluginkey, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error executing run API request.");
+        "Error executing result API request.");
     return (-1);
   }
 
@@ -334,15 +334,9 @@ dispatch_info dispatch_table_get(string method)
 
 int dispatch_teardown(void)
 {
-  string value;
-
   hashmap_free(string, dispatch_info)(dispatch_table);
 
-  hashmap_foreach_value(callids, value, {
-    free_string(value);
-  });
-
-  hashmap_free(uint64_t, string)(callids);
+  hashmap_free(uint64_t, ptr_t)(callids);
 
   return (0);
 }
@@ -362,7 +356,7 @@ int dispatch_table_init(void)
   msgpack_sbuffer_init(&sbuf);
 
   dispatch_table = hashmap_new(string, dispatch_info)();
-  callids = hashmap_new(uint64_t, string)();
+  callids = hashmap_new(uint64_t, ptr_t)();
 
   if (!dispatch_table || !callids)
     return (-1);

@@ -51,10 +51,12 @@ STATIC void close_cb(uv_handle_t *handle);
 STATIC void timer_cb(uv_timer_t *timer);
 STATIC int connection_handle_request(struct connection *con,
     msgpack_object *obj);
-STATIC int connection_handle_response(struct connection *con,
+STATIC void connection_handle_response(struct connection *con,
     msgpack_object *obj);
 STATIC void connection_request_event(connection_request_event_info *info);
 STATIC void connection_close(struct connection *con);
+STATIC void call_set_error(struct connection *con, char *msg);
+STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con);
 
 static hashmap(cstr_t, ptr_t) *connections = NULL;
 static msgpack_sbuffer sbuf;
@@ -314,8 +316,12 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
     if (message_is_request(&result.data))
       connection_handle_request(con, &result.data);
     else if (message_is_response(&result.data)) {
-      if (connection_handle_response(con, &result.data) != 0) {
-        break;
+      if (is_valid_rpc_response(&result.data, con)) {
+        connection_handle_response(con, &result.data);
+      } else {
+        call_set_error(con, "Returned response that doesn't have a matching "
+                            "request id. Ensure the client is properly "
+                            "synchronized");
       }
     } else {
       LOG_WARNING("invalid msgpack object");
@@ -477,32 +483,27 @@ STATIC void connection_request_event(connection_request_event_info *eventinfo)
   free_string(eventinfo->request.method);
 }
 
+STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con)
+{
+  uint64_t msg_id = message_get_id(obj);
 
-STATIC int connection_handle_response(struct connection *con,
+  return kv_size(con->callvector) && msg_id
+      == kv_A(con->callvector, kv_size(con->callvector) - 1)->msgid;
+}
+
+
+STATIC void connection_handle_response(struct connection *con,
     msgpack_object *obj)
 {
   struct callinfo *cinfo;
-  size_t csize;
-  size_t i;
   struct api_error api_error = { .isset = false };
 
-  message_is_error_response(obj);
+  cinfo = kv_A(con->callvector, kv_size(con->callvector) - 1);
 
-  csize = kv_size(con->callvector);
-  cinfo = kv_A(con->callvector, csize - 1);
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "received response: callinfo id = %u\n",
+      cinfo->msgid);
 
-  if (cinfo->msgid != message_get_id(obj)) {
-    for (i = 0; i < csize; i++) {
-      cinfo = kv_A(con->callvector, i);
-      cinfo->errorresponse = true;
-      cinfo->hasresponse = true;
-    }
-
-    connection_close(con);
-
-    return (-1);
-  }
-
+  cinfo->hasresponse = true;
   cinfo->errorresponse = message_is_error_response(obj);
 
   if (cinfo->errorresponse) {
@@ -510,9 +511,17 @@ STATIC int connection_handle_response(struct connection *con,
   } else {
     message_deserialize_response(&cinfo->response, obj, &api_error);
   }
+}
 
-  /* unblock */
-  cinfo->hasresponse = true;
+STATIC void call_set_error(struct connection *con, UNUSED(char *msg))
+{
+  struct callinfo *cinfo;
 
-  return (0);
+  for (size_t i = 0; i < kv_size(con->callvector); i++) {
+      cinfo = kv_A(con->callvector, i);
+      cinfo->errorresponse = true;
+      cinfo->hasresponse = true;
+  }
+
+  connection_close(con);
 }
