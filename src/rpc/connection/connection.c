@@ -45,7 +45,6 @@
 #include "rpc/sb-rpc.h"
 #include "rpc/connection/connection.h"
 #include "api/sb-api.h"
-#include "sb-common.h"
 
 STATIC int parse_cb(inputstream *istream, void *data, bool eof);
 STATIC void close_cb(uv_handle_t *handle);
@@ -57,14 +56,14 @@ STATIC int connection_handle_response(struct connection *con,
 STATIC void connection_request_event(connection_request_event_info *info);
 STATIC void connection_close(struct connection *con);
 
-static hashmap(string, ptr_t) *connections = NULL;
+static hashmap(cstr_t, ptr_t) *connections = NULL;
 static msgpack_sbuffer sbuf;
 equeue *equeue_root;
 uv_loop_t loop;
 
 int connection_init(void)
 {
-  connections = hashmap_new(string, ptr_t)();
+  connections = hashmap_new(cstr_t, ptr_t)();
 
   if (dispatch_table_init() == -1)
     return (-1);
@@ -89,7 +88,7 @@ int connection_teardown(void)
     FREE(con);
   });
 
-  hashmap_free(string, ptr_t)(connections);
+  hashmap_free(cstr_t, ptr_t)(connections);
   dispatch_teardown();
   msgpack_sbuffer_destroy(&sbuf);
 
@@ -327,14 +326,14 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
   return (0);
 }
 
-int connection_hashmap_put(string pluginlongtermpk, struct connection *con)
+int connection_hashmap_put(char *pluginkey, struct connection *con)
 {
-  hashmap_put(string, ptr_t)(connections, pluginlongtermpk, con);
+  hashmap_put(cstr_t, ptr_t)(connections, pluginkey, con);
 
   return (0);
 }
 
-struct callinfo * connection_send_request(string pluginlongtermpk, string method,
+struct callinfo * connection_send_request(char *pluginkey, string method,
     array params, struct api_error *api_error)
 {
   struct connection *con;
@@ -342,7 +341,7 @@ struct callinfo * connection_send_request(string pluginlongtermpk, string method
   struct message_request request;
   struct callinfo *cinfo;
 
-  con = hashmap_get(string, ptr_t)(connections, pluginlongtermpk);
+  con = hashmap_get(cstr_t, ptr_t)(connections, pluginkey);
 
   /*
    * if no connection is available for the key, set the connection to the
@@ -434,6 +433,7 @@ STATIC int connection_handle_request(struct connection *con,
   dispatcher = dispatch_table_get(eventinfo.request.method);
 
   if (dispatcher.func == NULL) {
+    LOG_VERBOSE(VERBOSE_LEVEL_0, "could not dispatch method\n");
     error_set(&api_error, API_ERROR_TYPE_VALIDATION, "could not dispatch method");
     dispatcher.func = handle_error;
     dispatcher.async = true;

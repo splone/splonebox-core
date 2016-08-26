@@ -23,7 +23,7 @@
 #include "helper-unix.h"
 
 
-static ssize_t db_function_get_argc(string api_key, string name)
+static ssize_t db_function_get_argc(char *pluginkey, string name)
 {
   redisReply *reply;
   ssize_t result;
@@ -33,7 +33,7 @@ static ssize_t db_function_get_argc(string api_key, string name)
     return -1;
   }
 
-  reply = redisCommand(rc, "LLEN %s:func:%s:args", api_key.str,
+  reply = redisCommand(rc, "LLEN %s:func:%s:args", pluginkey,
                        name.str);
 
   if (reply->type != REDIS_REPLY_INTEGER) {
@@ -51,8 +51,7 @@ static ssize_t db_function_get_argc(string api_key, string name)
 
 void functional_db_function_flush_args(UNUSED(void **state))
 {
-  string apikey = cstring_copy_string(
-      "bkAhXpRUwuwdeTx0tc24xXDPl6RdIH1uVgQUGRhAZTTjdYiYqkmTmVXgZmRSWuKi");
+  char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
   string name = cstring_copy_string("name of function");
   string desc = cstring_copy_string(
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
@@ -75,14 +74,14 @@ void functional_db_function_flush_args(UNUSED(void **state))
   params.obj[2].data.params.obj[0].type = OBJECT_TYPE_INT;
   params.obj[2].data.params.obj[0].data.uinteger = 6;
 
-  connect_and_create(apikey);
+  connect_and_create(pluginkey);
   args = &params.obj[2].data.params;
 
   /* register function */
-  assert_int_equal(0, db_function_add(apikey, &params));
+  assert_int_equal(0, db_function_add(pluginkey, &params));
 
   /* verify that registration succeeded */
-  argc = db_function_get_argc(apikey, name);
+  argc = db_function_get_argc(pluginkey, name);
   assert_true(argc >= 0);
   assert_true((size_t)argc == args->size);
 
@@ -90,8 +89,8 @@ void functional_db_function_flush_args(UNUSED(void **state))
    * regression test:
    * if flushings works, re-registering does not change the argc
    */
-  assert_int_equal(0, db_function_add(apikey, &params));
-  argc = db_function_get_argc(apikey, name);
+  assert_int_equal(0, db_function_add(pluginkey, &params));
+  argc = db_function_get_argc(pluginkey, name);
   assert_true(argc >= 0);
   assert_true((size_t)argc == args->size);
 
@@ -106,18 +105,17 @@ void functional_db_function_flush_args(UNUSED(void **state))
   params.obj[2].data.params.obj[0].type = OBJECT_TYPE_INT;
   params.obj[2].data.params.obj[0].data.uinteger = 12;
 
-  assert_int_equal(0, db_function_add(apikey, &params));
-  argc = db_function_get_argc(apikey, name);
+  assert_int_equal(0, db_function_add(pluginkey, &params));
+  argc = db_function_get_argc(pluginkey, name);
   assert_true(argc >= 0);
   assert_true((size_t)argc == args->size);
 
-  assert_int_equal(0, db_function_add(apikey, &params));
-  argc = db_function_get_argc(apikey, name);
+  assert_int_equal(0, db_function_add(pluginkey, &params));
+  argc = db_function_get_argc(pluginkey, name);
   assert_true(argc >= 0);
   assert_true((size_t)argc == args->size);
 
   db_close();
 
   free_params(params);
-  free_string(apikey);
 }

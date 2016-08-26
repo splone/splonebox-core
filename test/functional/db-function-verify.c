@@ -26,8 +26,7 @@
 
 void functional_db_function_verify(UNUSED(void **state))
 {
-  string apikey = cstring_copy_string(
-      "bkAhXpRUwuwdeTx0tc24xXDPl6RdIH1uVgQUGRhAZTTjdYiYqkmTmVXgZmRSWuKi");
+  char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
   string name = cstring_copy_string("name of function");
   string desc = cstring_copy_string(
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
@@ -51,36 +50,34 @@ void functional_db_function_verify(UNUSED(void **state))
 
   args = &params.obj[2].data.params;
 
-  connect_and_create(apikey);
+  connect_and_create(pluginkey);
 
   /* registering function should work */
-  assert_int_equal(0, db_function_add(apikey, &params));
+  assert_int_equal(0, db_function_add(pluginkey, &params));
 
   /* verifying a valid function call should work properly */
-  assert_int_equal(0, db_function_verify(apikey, name, args));
+  assert_int_equal(0, db_function_verify(pluginkey, name, args));
 
   /* verifying a non-existing function  */
   string invalid_name = cstring_copy_string("foobar");
-  string invalid_apikey = cstring_copy_string("bkAhXpRU");
-  assert_int_not_equal(0, db_function_verify(apikey, invalid_name, args));
-  assert_int_not_equal(0, db_function_verify(invalid_apikey, name, args));
+  char invalid_pluginkey[PLUGINKEY_STRING_SIZE] = "FFFFFFFFFFFFFFFF";
+  assert_int_not_equal(0, db_function_verify(pluginkey, invalid_name, args));
+  assert_int_not_equal(0, db_function_verify(invalid_pluginkey, name, args));
 
   /* verifying an existing function with wrong arg count */
   args->size = 2;
-  assert_int_not_equal(0, db_function_verify(apikey, name, args));
+  assert_int_not_equal(0, db_function_verify(pluginkey, name, args));
 
   args->size = SIZE_MAX;
-  assert_int_not_equal(0, db_function_verify(apikey, name, args));
+  assert_int_not_equal(0, db_function_verify(pluginkey, name, args));
 
   /* verifying an existing function with wrong arguments' type */
   args->size = 1;
   args->obj[0].type = OBJECT_TYPE_UINT;
   args->obj[0].data.integer = -1;
-  assert_int_not_equal(0, db_function_verify(apikey, name, args));
+  assert_int_not_equal(0, db_function_verify(pluginkey, name, args));
 
   free_params(params);
-  free_string(apikey);
   free_string(invalid_name);
-  free_string(invalid_apikey);
   db_close();
 }

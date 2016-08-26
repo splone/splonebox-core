@@ -67,7 +67,7 @@ endif()
 if(CLANG_ANALYZER)
   # Note that the default location of ccc-analyzer on Archlinux is used. this
   # may be different in other environments.
-  set(CMAKE_C_COMPILER /usr/lib/clang-analyzer/scan-build/ccc-analyzer)
+  set(CMAKE_C_COMPILER /usr/lib/clang/ccc-analyzer)
 endif()
 
 if((CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_THREAD_SANITIZER)
@@ -124,7 +124,6 @@ set(SPLONEBOX-SOURCES
   src/address.h
   src/sbmemzero.c
   src/api/sb-api.h
-  src/api/apikey.c
   src/api/register.c
   src/api/run.c
   src/rpc/sb-rpc.h
@@ -152,22 +151,22 @@ set(SPLONEBOX-SOURCES
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
   src/rpc/db/function.c
+  src/rpc/db/auth.c
 )
 
-# sb-plugin target sources
-set(SB-PLUGIN-SOURCES
-  src/sb-plugin.c
+# sb-pluginkey target sources
+set(SB-PLUGINKEY-SOURCES
+  src/sb-pluginkey.c
   src/sb-common.h
-  src/string.c
+  src/rpc/sb-rpc.h
+  src/util.c
+  src/confparse.c
+  src/parse.c
   src/reallocarray.c
-  src/api/sb-api.h
-  src/api/apikey.c
-  src/rpc/db/sb-db.h
-  src/rpc/db/connect.c
-  src/rpc/db/plugin.c
+  src/filesystem.c
 )
 
-# sb-plugin target sources
+# sb-makekey target sources
 set(SB-MAKEKEY-SOURCES
   src/sb-common.h
   src/reallocarray.c
@@ -206,7 +205,6 @@ set(TEST-SOURCES
   src/address.h
   src/sbmemzero.c
   src/api/sb-api.h
-  src/api/apikey.c
   src/api/register.c
   src/api/run.c
   src/rpc/sb-rpc.h
@@ -234,6 +232,7 @@ set(TEST-SOURCES
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
   src/rpc/db/function.c
+  src/rpc/db/auth.c
   test/main.c
   test/test-list.h
   test/helper-unix.h
@@ -253,7 +252,6 @@ set(TEST-SOURCES
   test/unit/unpack-string.c
   test/unit/unpack-uint.c
   test/unit/unpack-array.c
-  test/unit/apikey.c
   test/unit/dispatch-table-get.c
   test/unit/event-queue-put.c
   test/unit/event-queue-get.c
@@ -267,8 +265,7 @@ set(TEST-SOURCES
   test/unit/message-is-response.c
   test/functional/db-connect.c
   test/functional/db-plugin-add.c
-  test/functional/db-apikey-verify.c
-  test/functional/db-apikey-store.c
+  test/functional/db-pluginkey-verify.c
   test/functional/db-function-register.c
   test/functional/db-function-verify.c
   test/functional/db-function-flush-args.c
@@ -278,6 +275,7 @@ set(TEST-SOURCES
   test/functional/dispatch-handle-run.c
   test/functional/crypto.c
   test/functional/confparse.c
+  test/functional/db-whitelist.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
@@ -297,16 +295,15 @@ target_link_libraries(sb
   ${HIREDIS_LIBRARIES}
 )
 
-# sb-plugin target
-add_executable(sb-plugin ${SB-PLUGIN-SOURCES})
-target_link_libraries(sb-plugin ${BSD_LIBRARIES} ${HIREDIS_LIBRARIES})
-
 # sb-makekey target
 add_executable(sb-makekey ${SB-MAKEKEY-SOURCES})
 target_link_libraries(sb-makekey ${BSD_LIBRARIES})
 
 # sb-test target
 add_executable(sb-test ${TEST-SOURCES})
+
+# sb-pluginkey target
+add_executable(sb-pluginkey ${SB-PLUGINKEY-SOURCES})
 
 # wrap some functions for testing
 set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response,--wrap=crypto_write ")
@@ -329,30 +326,31 @@ if(CLANG_ADDRESS_SANITIZER)
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-fno-sanitize-recover -fno-omit-frame-pointer -fno-optimize-sibling-calls -fsanitize=address -fsanitize=undefined ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=address -fsanitize=undefined ")
+
 elseif(CLANG_MEMORY_SANITIZER)
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -fno-optimize-sibling-calls ")
   set_property(TARGET sb APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -fno-optimize-sibling-calls ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -fno-optimize-sibling-calls ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins -fno-omit-frame-pointer -fno-optimize-sibling-calls ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=memory -fsanitize-memory-track-origins ")
 elseif(CLANG_TSAN)
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
   set_property(TARGET sb APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=thread ")
   set_property(TARGET sb APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=thread ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=thread ")
-  set_property(TARGET sb-plugin APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=thread ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=thread ")
   set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=thread ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-DEXITFREE ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY COMPILE_FLAGS "-fsanitize=thread ")
+  set_property(TARGET sb-pluginkey APPEND_STRING PROPERTY LINK_FLAGS "-fsanitize=thread ")
 endif()

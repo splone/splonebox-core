@@ -47,7 +47,7 @@ void connect_to_db(void)
   options_free(globaloptions);
 }
 
-void connect_and_create(string apikey)
+void connect_and_create(char *pluginkey)
 {
   string name = cstring_copy_string("my new plugin");
   string desc = cstring_copy_string("Lorem ipsum");
@@ -56,7 +56,7 @@ void connect_and_create(string apikey)
 
   connect_to_db();
 
-  assert_int_equal(0, db_plugin_add(apikey, name, desc, author, license));
+  assert_int_equal(0, db_plugin_add(pluginkey, name, desc, author, license));
 
   free_string(name);
   free_string(desc);

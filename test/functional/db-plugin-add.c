@@ -25,8 +25,7 @@
 void functional_db_plugin_add(UNUSED(void **state))
 {
   /* valid parameters */
-  string apikey = cstring_copy_string(
-      "bkAhXpRUwuwdeTx0tc24xXDPl6RdIH1uVgQUGRhAZTTjdYiYqkmTmVXgZmRSWuKi");
+  char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
   string name = cstring_copy_string("my new plugin");
   string desc = cstring_copy_string(
     "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec a diam "
@@ -48,30 +47,29 @@ void functional_db_plugin_add(UNUSED(void **state))
 
   connect_to_db();
 
-  assert_int_equal(0, db_plugin_add(apikey, name, desc, author, license));
+  assert_int_equal(0, db_plugin_add(pluginkey, name, desc, author, license));
 
   /* missing name - must fail */
   string name_empty = cstring_copy_string("");
-  assert_int_not_equal(0, db_plugin_add(apikey, name_empty, desc, author,
+  assert_int_not_equal(0, db_plugin_add(pluginkey, name_empty, desc, author,
       license));
 
   /* missing desc - OK */
   string desc_empty = cstring_copy_string("");
-  assert_int_equal(0, db_plugin_add(apikey, name, desc_empty, author,
+  assert_int_equal(0, db_plugin_add(pluginkey, name, desc_empty, author,
       license));
 
   /* missing author - OK */
   string author_empty = cstring_copy_string("");
-  assert_int_equal(0, db_plugin_add(apikey, name, desc, author_empty,
+  assert_int_equal(0, db_plugin_add(pluginkey, name, desc, author_empty,
       license));
 
   /* missing license - OK */
   string license_empty = cstring_copy_string("");
-  assert_int_equal(0, db_plugin_add(apikey, name, desc, author, license_empty));
+  assert_int_equal(0, db_plugin_add(pluginkey, name, desc, author, license_empty));
 
   db_close();
 
-  free_string(apikey);
   free_string(name);
   free_string(desc);
   free_string(author);

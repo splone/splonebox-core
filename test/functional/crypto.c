@@ -16,8 +16,10 @@
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/db/sb-db.h"
 #include "tweetnacl.h"
 #include "helper-unix.h"
+#include "helper-all.h"
 
 unsigned char clientshorttermpk[32];
 unsigned char clientshorttermsk[32];
@@ -137,6 +139,8 @@ void functional_crypto(UNUSED(void **state))
   uint64_t readlen;
   outputstream write;
 
+  connect_to_db();
+
   wrap_crypto_write = false;
 
   assert_int_equal(0, filesystem_load(".keys/server-long-term.pub",
@@ -221,6 +225,11 @@ void functional_crypto(UNUSED(void **state))
 
   memcpy(initiatepacket + 112, initiatebox + 16, 144);
 
+  /* without valid certificate */
+  assert_int_not_equal(0, crypto_recv_initiate(&cc, initiatepacket));
+
+  /* all plugins are allowed to connect */
+  db_authorized_set_whitelist_all();
   assert_int_equal(0, crypto_recv_initiate(&cc, initiatepacket));
 
   /* crypto_write() test */
@@ -256,4 +265,6 @@ void functional_crypto(UNUSED(void **state))
 
   assert_int_equal(0, crypto_read(&cc, messagepacket, (char*)messagepacketout,
       readlen, &plaintextlen));
+
+  db_close();
 }
