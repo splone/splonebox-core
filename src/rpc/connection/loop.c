@@ -66,6 +66,7 @@ struct callinfo *loop_wait_for_response(struct connection *con,
   /* generate callinfo */
   cinfo->msgid = request->msgid;
   cinfo->hasresponse = false;
+  cinfo->errorresponse = false;
 
   /* push callinfo to connection callinfo vector */
   kv_push(struct callinfo *, con->callvector, cinfo);
