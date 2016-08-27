@@ -54,19 +54,9 @@ static inline void loop_poll_events_until(struct connection *con,
 }
 
 
-struct callinfo *loop_wait_for_response(struct connection *con,
-    struct message_request *request)
+void loop_wait_for_response(struct connection *con,
+    struct callinfo *cinfo)
 {
-  struct callinfo *cinfo;
-  cinfo = MALLOC(struct callinfo);
-
-  if (!cinfo)
-    return (NULL);
-
-  /* generate callinfo */
-  cinfo->msgid = request->msgid;
-  cinfo->hasresponse = false;
-  cinfo->errorresponse = false;
 
   /* push callinfo to connection callinfo vector */
   kv_push(struct callinfo *, con->callvector, cinfo);
@@ -78,6 +68,4 @@ struct callinfo *loop_wait_for_response(struct connection *con,
   /* delete last from callinfo vector */
   kv_pop(con->callvector);
   con->pendingcalls--;
-
-  return cinfo;
 }

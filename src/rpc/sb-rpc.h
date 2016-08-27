@@ -59,6 +59,8 @@ typedef struct connection_request_event_info connection_request_event_info;
 
 #define STREAM_BUFFER_SIZE 0xffff
 
+#define CALLINFO_INIT (struct callinfo) {0, false, false,((struct message_response) {0, ARRAY_INIT})}
+
 
 /*
  * Structure Information:
@@ -268,13 +270,13 @@ int connection_init(void);
  */
 int connection_create(uv_stream_t *stream);
 
-struct callinfo * connection_send_request(char *pluginkey, string method,
+struct callinfo connection_send_request(char *pluginkey, string method,
     array params, struct api_error *api_error);
 int connection_send_response(struct connection *con, uint32_t msgid,
     array params, struct api_error *api_error);
 int connection_hashmap_put(char *pluginkey, struct connection *con);
-struct callinfo *loop_wait_for_response(struct connection *con,
-    struct message_request *request);
+void loop_wait_for_response(struct connection *con,
+    struct callinfo *cinfo);
 int connection_teardown(void);
 
 /**

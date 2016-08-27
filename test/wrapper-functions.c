@@ -52,12 +52,9 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
   return (0);
 }
 
-struct callinfo *__wrap_loop_wait_for_response(UNUSED(struct connection *con),
-    UNUSED(struct message_request *request))
+void __wrap_loop_wait_for_response(UNUSED(struct connection *con),
+    struct callinfo *cinfo)
 {
-  struct callinfo *cinfo;
-
-  cinfo = MALLOC(struct callinfo);
   assert_non_null(cinfo);
 
   /* The callid and the message_params type are determined by the unit test. */
@@ -66,6 +63,4 @@ struct callinfo *__wrap_loop_wait_for_response(UNUSED(struct connection *con),
       struct message_object);
   cinfo->response.params.obj[0].type = (message_object_type)mock();
   cinfo->response.params.obj[0].data.uinteger = (uint64_t)mock();
-
-  return (cinfo);
 }

@@ -29,7 +29,7 @@ int api_result(char *targetpluginkey, uint64_t callid,
   array result_params;
   array result_response_params;
   string result;
-  struct callinfo *cinfo;
+  struct callinfo cinfo;
 
   if (!api_error)
     return (-1);
@@ -68,23 +68,17 @@ int api_result(char *targetpluginkey, uint64_t callid,
   cinfo = connection_send_request(targetpluginkey, result, result_params,
       api_error);
 
-  if (cinfo == NULL) {
-      error_set(api_error, API_ERROR_TYPE_VALIDATION,
-            "Error sending run API request.");
-      return (-1);
-  }
-
-  if (cinfo->response.params.size != 1) {
+  if (cinfo.response.params.size != 1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API response. Either response is broken "
         "or it just has wrong params size.");
     return (-1);
   }
 
-  if (!(cinfo->response.params.obj[0].type == OBJECT_TYPE_UINT &&
-    callid == cinfo->response.params.obj[0].data.uinteger)) {
+  if (!(cinfo.response.params.obj[0].type == OBJECT_TYPE_UINT &&
+    callid == cinfo.response.params.obj[0].data.uinteger)) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching result API response. Invalid callid");
+        "Error dispatching run API response. Invalid callid");
     return (-1);
   }
 
@@ -97,8 +91,7 @@ int api_result(char *targetpluginkey, uint64_t callid,
     return (-1);
   };
 
-  free_params(cinfo->response.params);
-  FREE(cinfo);
+  free_params(cinfo.response.params);
 
   return (0);
 }

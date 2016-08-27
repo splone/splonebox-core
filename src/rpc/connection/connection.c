@@ -339,13 +339,12 @@ int connection_hashmap_put(char *pluginkey, struct connection *con)
   return (0);
 }
 
-struct callinfo * connection_send_request(char *pluginkey, string method,
+struct callinfo connection_send_request(char *pluginkey, string method,
     array params, struct api_error *api_error)
 {
   struct connection *con;
   msgpack_packer packer;
   struct message_request request;
-  struct callinfo *cinfo;
 
   con = hashmap_get(cstr_t, ptr_t)(connections, pluginkey);
 
@@ -356,7 +355,7 @@ struct callinfo * connection_send_request(char *pluginkey, string method,
   if (!con) {
     free_params(params);
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
-    return (NULL);
+    return CALLINFO_INIT;
   }
 
   request.msgid = con->msgid++;
@@ -368,14 +367,16 @@ struct callinfo * connection_send_request(char *pluginkey, string method,
   free_params(params);
 
   if (crypto_write(&con->cc, sbuf.data, sbuf.size, con->streams.write) != 0)
-    return (NULL);
+    return CALLINFO_INIT;
 
-  cinfo = loop_wait_for_response(con, &request);
+  struct callinfo cinfo = (struct callinfo) {request.msgid, false, false,((struct message_response) {0, ARRAY_INIT})};
+
+  loop_wait_for_response(con, &cinfo);
 
   msgpack_sbuffer_clear(&sbuf);
 
-  if (cinfo->errorresponse)
-    return (NULL);
+  if (cinfo.errorresponse)
+    return CALLINFO_INIT;
 
   return cinfo;
 }
