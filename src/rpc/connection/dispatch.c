@@ -312,6 +312,12 @@ int handle_result(connection_request_event_info *info)
 
   targetpluginkey = hashmap_get(uint64_t, ptr_t)(callids, callid);
 
+  if (!targetpluginkey) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+      "Failed to find target's key associated with given callid.");
+    return (-1);
+  }
+
   if (api_result(targetpluginkey, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
     if (false == api_error->isset)
