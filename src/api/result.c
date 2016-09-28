@@ -70,7 +70,7 @@ int api_result(char *targetpluginkey, uint64_t callid,
 
   if (cinfo.response.params.size != 1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API response. Either response is broken "
+        "Error dispatching result API response. Either response is broken "
         "or it just has wrong params size.");
     return (-1);
   }
