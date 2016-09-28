@@ -241,8 +241,9 @@ int handle_run(connection_request_event_info *info)
 
   if (api_run(targetpluginkey, function_name, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error executing run API request.");
+    if (false == api_error->isset)
+      error_set(api_error, API_ERROR_TYPE_VALIDATION,
+         "Error executing run API request.");
     return (-1);
   }
 
@@ -313,7 +314,8 @@ int handle_result(connection_request_event_info *info)
 
   if (api_result(targetpluginkey, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+    if (false == api_error->isset)
+      error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error executing result API request.");
     return (-1);
   }
