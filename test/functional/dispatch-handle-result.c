@@ -41,7 +41,7 @@ static struct plugin *prepare_test(connection_request_event_info *info)
   assert_non_null(info->con);
 
   expect_check(__wrap_crypto_write, &deserialized, validate_run_request, plugin);
-  expect_check(__wrap_crypto_write, &deserialized, validate_run_response, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_run_response, plugin);
 
   helper_build_run_request(&info->request, plugin
     ,OBJECT_TYPE_ARRAY  /* meta array type */

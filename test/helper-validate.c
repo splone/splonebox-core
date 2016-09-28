@@ -127,6 +127,7 @@ int validate_run_response(const unsigned long data1,
 {
   struct msgpack_object *deserialized = (struct msgpack_object *) data1;
   struct message_object response;
+  struct plugin *p = (struct plugin *) data2;
   array params;
 
   wrap_crypto_write = true;
@@ -156,6 +157,9 @@ int validate_run_response(const unsigned long data1,
   assert_true(response.data.params.obj[0].type == OBJECT_TYPE_UINT);
   check_expected(response.data.params.obj[0].data.uinteger);
   //TODO validate callid against plugin->callid
+  if (p) {
+    assert_true(response.data.params.obj[0].data.uinteger == p->callid);
+  }
 
   free_params(params);
 

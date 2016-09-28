@@ -50,7 +50,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   plugin = prepare_test(&info);
 
   expect_check(__wrap_crypto_write, &deserialized, validate_run_request, plugin);
-  expect_check(__wrap_crypto_write, &deserialized, validate_run_response, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_run_response, plugin);
 
   /*
    * The following asserts verifies a legitim run call. In detail, it
