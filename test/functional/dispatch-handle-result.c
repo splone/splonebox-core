@@ -122,6 +122,16 @@ void functional_dispatch_handle_result(UNUSED(void **state))
 
   helper_request_set_callid(&info.request, OBJECT_TYPE_UINT);
 
+  /* wrong callid */
+  info.request.params.obj[0].data.params.obj[0].data.uinteger = 0;
+
+  assert_int_not_equal(0, handle_result(&info));
+  assert_true(info.api_error.isset);
+  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
+  info.api_error.isset = false;
+
+  info.request.params.obj[0].data.params.obj[0].data.uinteger = plugin->callid;
+
   /* wrong argument type */
   helper_request_set_args_size(&info.request,
     OBJECT_TYPE_STR, 2);
