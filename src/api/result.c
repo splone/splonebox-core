@@ -68,6 +68,9 @@ int api_result(char *targetpluginkey, uint64_t callid,
   cinfo = connection_send_request(targetpluginkey, result, result_params,
       api_error);
 
+  if (true == api_error->isset)
+    return (-1);
+
   if (cinfo.response.params.size != 1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching result API response. Either response is broken "
