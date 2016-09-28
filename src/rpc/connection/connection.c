@@ -366,6 +366,8 @@ struct callinfo connection_send_request(char *pluginkey, string method,
   message_serialize_request(&request, &packer);
   free_params(params);
 
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "sending request: method = %s,  callinfo id = %u\n",
+      method, request.msgid);
   if (crypto_write(&con->cc, sbuf.data, sbuf.size, con->streams.write) != 0)
     return CALLINFO_INIT;
 
