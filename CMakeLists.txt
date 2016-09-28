@@ -241,6 +241,8 @@ set(TEST-SOURCES
   test/wrapper-functions.c
   test/helper-all.c
   test/helper-all.h
+  test/helper-validate.c
+  test/helper-validate.h
   test/unit/server-start.c
   test/unit/server-stop.c
   test/unit/pack-string.c

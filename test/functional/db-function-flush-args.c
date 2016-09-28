@@ -51,7 +51,7 @@ static ssize_t db_function_get_argc(char *pluginkey, string name)
 
 void functional_db_function_flush_args(UNUSED(void **state))
 {
-  char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
+  char *pluginkey = "0123456789ABCDEF";
   string name = cstring_copy_string("name of function");
   string desc = cstring_copy_string(
       "Lorem ipsum dolor sit amet, consectetur adipiscing elit.");
