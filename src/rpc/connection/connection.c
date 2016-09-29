@@ -227,6 +227,9 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
       LOG_WARNING("establishing crypto tunnel failed at initiate packet");
       con->cc.state = TUNNEL_INITIAL;
     }
+
+    connection_hashmap_put(con->cc.pluginkeystring, con);
+
   }
 
   pending = inputstream_pending(istream);

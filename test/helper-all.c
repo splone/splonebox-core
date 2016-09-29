@@ -194,6 +194,8 @@ void helper_register_plugin(struct plugin *p)
   assert_int_equal(0, handle_register(&info));
   assert_false(info.api_error.isset);
 
+  connection_hashmap_put(info.con->cc.pluginkeystring, info.con);
+
   FREE(args->obj);
   FREE(func1->obj);
   FREE(functions->obj);
