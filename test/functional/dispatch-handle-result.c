@@ -88,6 +88,24 @@ void functional_dispatch_handle_result(UNUSED(void **state))
    * set in order inform the caller later on.
    */
 
+  /* size of payload too small */
+  info.request.params.size = 1;
+
+  assert_int_not_equal(0, handle_result(&info));
+  assert_true(info.api_error.isset);
+  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
+  info.api_error.isset = false;
+
+  /* size of payload too big */
+  info.request.params.size = 3;
+
+  assert_int_not_equal(0, handle_result(&info));
+  assert_true(info.api_error.isset);
+  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
+  info.api_error.isset = false;
+
+  info.request.params.size = 2;
+
   /* wrong meta size */
   helper_request_set_meta_size(&info.request,
     OBJECT_TYPE_ARRAY, 2);
