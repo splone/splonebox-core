@@ -51,10 +51,12 @@ STATIC void close_cb(uv_handle_t *handle);
 STATIC void timer_cb(uv_timer_t *timer);
 STATIC int connection_handle_request(struct connection *con,
     msgpack_object *obj);
-STATIC int connection_handle_response(struct connection *con,
+STATIC void connection_handle_response(struct connection *con,
     msgpack_object *obj);
 STATIC void connection_request_event(connection_request_event_info *info);
 STATIC void connection_close(struct connection *con);
+STATIC void call_set_error(struct connection *con, char *msg);
+STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con);
 
 static hashmap(cstr_t, ptr_t) *connections = NULL;
 static msgpack_sbuffer sbuf;
@@ -225,6 +227,9 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
       LOG_WARNING("establishing crypto tunnel failed at initiate packet");
       con->cc.state = TUNNEL_INITIAL;
     }
+
+    connection_hashmap_put(con->cc.pluginkeystring, con);
+
   }
 
   pending = inputstream_pending(istream);
@@ -314,8 +319,12 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
     if (message_is_request(&result.data))
       connection_handle_request(con, &result.data);
     else if (message_is_response(&result.data)) {
-      if (connection_handle_response(con, &result.data) != 0) {
-        break;
+      if (is_valid_rpc_response(&result.data, con)) {
+        connection_handle_response(con, &result.data);
+      } else {
+        call_set_error(con, "Returned response that doesn't have a matching "
+                            "request id. Ensure the client is properly "
+                            "synchronized");
       }
     } else {
       LOG_WARNING("invalid msgpack object");
@@ -333,13 +342,12 @@ int connection_hashmap_put(char *pluginkey, struct connection *con)
   return (0);
 }
 
-struct callinfo * connection_send_request(char *pluginkey, string method,
+struct callinfo connection_send_request(char *pluginkey, string method,
     array params, struct api_error *api_error)
 {
   struct connection *con;
   msgpack_packer packer;
   struct message_request request;
-  struct callinfo *cinfo;
 
   con = hashmap_get(cstr_t, ptr_t)(connections, pluginkey);
 
@@ -350,7 +358,7 @@ struct callinfo * connection_send_request(char *pluginkey, string method,
   if (!con) {
     free_params(params);
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
-    return (NULL);
+    return CALLINFO_INIT;
   }
 
   request.msgid = con->msgid++;
@@ -361,16 +369,19 @@ struct callinfo * connection_send_request(char *pluginkey, string method,
   message_serialize_request(&request, &packer);
   free_params(params);
 
-  /* if error is set, generate an error response message */
-  if (api_error->isset)
-    return (NULL);
-
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "sending request: method = %s,  callinfo id = %u\n",
+      method, request.msgid);
   if (crypto_write(&con->cc, sbuf.data, sbuf.size, con->streams.write) != 0)
-    return (NULL);
+    return CALLINFO_INIT;
 
-  cinfo = loop_wait_for_response(con, &request);
+  struct callinfo cinfo = (struct callinfo) {request.msgid, false, false,((struct message_response) {0, ARRAY_INIT})};
+
+  loop_wait_for_response(con, &cinfo);
 
   msgpack_sbuffer_clear(&sbuf);
+
+  if (cinfo.errorresponse)
+    return CALLINFO_INIT;
 
   return cinfo;
 }
@@ -423,8 +434,7 @@ STATIC int connection_handle_request(struct connection *con,
   if (message_deserialize_request(&eventinfo.request, obj, &api_error) != 0) {
     /* request wasn't parsed correctly, send error with pseudo RESPONSE ID*/
     eventinfo.request.msgid = MESSAGE_RESPONSE_UNKNOWN;
-    eventinfo.request.method = (string) {.str = "error",
-        .length = sizeof("error") - 1};
+    eventinfo.request.method = cstring_copy_string("error");
   }
 
   LOG_VERBOSE(VERBOSE_LEVEL_0, "received request: method = %s\n",
@@ -473,34 +483,32 @@ STATIC void connection_request_event(connection_request_event_info *eventinfo)
 
     msgpack_sbuffer_clear(&sbuf);
   }
+
+  free_params(eventinfo->request.params);
+  free_string(eventinfo->request.method);
+}
+
+STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con)
+{
+  uint64_t msg_id = message_get_id(obj);
+
+  return kv_size(con->callvector) && msg_id
+      == kv_A(con->callvector, kv_size(con->callvector) - 1)->msgid;
 }
 
 
-STATIC int connection_handle_response(struct connection *con,
+STATIC void connection_handle_response(struct connection *con,
     msgpack_object *obj)
 {
   struct callinfo *cinfo;
-  size_t csize;
-  size_t i;
   struct api_error api_error = { .isset = false };
 
-  message_is_error_response(obj);
+  cinfo = kv_A(con->callvector, kv_size(con->callvector) - 1);
 
-  csize = kv_size(con->callvector);
-  cinfo = kv_A(con->callvector, csize - 1);
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "received response: callinfo id = %u\n",
+      cinfo->msgid);
 
-  if (cinfo->msgid != message_get_id(obj)) {
-    for (i = 0; i < csize; i++) {
-      cinfo = kv_A(con->callvector, i);
-      cinfo->errorresponse = true;
-      cinfo->hasresponse = true;
-    }
-
-    connection_close(con);
-
-    return (-1);
-  }
-
+  cinfo->hasresponse = true;
   cinfo->errorresponse = message_is_error_response(obj);
 
   if (cinfo->errorresponse) {
@@ -508,9 +516,17 @@ STATIC int connection_handle_response(struct connection *con,
   } else {
     message_deserialize_response(&cinfo->response, obj, &api_error);
   }
+}
 
-  /* unblock */
-  cinfo->hasresponse = true;
+STATIC void call_set_error(struct connection *con, UNUSED(char *msg))
+{
+  struct callinfo *cinfo;
 
-  return (0);
+  for (size_t i = 0; i < kv_size(con->callvector); i++) {
+      cinfo = kv_A(con->callvector, i);
+      cinfo->errorresponse = true;
+      cinfo->hasresponse = true;
+  }
+
+  connection_close(con);
 }

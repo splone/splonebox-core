@@ -236,18 +236,98 @@ int handle_run(connection_request_event_info *info)
 
   args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
-  hashmap_put(uint64_t, ptr_t)(callids, callid, targetpluginkey);
+  LOG_VERBOSE(VERBOSE_LEVEL_1, "generated callid %lu\n", callid);
+  hashmap_put(uint64_t, ptr_t)(callids, callid, info->con->cc.pluginkeystring);
 
   if (api_run(targetpluginkey, function_name, callid, args_object, info->con,
       info->request.msgid, api_error) == -1) {
-    error_set(api_error, API_ERROR_TYPE_VALIDATION,
-        "Error executing run API request.");
+    if (false == api_error->isset)
+      error_set(api_error, API_ERROR_TYPE_VALIDATION,
+         "Error executing run API request.");
     return (-1);
   }
 
   return (0);
 }
 
+int handle_result(connection_request_event_info *info)
+{
+  uint64_t callid;
+  array *meta = NULL;
+  struct message_object args_object;
+  struct message_request *request;
+  struct api_error *api_error;
+  char * targetpluginkey;
+
+  request = &info->request;
+  api_error = &info->api_error;
+
+  if (!api_error || !request)
+    return (-1);
+
+  /* check params size */
+  if (request->params.size != 2) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching result API request. Invalid params size");
+    return (-1);
+  }
+
+  if (request->params.obj[0].type == OBJECT_TYPE_ARRAY)
+    meta = &request->params.obj[0].data.params;
+  else {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching result API request. meta params has wrong type");
+    return (-1);
+  }
+
+  if (!meta) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching result API request. meta params is NULL");
+    return (-1);
+  }
+
+  /* meta = [callid]*/
+  if (meta->size != 1) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching result API request. Invalid meta params size");
+    return (-1);
+  }
+
+  /* extract meta information */
+  if (meta->obj[0].type != OBJECT_TYPE_UINT) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching result API request. meta elements have wrong type");
+    return (-1);
+  }
+
+  callid = meta->obj[0].data.uinteger;
+
+  if (request->params.obj[1].type != OBJECT_TYPE_ARRAY) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching result API request. function string has wrong type");
+    return (-1);
+  }
+
+  args_object = request->params.obj[1];
+
+  targetpluginkey = hashmap_get(uint64_t, ptr_t)(callids, callid);
+
+  if (!targetpluginkey) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+      "Failed to find target's key associated with given callid.");
+    return (-1);
+  }
+
+  if (api_result(targetpluginkey, callid, args_object, info->con,
+      info->request.msgid, api_error) == -1) {
+    if (false == api_error->isset)
+      error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Error executing result API request.");
+    return (-1);
+  }
+
+  return (0);
+}
 
 void dispatch_table_put(string method, dispatch_info info)
 {
@@ -263,6 +343,7 @@ dispatch_info dispatch_table_get(string method)
 int dispatch_teardown(void)
 {
   hashmap_free(string, dispatch_info)(dispatch_table);
+
   hashmap_free(uint64_t, ptr_t)(callids);
 
   return (0);
@@ -277,6 +358,8 @@ int dispatch_table_init(void)
       .name = (string) {.str = "run", .length = sizeof("run") - 1}};
   dispatch_info error_info = {.func = handle_error, .async = true,
       .name = (string) {.str = "error", .length = sizeof("error") - 1}};
+  dispatch_info result_info = {.func = handle_result, .async = true,
+      .name = (string) {.str = "result", .length = sizeof("result") - 1,}};
 
   msgpack_sbuffer_init(&sbuf);
 
@@ -289,6 +372,8 @@ int dispatch_table_init(void)
   dispatch_table_put(register_info.name, register_info);
   dispatch_table_put(run_info.name, run_info);
   dispatch_table_put(error_info.name, error_info);
+  dispatch_table_put(result_info.name, result_info);
+
 
   return (0);
 }

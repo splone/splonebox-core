@@ -19,42 +19,11 @@
 #include "sb-common.h"
 #include "tweetnacl.h"
 #include "rpc/sb-rpc.h"
-#include "helper-unix.h"
-#include "helper-all.h"
 #include "rpc/msgpack/sb-msgpack-rpc.h"
 
-
-int validate_register_response(const unsigned long data1,
-    UNUSED(const unsigned long data2))
-{
-  struct msgpack_object *deserialized = (struct msgpack_object *) data1;
-  struct message_object request;
-  array params;
-
-  wrap_crypto_write = true;
-
-  assert_int_equal(0, unpack_params(deserialized, &params));
-
-  /* msgpack request needs to be 1 */
-  assert_true(params.obj[0].type == OBJECT_TYPE_UINT);
-  assert_int_equal(1, params.obj[0].data.uinteger);
-
-  /* msg id which is random */
-  assert_true(params.obj[1].type == OBJECT_TYPE_UINT);
-
-  /* next field is NIL */
-  assert_true(params.obj[2].type == OBJECT_TYPE_NIL);
-
-  /* followed by an empty array */
-  request = params.obj[3];
-  assert_true(request.type == OBJECT_TYPE_ARRAY);
-  assert_int_equal(0, request.data.params.size);
-
-  free_params(params);
-
-  return (1);
-}
-
+#include "helper-unix.h"
+#include "helper-all.h"
+#include "helper-validate.h"
 
 void functional_dispatch_handle_register(UNUSED(void **state))
 {
@@ -81,7 +50,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
 
   info.con = MALLOC(struct connection);
   info.con->closed = true;
-  memcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE);
+  strlcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE+1);
   assert_non_null(info.con);
 
   connect_and_create(info.con->cc.pluginkeystring);

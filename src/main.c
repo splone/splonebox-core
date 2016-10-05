@@ -21,6 +21,7 @@
 #include "sb-common.h"
 #include "tweetnacl.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/db/sb-db.h"
 
 int8_t verbose_level;
 uv_loop_t loop;

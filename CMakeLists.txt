@@ -125,6 +125,7 @@ set(SPLONEBOX-SOURCES
   src/sbmemzero.c
   src/api/sb-api.h
   src/api/register.c
+  src/api/result.c
   src/api/run.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
@@ -207,6 +208,7 @@ set(TEST-SOURCES
   src/api/sb-api.h
   src/api/register.c
   src/api/run.c
+  src/api/result.c
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
   src/rpc/connection/event.h
@@ -239,6 +241,8 @@ set(TEST-SOURCES
   test/wrapper-functions.c
   test/helper-all.c
   test/helper-all.h
+  test/helper-validate.c
+  test/helper-validate.h
   test/unit/server-start.c
   test/unit/server-stop.c
   test/unit/pack-string.c
@@ -273,6 +277,7 @@ set(TEST-SOURCES
   test/functional/filesystem-save-sync.c
   test/functional/dispatch-handle-register.c
   test/functional/dispatch-handle-run.c
+  test/functional/dispatch-handle-result.c
   test/functional/crypto.c
   test/functional/confparse.c
   test/functional/db-whitelist.c
