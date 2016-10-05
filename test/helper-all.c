@@ -75,17 +75,27 @@ struct plugin *helper_get_example_plugin(void)
   if (!p || !f)
     LOG_ERROR("[test] Failed to alloc mem for example plugin.\n");
 
-  p->key = cstring_copy_string("0123456789ABCDEF");
-  p->name = cstring_copy_string("plugin name");
-  p->description = cstring_copy_string("plugin desc");
-  p->license = cstring_copy_string("plugin license");
-  p->author = cstring_copy_string("plugin author");
+  p->key = (string) {.str = "0123456789ABCDEF",
+                     .length = sizeof("0123456789ABCDEF") - 1};
+  p->name = (string) {.str = "plugin name",
+                      .length = sizeof("plugin name") - 1};
+  p->description = (string) {.str = "plugin desc",
+                             .length = sizeof("plugin desc") - 1};
+  p->license = (string) {.str = "plugin license",
+                         .length = sizeof("plugin license") - 1};
+  p->author = (string) {.str = "plugin author",
+                        .length = sizeof("plugin author") - 1};
+
   p->callid = 0;
 
-  f->name = cstring_copy_string("function name");
-  f->description = cstring_copy_string("function desc");
-  f->args[0] = cstring_copy_string("arg 1");
-  f->args[1] = cstring_copy_string("arg 2");
+  f->name = (string) {.str = "function name",
+                      .length = sizeof("function name") - 1};
+  f->description = (string) {.str = "function desc",
+                             .length = sizeof("function desc") - 1};
+  f->args[0] = (string) {.str = "arg 1",
+                         .length = sizeof("arg 1") - 1};
+  f->args[1] = (string) {.str = "arg 2",
+                         .length = sizeof("arg 2") - 1};
 
   p->function = f;
   return p;
@@ -93,17 +103,6 @@ struct plugin *helper_get_example_plugin(void)
 
 void helper_free_plugin(struct plugin *p)
 {
-  free_string(p->key);
-  free_string(p->name);
-  free_string(p->description);
-  free_string(p->license);
-  free_string(p->author);
-
-  free_string(p->function->name);
-  free_string(p->function->description);
-  free_string(p->function->args[0]);
-  free_string(p->function->args[1]);
-
   FREE(p->function);
   FREE(p);
 }
