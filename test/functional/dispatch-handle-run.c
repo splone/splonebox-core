@@ -16,286 +16,58 @@
 
 #include <msgpack.h>
 
-#include "helper-all.h"
 #include "sb-common.h"
 #include "rpc/msgpack/sb-msgpack-rpc.h"
 #include "rpc/sb-rpc.h"
+
 #include "helper-unix.h"
+#include "helper-all.h"
+#include "helper-validate.h"
 
-static char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
-static string pluginname;
-static string description;
-static string author;
-static string license;
-
-#define KEY "AB1BF3H4C2BA3194"
-#define FUNC "test_function"
-#define ARG1 "test arg1"
-#define ARG2 "test arg2"
-
-int validate_run_response(const unsigned long data1,
-  UNUSED(const unsigned long data2))
+static struct plugin *prepare_test(connection_request_event_info *info)
 {
-  struct msgpack_object *deserialized = (struct msgpack_object *) data1;
-  struct message_object response;
-  array params;
-
-  wrap_crypto_write = true;
-
-  assert_int_equal(0, unpack_params(deserialized, &params));
-
-  /* msgpack response needs to be 1 */
-  assert_true(params.obj[0].type == OBJECT_TYPE_UINT);
-  assert_int_equal(1, params.obj[0].data.uinteger);
-
-  /* msg id which is random */
-  assert_true(params.obj[1].type == OBJECT_TYPE_UINT);
-
-  /* method should be NIL */
-  assert_true(params.obj[2].type == OBJECT_TYPE_NIL);
-
-  /* first level arrays:
-   *
-   * [meta] args->obj[0]
-   */
-  response = params.obj[3];
-  assert_true(response.type == OBJECT_TYPE_ARRAY);
-  assert_int_equal(1, response.data.params.size);
-
-  /* the server must send a call id, store the callid for further
-   * validation */
-  assert_true(response.data.params.obj[0].type == OBJECT_TYPE_UINT);
-  check_expected(response.data.params.obj[0].data.uinteger);
-
-  free_params(params);
-
-  return (1);
-}
-
-int validate_run_request(const unsigned long data1,
-  UNUSED(const unsigned long data2))
-{
-  struct msgpack_object *deserialized = (struct msgpack_object *) data1;
-  struct message_object meta, request, func, args;
-  array params;
-
-  assert_int_equal(0, unpack_params(deserialized, &params));
-
-  /* msgpack request needs to be 0 */
-  assert_true(params.obj[0].type == OBJECT_TYPE_UINT);
-  assert_int_equal(0, params.obj[0].data.uinteger);
-
-  /* msg id which is random */
-  assert_true(params.obj[1].type == OBJECT_TYPE_UINT);
-
-  /* run call */
-  assert_true(params.obj[2].type == OBJECT_TYPE_STR);
-  assert_string_equal(params.obj[2].data.string.str, "run");
-
-  /* first level arrays:
-   *
-   * [meta] args->obj[0]
-   * [functions] args->obj[1]
-   */
-  request = params.obj[3];
-  assert_true(request.type == OBJECT_TYPE_ARRAY);
-  assert_int_equal(3, request.data.params.size);
-
-  meta = request.data.params.obj[0];
-  assert_true(meta.type == OBJECT_TYPE_ARRAY);
-  assert_int_equal(2, meta.data.params.size);
-
-  /* client2 id should be nil */
-  assert_true(meta.data.params.obj[0].type == OBJECT_TYPE_NIL);
-
-  /* verify that the server sent a proper callid */
-  assert_true(meta.data.params.obj[1].type == OBJECT_TYPE_UINT);
-
-  /* since the callid must be forwarded to the client1, the original
-   * sender of the rpc call, we need to push the callid on the cmocka test
-   * stack. this allows verifying of it later on */
-  uint64_t callid = meta.data.params.obj[1].data.uinteger;
-  will_return(__wrap_loop_wait_for_response, OBJECT_TYPE_UINT);
-  will_return(__wrap_loop_wait_for_response, callid);
-  expect_value(validate_run_response, response.data.params.obj[0].data.uinteger, callid);
-
-  /* the function to call on client2 side */
-  func = request.data.params.obj[1];
-  assert_true(func.type == OBJECT_TYPE_STR);
-  assert_string_equal(func.data.string.str, FUNC);
-
-  /* the function arguments to pass to client2 side */
-  assert_true(request.data.params.obj[2].type == OBJECT_TYPE_ARRAY);
-  assert_int_equal(2, request.data.params.obj[2].data.params.size);
-
-  args = request.data.params.obj[2];
-  assert_true(args.data.params.obj[0].type == OBJECT_TYPE_STR);
-  assert_string_equal(args.data.params.obj[0].data.string.str, ARG1);
-
-  assert_true(args.data.params.obj[1].type == OBJECT_TYPE_STR);
-  assert_string_equal(args.data.params.obj[1].data.string.str, ARG2);
-
-  free_params(params);
-
-  return (1);
-}
-
-static void register_test_function(void)
-{
-  connection_request_event_info info;
-  struct message_request *register_request;
-  array *meta, *functions, *func1, *args;
   struct api_error err = ERROR_INIT;
+  info->api_error = err;
 
-  pluginname = cstring_copy_string("register");
-  description = cstring_copy_string("register a plugin");
-  author = cstring_copy_string("test");
-  license = cstring_copy_string("none");
+  /* create test plugin that is used for the tests */
+  struct plugin *plugin = helper_get_example_plugin();
+  helper_register_plugin(plugin);
 
-  info.request.msgid = 1;
-  register_request = &info.request;
-  assert_non_null(register_request);
+  /* establish fake connection to plugin */
+  info->con = MALLOC(struct connection);
+  info->con->closed = true;
+  strlcpy(info->con->cc.pluginkeystring, plugin->key.str, plugin->key.length+1);
+  assert_non_null(info->con);
 
-  info.api_error = err;
-
-  info.con = MALLOC(struct connection);
-  assert_non_null(info.con);
-
-  info.con->closed = true;
-  info.con->msgid = 1;
-  memcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE);
-
-  connect_and_create(pluginkey);
-  assert_int_equal(0, connection_init());
-
-  /* first level arrays:
-   *
-   * [meta] args->obj[0]
-   * [functions] args->obj[1]
-   */
-  register_request->params.size = 2;
-  register_request->params.obj = CALLOC(2, struct message_object);
-  register_request->params.obj[0].type = OBJECT_TYPE_ARRAY;
-  register_request->params.obj[1].type = OBJECT_TYPE_ARRAY;
-
-  /* meta array:
-   *
-   * [name]
-   * [desciption]
-   * [author]
-   * [license]
-   */
-  meta = &register_request->params.obj[0].data.params;
-  meta->size = 4;
-  meta->obj = CALLOC(meta->size, struct message_object);
-  meta->obj[0].type = OBJECT_TYPE_STR;
-  meta->obj[0].data.string = pluginname;
-  meta->obj[1].type = OBJECT_TYPE_STR;
-  meta->obj[1].data.string = description;
-  meta->obj[2].type = OBJECT_TYPE_STR;
-  meta->obj[2].data.string = author;
-  meta->obj[3].type = OBJECT_TYPE_STR;
-  meta->obj[3].data.string = license;
-
-  functions = &register_request->params.obj[1].data.params;
-  functions->size = 1;
-  functions->obj = CALLOC(functions->size, struct message_object);
-  functions->obj[0].type = OBJECT_TYPE_ARRAY;
-
-  func1 = &functions->obj[0].data.params;
-  func1->size = 3;
-  func1->obj = CALLOC(3, struct message_object);
-  func1->obj[0].type = OBJECT_TYPE_STR;
-  func1->obj[0].data.string = cstring_copy_string("test_function");
-  func1->obj[1].type = OBJECT_TYPE_STR;
-  func1->obj[1].data.string = cstring_copy_string("test_function desc");
-  func1->obj[2].type = OBJECT_TYPE_ARRAY;
-
-  /* function arguments */
-  args = &func1->obj[2].data.params;
-  args->size = 2;
-  args->obj = CALLOC(2, struct message_object);
-  args->obj[0].type = OBJECT_TYPE_STR;
-  args->obj[0].data.string = cstring_copy_string("test arg1");
-  args->obj[1].type = OBJECT_TYPE_STR;
-  args->obj[1].data.string = cstring_copy_string("test arg2");
-
-  /* before running function, it must be registered successfully */
-  info.api_error.isset = false;
-  expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
-  assert_int_equal(0, handle_register(&info));
-  assert_false(info.api_error.isset);
-
-  free_params(register_request->params);
-}
-
-void run_request_helper(struct message_request *rr, char *key,
-    string function_name, message_object_type metaarraytype,
-    message_object_type functionnametype, message_object_type argstype,
-    size_t metasize, message_object_type metaclientidtype,
-    message_object_type metacallidtype)
-{
-  array argsarray = ARRAY_INIT;
-  array *meta;
-
-  rr->msgid = 1;
-
-  rr->params.size = 3;
-  rr->params.obj = CALLOC(rr->params.size, struct message_object);
-  rr->params.obj[0].type = metaarraytype;
-  rr->params.obj[1].type = functionnametype;
-  rr->params.obj[2].type = argstype;
-
-  meta = &rr->params.obj[0].data.params;
-  meta->size = metasize;
-  meta->obj = CALLOC(meta->size, struct message_object);
-  meta->obj[0].type = metaclientidtype;
-  meta->obj[0].data.string = cstring_copy_string(key);
-  meta->obj[1].type = metacallidtype;
-
-  rr->params.obj[1].data.string = cstring_copy_string(function_name.str);
-
-  argsarray.size = 2;
-  argsarray.obj = CALLOC(argsarray.size, struct message_object);
-  argsarray.obj[0].type = OBJECT_TYPE_STR; /* first argument */
-  argsarray.obj[0].data.string = cstring_copy_string(ARG1);
-  argsarray.obj[1].type = OBJECT_TYPE_STR; /* second argument */
-  argsarray.obj[1].data.string = cstring_copy_string(ARG2);
-
-  rr->params.obj[2].data.params = argsarray;
+  return plugin;
 }
 
 void functional_dispatch_handle_run(UNUSED(void **state))
 {
   connection_request_event_info info;
-  struct api_error err = ERROR_INIT;
-  string functionname, invalidfunctionname;
+  struct plugin *plugin;
 
-  register_test_function();
+  plugin = prepare_test(&info);
 
-  info.api_error = err;
-  assert_false(info.api_error.isset);
-  info.con = MALLOC(struct connection);
-  info.con->closed = true;
-  memcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE);
-  assert_non_null(info.con);
-
-  functionname = cstring_copy_string(FUNC);
-
-  expect_check(__wrap_crypto_write, &deserialized, validate_run_request, NULL);
-  expect_check(__wrap_crypto_write, &deserialized, validate_run_response, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_run_request, plugin);
+  expect_check(__wrap_crypto_write, &deserialized, validate_run_response, plugin);
 
   /*
    * The following asserts verifies a legitim run call. In detail, it
    * verifies, that the forwarded run request by the server is of proper
    * format.
    * */
-  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_ARRAY,
-      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
+  helper_build_run_request(&info.request, plugin
+    ,OBJECT_TYPE_ARRAY  /* meta array type */
+    ,2                  /* meta size */
+    ,OBJECT_TYPE_STR    /* target plugin key */
+    ,OBJECT_TYPE_NIL    /* call id type */
+    ,OBJECT_TYPE_STR    /* function name */
+    ,OBJECT_TYPE_ARRAY  /* arguments */
+  );
 
   assert_int_equal(0, handle_run(&info));
-
-  free_params(info.request.params);
+  assert_false(info.api_error.isset);
 
   /*
    * The following asserts verify, that the handle_run method cancels
@@ -304,9 +76,20 @@ void functional_dispatch_handle_run(UNUSED(void **state))
    */
 
   /* calling not registered function should fail */
-  invalidfunctionname = cstring_copy_string("invalid func name");
-  run_request_helper(&info.request, pluginkey, invalidfunctionname, OBJECT_TYPE_ARRAY,
-      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
+  helper_request_set_function_name(&info.request, OBJECT_TYPE_STR,
+    "invalid funcion name");
+
+  assert_int_not_equal(0, handle_run(&info));
+  assert_true(info.api_error.isset);
+  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
+  info.api_error.isset = false;
+
+  /* reset to correct request */
+  helper_request_set_function_name(&info.request, OBJECT_TYPE_STR,
+    plugin->function->name.str);
+
+  /* meta object has wrong type */
+  helper_request_set_meta_size(&info.request, OBJECT_TYPE_STR, 2);
 
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
@@ -314,35 +97,11 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
 
-  free_params(info.request.params);
-
-  /* object has wrong type */
-  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_STR,
-      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
-  assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_run(&info));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-
-  /* need to free key string manually, because type is wrong */
-  free_string(info.request.params.obj[0].data.params.obj[0].data.string);
-  free_params(info.request.params);
+  /* reset to correct request */
+  helper_request_set_meta_size(&info.request, OBJECT_TYPE_ARRAY, 2);
 
   /* meta has wrong size */
-  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_ARRAY,
-      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 3, OBJECT_TYPE_STR, OBJECT_TYPE_NIL);
-  assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_run(&info));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-
-  free_params(info.request.params);
-
-  /* client2_id has wrong type */
-  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_ARRAY,
-      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_BIN, OBJECT_TYPE_NIL);
+  helper_request_set_meta_size(&info.request, OBJECT_TYPE_ARRAY, 3);
 
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
@@ -350,21 +109,34 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
 
-  free_params(info.request.params);
+  /* reset to correct request */
+  helper_request_set_meta_size(&info.request, OBJECT_TYPE_ARRAY, 2);
+
+  /* target plugin key has wrong type */
+  helper_request_set_pluginkey_type(&info.request, OBJECT_TYPE_ARRAY, plugin->key.str);
+
+  assert_false(info.api_error.isset);
+  assert_int_not_equal(0, handle_run(&info));
+  assert_true(info.api_error.isset);
+  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
+  info.api_error.isset = false;
+
+  /* reset to correct request */
+  helper_request_set_pluginkey_type(&info.request, OBJECT_TYPE_STR, plugin->key.str);
 
   /* call_id has wrong type */
-  run_request_helper(&info.request, pluginkey, functionname, OBJECT_TYPE_ARRAY,
-      OBJECT_TYPE_STR, OBJECT_TYPE_ARRAY, 2, OBJECT_TYPE_BIN, OBJECT_TYPE_BIN);
+  helper_request_set_callid(&info.request, OBJECT_TYPE_BIN);
 
   assert_false(info.api_error.isset);
   assert_int_not_equal(0, handle_run(&info));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
 
-  free_params(info.request.params);
+  /* reset to correct request */
+  helper_request_set_callid(&info.request, OBJECT_TYPE_NIL);
 
-  free_string(invalidfunctionname);
-  free_string(functionname);
+  free_params(info.request.params);
+  helper_free_plugin(plugin);
   FREE(info.con);
   connection_teardown();
   db_close();

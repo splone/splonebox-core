@@ -58,8 +58,6 @@ int api_register(string name, string desc,
   if (api_error->isset)
     return (-1);
 
-  connection_hashmap_put(con->cc.pluginkeystring, con);
-
   if (connection_send_response(con, msgid, params, api_error) < 0) {
     return (-1);
   };

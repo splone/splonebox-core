@@ -1,5 +1,5 @@
 /**
- *    Copyright (C) 2016 splone UG
+ *    Copyright (C) 2015 splone UG
  *
  *    This program is free software: you can redistribute it and/or  modify
  *    it under the terms of the GNU Affero General Public License, version 3,
@@ -16,15 +16,8 @@
 
 #pragma once
 
-#include "rpc/sb-rpc.h"
-
-STATIC void close_cb(uv_handle_t *handle);
-STATIC int connection_handle_request(struct connection *con,
-    msgpack_object *obj);
-STATIC void connection_handle_response(struct connection *con,
-    msgpack_object *obj);
-STATIC void connection_request_event(connection_request_event_info *info);
-STATIC void connection_close(struct connection *con);
-STATIC int parse_cb(inputstream *istream, void *data, bool eof);
-STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con);
-STATIC void call_set_error(struct connection *con, char *msg);
+int validate_register_response(const unsigned long data1, const unsigned long data2);
+int validate_run_request(const unsigned long data1, const unsigned long data2);
+int validate_run_response(const unsigned long data1, const unsigned long data2);
+int validate_result_request(const unsigned long data1, const unsigned long data2);
+int validate_result_response(const unsigned long data1, const unsigned long data2);

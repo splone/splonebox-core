@@ -139,4 +139,5 @@
 
 MAP_IMPL(cstr_t, ptr_t, DEFAULT_INITIALIZER) /* maps pluginkey <> connection */
 MAP_IMPL(string, dispatch_info, {.func = NULL, .async = false, .name = {.str = NULL, .length = 0}})
+MAP_IMPL(uint64_t, string, {.str = NULL, .length = 0})
 MAP_IMPL(uint64_t, ptr_t, DEFAULT_INITIALIZER) /* maps callid <> pluginkey */
