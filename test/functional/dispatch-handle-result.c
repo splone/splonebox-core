@@ -82,6 +82,19 @@ void functional_dispatch_handle_result(UNUSED(void **state))
 
   assert_int_equal(0, handle_result(&info));
 
+  /* a second result for the same call id should work */
+  expect_check(__wrap_crypto_write, &deserialized, validate_result_request, NULL);
+  expect_check(__wrap_crypto_write, &deserialized, validate_result_response, NULL);
+
+  helper_build_result_request(&info.request, plugin
+    ,OBJECT_TYPE_ARRAY  /* meta array type */
+    ,1                  /* meta array size */
+    ,OBJECT_TYPE_UINT   /* call id type */
+    ,OBJECT_TYPE_ARRAY  /* arguments */
+  );
+
+  assert_int_equal(0, handle_result(&info));
+
   /*
    * The following asserts verify, that the handle_result method cancels
    * as soon as illegitim result calls are processed. A API_ERROR must be
