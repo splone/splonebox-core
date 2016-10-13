@@ -14,6 +14,8 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/random.h>
+
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
 #include "rpc/db/sb-db.h"
@@ -131,6 +133,7 @@ void functional_crypto(UNUSED(void **state))
   unsigned char initiatepacket[256] = {0};
   unsigned char messagepacket[120];
   unsigned char messagepacketout[120] = {0};
+  unsigned char allzero[96] = {0};
   unsigned char allzeroboxed[96] = {0};
   unsigned char initiatebox[160] = {0};
   unsigned char pubkeybox[96] = {0};
@@ -256,15 +259,46 @@ void functional_crypto(UNUSED(void **state))
   uint64_pack(nonce + 16, cc.nonce + 2);
 
   memset(allzeroboxed, 0, 96);
-  assert_int_equal(0, crypto_box_afternm(allzeroboxed, allzeroboxed, 96, nonce,
+  assert_int_equal(0, crypto_box_afternm(allzeroboxed, allzero, 96, nonce,
       cc.clientshortservershort));
 
   memcpy(messagepacket + 40, allzeroboxed + 16, 80);
 
   assert_int_equal(0, crypto_verify_header(&cc, messagepacket, &readlen));
 
+  /* valid messagepacket with all zero should result in successful
+   * crypto_read execution */
   assert_int_equal(0, crypto_read(&cc, messagepacket, (char*)messagepacketout,
       readlen, &plaintextlen));
+  assert_memory_equal(messagepacketout, allzero, plaintextlen);
+
+  /* valid messagepacket with random bytes should be successful */
+  unsigned char payload[96];
+  unsigned char payloadboxed[96] = {0};
+//TODO better to use some random byte instead of uninitialized ones
+//  assert_int_equal(0, getrandom(payload, 96, 0));
+
+  uint64_pack(nonce + 16, cc.receivednonce + 2);
+  memcpy(messagepacket + 8, nonce + 16, 8);
+
+  memset(lengthbox, 0, 40);
+  uint64_pack(lengthbox + 32, 120);
+
+  assert_int_equal(0, crypto_box(lengthbox, lengthbox, 40, nonce,
+      servershorttermpk, clientshorttermsk));
+
+  memcpy(messagepacket + 16, lengthbox + 16, 24);
+
+  assert_int_equal(0, crypto_box_afternm(payloadboxed, payload, 96, nonce,
+      cc.clientshortservershort));
+  memcpy(messagepacket + 40, payloadboxed + 16, 80);
+
+  assert_int_equal(0, crypto_verify_header(&cc, messagepacket, &readlen));
+//TODO fails
+  assert_int_equal(0, crypto_read(&cc, messagepacket, (char*)messagepacketout,
+      readlen, &plaintextlen));
+  assert_memory_equal(messagepacketout, payload, plaintextlen);
+
 
   db_close();
 }
