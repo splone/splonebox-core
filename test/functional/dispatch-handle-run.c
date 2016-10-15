@@ -34,8 +34,10 @@ static struct plugin *prepare_test(connection_request_event_info *info)
   helper_register_plugin(plugin);
 
   /* establish fake connection to plugin */
-  info->con = MALLOC(struct connection);
+  info->con = CALLOC(1, struct connection);
   info->con->closed = true;
+  info->con->id = 12345;
+  connection_hashmap_put(info->con->id, info->con);
   strlcpy(info->con->cc.pluginkeystring, plugin->key.str, plugin->key.length+1);
   assert_non_null(info->con);
 
@@ -66,7 +68,9 @@ void functional_dispatch_handle_run(UNUSED(void **state))
     ,OBJECT_TYPE_ARRAY  /* arguments */
   );
 
-  assert_int_equal(0, handle_run(&info));
+  //nfo.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error
+
+  assert_int_equal(0, handle_run(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_false(info.api_error.isset);
 
   /*
@@ -79,7 +83,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   helper_request_set_function_name(&info.request, OBJECT_TYPE_STR,
     "invalid funcion name");
 
-  assert_int_not_equal(0, handle_run(&info));
+  assert_int_not_equal(0, handle_run(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -92,7 +96,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   helper_request_set_meta_size(&info.request, OBJECT_TYPE_STR, 2);
 
   assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_run(&info));
+  assert_int_not_equal(0, handle_run(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -104,7 +108,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   helper_request_set_meta_size(&info.request, OBJECT_TYPE_ARRAY, 3);
 
   assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_run(&info));
+  assert_int_not_equal(0, handle_run(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -116,19 +120,21 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   helper_request_set_pluginkey_type(&info.request, OBJECT_TYPE_ARRAY, plugin->key.str);
 
   assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_run(&info));
+  assert_int_not_equal(0, handle_run(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
 
   /* reset to correct request */
   helper_request_set_pluginkey_type(&info.request, OBJECT_TYPE_STR, plugin->key.str);
+  array *meta = &info.request.params.obj[0].data.params;
+  free_string(meta->obj[0].data.string);
 
   /* call_id has wrong type */
   helper_request_set_callid(&info.request, OBJECT_TYPE_BIN);
 
   assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_run(&info));
+  assert_int_not_equal(0, handle_run(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
 
@@ -137,7 +143,6 @@ void functional_dispatch_handle_run(UNUSED(void **state))
 
   free_params(info.request.params);
   helper_free_plugin(plugin);
-  FREE(info.con);
   connection_teardown();
   db_close();
 }

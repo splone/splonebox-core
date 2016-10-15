@@ -51,6 +51,7 @@ inputstream *inputstream_new(inputstream_cb cb, uint32_t buffer_size,
   rs->size = 0;
   rs->cb = cb;
   rs->stream = NULL;
+  rs->free_handle = false;
 
   /* initialize circular buffer */
   rs->circbuf_start = MALLOC_ARRAY(buffer_size, unsigned char);
@@ -89,7 +90,11 @@ void inputstream_free(inputstream *istream)
   sbassert(istream);
   sbassert(istream->stream);
 
-  uv_close((uv_handle_t *)istream->stream, inputstream_close_cb);
+  if (istream->free_handle)
+    uv_close((uv_handle_t *)istream->stream, inputstream_close_cb);
+
+  FREE(istream->circbuf_start);
+  FREE(istream);
 }
 
 

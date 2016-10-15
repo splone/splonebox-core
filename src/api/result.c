@@ -21,7 +21,7 @@
 #include "sb-common.h"
 
 int api_result(char *targetpluginkey, uint64_t callid,
-    struct message_object args, struct connection *con, uint32_t msgid,
+    struct message_object args, uint64_t con_id, uint32_t msgid,
     struct api_error *api_error)
 {
   struct message_object *data;
@@ -90,7 +90,7 @@ int api_result(char *targetpluginkey, uint64_t callid,
   result_response_params.obj[0].type = OBJECT_TYPE_UINT;
   result_response_params.obj[0].data.uinteger = callid;
 
-  if (connection_send_response(con, msgid, result_response_params, api_error) < 0) {
+  if (connection_send_response(con_id, msgid, result_response_params, api_error) < 0) {
     return (-1);
   };
 

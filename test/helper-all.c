@@ -123,9 +123,11 @@ void helper_register_plugin(struct plugin *p)
 
   info.api_error = err;
 
-  info.con = MALLOC(struct connection);
+  info.con = CALLOC(1, struct connection);
   info.con->closed = true;
   info.con->msgid = 1;
+  info.con->id = (uint64_t) randommod(281474976710656LL);
+
   assert_non_null(info.con);
 
   strlcpy(info.con->cc.pluginkeystring, p->key.str, p->key.length+1);
@@ -150,17 +152,17 @@ void helper_register_plugin(struct plugin *p)
    * [author]
    * [license]
    */
-   meta = &register_request->params.obj[0].data.params;
-   meta->size = 4;
-   meta->obj = CALLOC(meta->size, struct message_object);
-   meta->obj[0].type = OBJECT_TYPE_STR;
-   meta->obj[0].data.string = cstring_copy_string(p->name.str);
-   meta->obj[1].type = OBJECT_TYPE_STR;
-   meta->obj[1].data.string = cstring_copy_string(p->description.str);
-   meta->obj[2].type = OBJECT_TYPE_STR;
-   meta->obj[2].data.string = cstring_copy_string(p->author.str);
-   meta->obj[3].type = OBJECT_TYPE_STR;
-   meta->obj[3].data.string = cstring_copy_string(p->license.str);
+  meta = &register_request->params.obj[0].data.params;
+  meta->size = 4;
+  meta->obj = CALLOC(meta->size, struct message_object);
+  meta->obj[0].type = OBJECT_TYPE_STR;
+  meta->obj[0].data.string = cstring_copy_string(p->name.str);
+  meta->obj[1].type = OBJECT_TYPE_STR;
+  meta->obj[1].data.string = cstring_copy_string(p->description.str);
+  meta->obj[2].type = OBJECT_TYPE_STR;
+  meta->obj[2].data.string = cstring_copy_string(p->author.str);
+  meta->obj[3].type = OBJECT_TYPE_STR;
+  meta->obj[3].data.string = cstring_copy_string(p->license.str);
 
   functions = &register_request->params.obj[1].data.params;
   functions->size = 1;
@@ -190,16 +192,23 @@ void helper_register_plugin(struct plugin *p)
   expect_check(__wrap_crypto_write, &deserialized,
                 validate_register_response,
                 NULL);
-  assert_int_equal(0, handle_register(&info));
+
+  info.con->refcount++;
+
+  connection_hashmap_put(info.con->id, info.con);
+  pluginkeys_hashmap_put(info.con->cc.pluginkeystring, info.con->id);
+
+  assert_int_equal(0, handle_register(info.con->id, &info.request,
+      info.con->cc.pluginkeystring, &info.api_error));
   assert_false(info.api_error.isset);
 
-  connection_hashmap_put(info.con->cc.pluginkeystring, info.con);
-
-  FREE(args->obj);
-  FREE(func1->obj);
-  FREE(functions->obj);
-  FREE(meta->obj);
-  FREE(register_request->params.obj);
+  //hashmap_put(uint64_t, ptr_t)(connections, info.con->id, info.con);
+  free_params(register_request->params);
+  //FREE(args->obj);
+  //FREE(func1->obj);
+  //FREE(functions->obj);
+  //FREE(meta->obj);
+  //FREE(register_request->params.obj);
 }
 
 /* Builds a run request */

@@ -145,8 +145,10 @@ struct crypto_context {
 };
 
 struct connection {
+  uint64_t id;
   uint32_t msgid;
   uint32_t pendingcalls;
+  size_t refcount;
   msgpack_unpacker *mpac;
   msgpack_sbuffer *sbuf;
   char *unpackbuf;
@@ -176,10 +178,12 @@ struct callinfo {
   struct message_response response;
 };
 
+typedef int (*apidispatchwrapper)(uint64_t con_id,
+    struct message_request *request, char *pluginkey,
+    struct api_error *error);
+
 typedef struct {
-  int (*func)(
-    connection_request_event_info *info
-    );
+  apidispatchwrapper func;
   bool async;
   string name;
 } dispatch_info;
@@ -206,6 +210,7 @@ struct inputstream {
   unsigned char *circbuf_read_pos;
   unsigned char *circbuf_write_pos;
   size_t size;
+  bool free_handle;
 };
 
 /* this structure holds a request and all information to send a response */
@@ -247,6 +252,7 @@ MAP_DECLS(string, ptr_t)
 MAP_DECLS(uint64_t, ptr_t) /* maps callid <> pluginkey */
 MAP_DECLS(cstr_t, ptr_t) /* maps pluginkey <> connection */
 MAP_DECLS(string, dispatch_info)
+MAP_DECLS(cstr_t, uint64_t)
 
 /* define global root event queue */
 extern equeue *equeue_root;
@@ -272,9 +278,10 @@ int connection_create(uv_stream_t *stream);
 
 struct callinfo connection_send_request(char *pluginkey, string method,
     array params, struct api_error *api_error);
-int connection_send_response(struct connection *con, uint32_t msgid,
+int connection_send_response(uint64_t con_id, uint32_t msgid,
     array params, struct api_error *api_error);
-int connection_hashmap_put(char *pluginkey, struct connection *con);
+int connection_hashmap_put(uint64_t id, struct connection *con);
+int pluginkeys_hashmap_put(char *pluginkey, uint64_t id);
 void loop_wait_for_response(struct connection *con,
     struct callinfo *cinfo);
 int connection_teardown(void);
@@ -472,10 +479,14 @@ int dispatch_table_init(void);
 int dispatch_teardown(void);
 dispatch_info dispatch_table_get(string method);
 void dispatch_table_put(string method, dispatch_info info);
-int handle_run(connection_request_event_info *info);
-int handle_result(connection_request_event_info *info);
-int handle_register(connection_request_event_info *info);
-int handle_error(connection_request_event_info *info);
+int handle_run(uint64_t con_id, struct message_request *request,
+    char *pluginkey, struct api_error *error);
+int handle_result(uint64_t con_id, struct message_request *request,
+    char *pluginkey, struct api_error *error);
+int handle_register(uint64_t con_id, struct message_request *request,
+    char *pluginkey, struct api_error *error);
+int handle_error(uint64_t con_id, struct message_request *request,
+    char *pluginkey, struct api_error *error);
 
 
 /* Message Functions */
