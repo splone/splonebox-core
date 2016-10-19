@@ -143,6 +143,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   helper_request_set_callid(&info.request, OBJECT_TYPE_NIL);
 
   free_params(info.request.params);
+  FREE(info.con);
   helper_free_plugin(plugin);
   connection_teardown();
   db_close();
