@@ -249,9 +249,19 @@ struct queue_entry {
 /* hashmap declarations */
 MAP_DECLS(uint64_t, string)
 MAP_DECLS(string, ptr_t)
-MAP_DECLS(uint64_t, ptr_t) /* maps callid <> pluginkey */
-MAP_DECLS(cstr_t, ptr_t) /* maps pluginkey <> connection */
+
+/* callid -> pluginkey
+ * connection id -> connection */
+MAP_DECLS(uint64_t, ptr_t)
+
+/* pluginkey -> connection
+ * formatted address to listen to -> server */
+MAP_DECLS(cstr_t, ptr_t)
+
+/* RPC function name -> dispatch info */
 MAP_DECLS(string, dispatch_info)
+
+/* pluginkey -> connection id */
 MAP_DECLS(cstr_t, uint64_t)
 
 /* define global root event queue */
