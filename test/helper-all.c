@@ -15,6 +15,7 @@
  */
 
 #include <hiredis/hiredis.h>
+#include <bsd/string.h>
 
 #include "sb-common.h"
 #include "rpc/db/sb-db.h"

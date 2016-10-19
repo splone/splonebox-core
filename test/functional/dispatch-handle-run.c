@@ -15,6 +15,7 @@
  */
 
 #include <msgpack.h>
+#include <bsd/string.h>
 
 #include "sb-common.h"
 #include "rpc/msgpack/sb-msgpack-rpc.h"
