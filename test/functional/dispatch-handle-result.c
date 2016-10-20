@@ -38,8 +38,6 @@ static struct plugin *prepare_test(connection_request_event_info *info)
   /* establish fake connection to plugin */
   info->con = CALLOC(1, struct connection);
   info->con->closed = true;
-  info->con->refcount++;
-
   connection_hashmap_put(info->con->id, info->con);
   strlcpy(info->con->cc.pluginkeystring, plugin->key.str, plugin->key.length+1);
   assert_non_null(info->con);
