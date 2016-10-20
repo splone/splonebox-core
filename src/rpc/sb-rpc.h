@@ -247,8 +247,6 @@ struct queue_entry {
 };
 
 /* hashmap declarations */
-MAP_DECLS(uint64_t, string)
-MAP_DECLS(string, ptr_t)
 
 /* callid -> pluginkey
  * connection id -> connection */
