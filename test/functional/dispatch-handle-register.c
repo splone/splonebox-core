@@ -52,6 +52,8 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   info.con = CALLOC(1, struct connection);
   info.con->closed = true;
   info.con->id = 1234;
+  info.con->refcount++;
+
   strlcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE+1);
   assert_non_null(info.con);
 
