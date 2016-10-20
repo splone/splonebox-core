@@ -47,7 +47,7 @@ static inline void loop_poll_events_until(struct connection *con,
     if (con->queue && !equeue_empty(con->queue)) {
       equeue_run_events(con->queue);
     } else {
-      uv_run(&loop, UV_RUN_NOWAIT);
+      uv_run(&loop, UV_RUN_ONCE);
       equeue_run_events(equeue_root);
     }
   }

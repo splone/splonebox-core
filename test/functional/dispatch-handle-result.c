@@ -15,6 +15,7 @@
  */
 
 #include <msgpack.h>
+#include <bsd/string.h>
 
 #include "helper-all.h"
 #include "sb-common.h"
@@ -35,8 +36,9 @@ static struct plugin *prepare_test(connection_request_event_info *info)
   helper_register_plugin(plugin);
 
   /* establish fake connection to plugin */
-  info->con = MALLOC(struct connection);
+  info->con = CALLOC(1, struct connection);
   info->con->closed = true;
+  connection_hashmap_put(info->con->id, info->con);
   strlcpy(info->con->cc.pluginkeystring, plugin->key.str, plugin->key.length+1);
   assert_non_null(info->con);
 
@@ -52,7 +54,7 @@ static struct plugin *prepare_test(connection_request_event_info *info)
     ,OBJECT_TYPE_ARRAY  /* arguments */
   );
 
-  assert_int_equal(0, handle_run(info));
+  assert_int_equal(0, handle_run(info->con->id, &info->request, info->con->cc.pluginkeystring, &info->api_error));
   free_params(info->request.params);
 
   return plugin;
@@ -80,7 +82,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
     ,OBJECT_TYPE_ARRAY  /* arguments */
   );
 
-  assert_int_equal(0, handle_result(&info));
+  assert_int_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
 
   /*
    * The following asserts verify, that the handle_result method cancels
@@ -91,7 +93,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
   /* size of payload too small */
   info.request.params.size = 1;
 
-  assert_int_not_equal(0, handle_result(&info));
+  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -99,7 +101,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
   /* size of payload too big */
   info.request.params.size = 3;
 
-  assert_int_not_equal(0, handle_result(&info));
+  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -110,7 +112,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
   helper_request_set_meta_size(&info.request,
     OBJECT_TYPE_ARRAY, 2);
 
-  assert_int_not_equal(0, handle_result(&info));
+  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -122,7 +124,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
   helper_request_set_meta_size(&info.request,
     OBJECT_TYPE_STR, 1);
 
-  assert_int_not_equal(0, handle_result(&info));
+  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -133,7 +135,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
   /* wrong callid type */
   helper_request_set_callid(&info.request, OBJECT_TYPE_STR);
 
-  assert_int_not_equal(0, handle_result(&info));
+  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -143,7 +145,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
   /* wrong callid */
   info.request.params.obj[0].data.params.obj[0].data.uinteger = 0;
 
-  assert_int_not_equal(0, handle_result(&info));
+  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -154,7 +156,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
   helper_request_set_args_size(&info.request,
     OBJECT_TYPE_STR, 2);
 
-  assert_int_not_equal(0, handle_result(&info));
+  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -165,7 +167,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
 
   free_params(info.request.params);
   helper_free_plugin(plugin);
-  FREE(info.con);
   connection_teardown();
+  FREE(info.con);
   db_close();
 }

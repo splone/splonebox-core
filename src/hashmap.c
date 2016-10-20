@@ -137,7 +137,17 @@
     kh_clear(T##_##U##_map, map->table);                                      \
   }
 
-MAP_IMPL(cstr_t, ptr_t, DEFAULT_INITIALIZER) /* maps pluginkey <> connection */
+/* callid -> pluginkey
+ * connection id -> connection */
+MAP_IMPL(uint64_t, ptr_t, DEFAULT_INITIALIZER)
+
+/* pluginkey -> connection
+ * formatted address to listen to -> server */
+MAP_IMPL(cstr_t, ptr_t, DEFAULT_INITIALIZER)
+
+/* RPC function name -> dispatch info */
 MAP_IMPL(string, dispatch_info, {.func = NULL, .async = false, .name = {.str = NULL, .length = 0}})
-MAP_IMPL(uint64_t, string, {.str = NULL, .length = 0})
-MAP_IMPL(uint64_t, ptr_t, DEFAULT_INITIALIZER) /* maps callid <> pluginkey */
+
+/* pluginkey -> connection id */
+MAP_IMPL(cstr_t, uint64_t, DEFAULT_INITIALIZER)
+

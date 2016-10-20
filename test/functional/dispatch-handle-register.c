@@ -15,6 +15,7 @@
  */
 
 #include <msgpack.h>
+#include <bsd/string.h>
 
 #include "sb-common.h"
 #include "tweetnacl.h"
@@ -48,13 +49,16 @@ void functional_dispatch_handle_register(UNUSED(void **state))
 
   info.api_error.isset = false;
 
-  info.con = MALLOC(struct connection);
+  info.con = CALLOC(1, struct connection);
   info.con->closed = true;
+  info.con->id = 1234;
   strlcpy(info.con->cc.pluginkeystring, pluginkey, PLUGINKEY_STRING_SIZE+1);
   assert_non_null(info.con);
 
   connect_and_create(info.con->cc.pluginkeystring);
   assert_int_equal(0, connection_init());
+
+  connection_hashmap_put(info.con->id, info.con);
 
   /* first level arrays:
    *
@@ -114,12 +118,12 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   /* a valid request has to trigger the corresponding response */
   assert_false(info.api_error.isset);
   expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
-  assert_int_equal(0, handle_register(&info));
+  assert_int_equal(0, handle_register(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
 
   /* payload does not consist of two arrays, meta and func */
   request->params.size = 1;
   assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_register(&info));
+  assert_int_not_equal(0, handle_register(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -128,7 +132,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   /* object has wrong type */
   request->params.obj[0].type = OBJECT_TYPE_STR;
   assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_register(&info));
+  assert_int_not_equal(0, handle_register(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -137,7 +141,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   /* meta has wrong size */
   meta->size = 3;
   assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_register(&info));
+  assert_int_not_equal(0, handle_register(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -154,7 +158,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   meta->obj[0].data.string.length = len;
   assert_false(info.api_error.isset);
   expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
-  assert_int_equal(0, handle_register(&info));
+  assert_int_equal(0, handle_register(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_false(info.api_error.isset);
   meta->obj[0].data.string = name;
   FREE(buf);
@@ -162,7 +166,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   /* no function description field should fail */
   func1->obj[1].type = OBJECT_TYPE_NIL;
   assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_register(&info));
+  assert_int_not_equal(0, handle_register(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   func1->obj[1].type = OBJECT_TYPE_STR;
@@ -178,7 +182,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   func1->obj[1].data.string.length = len;
   assert_false(info.api_error.isset);
   expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
-  assert_int_equal(0, handle_register(&info));
+  assert_int_equal(0, handle_register(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_false(info.api_error.isset);
   func1->obj[1].data.string = func_desc;
   FREE(buf);
@@ -186,7 +190,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   /* registering w/o function, should not work */
   functions->size = 0;
   assert_false(info.api_error.isset);
-  assert_int_not_equal(0, handle_register(&info));
+  assert_int_not_equal(0, handle_register(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_true(info.api_error.isset);
   assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
   info.api_error.isset = false;
@@ -203,7 +207,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   args->obj[1].data.string = cstring_copy_string("foobar");
   assert_false(info.api_error.isset);
   expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
-  assert_int_equal(0, handle_register(&info));
+  assert_int_equal(0, handle_register(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_false(info.api_error.isset);
   info.api_error.isset = false;
 
@@ -211,7 +215,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   functions->size = 1;
   assert_false(info.api_error.isset);
   expect_check(__wrap_crypto_write, &deserialized, validate_register_response, NULL);
-  assert_int_equal(0, handle_register(&info));
+  assert_int_equal(0, handle_register(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
   assert_false(info.api_error.isset);
   info.api_error.isset = false;
   functions->size = 2;
@@ -219,5 +223,6 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   free_params(request->params);
   connection_teardown();
   FREE(err);
+  FREE(info.con);
   db_close();
 }

@@ -57,20 +57,26 @@ STATIC void connection_request_event(connection_request_event_info *info);
 STATIC void connection_close(struct connection *con);
 STATIC void call_set_error(struct connection *con, char *msg);
 STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con);
+STATIC void free_connection(struct connection *con);
+STATIC void incref(struct connection *con);
+STATIC void decref(struct connection *con);
 
-static hashmap(cstr_t, ptr_t) *connections = NULL;
+static uint64_t next_con_id = 1;
+static hashmap(uint64_t, ptr_t) *connections = NULL;
+static hashmap(cstr_t, uint64_t) *pluginkeys = NULL;
 static msgpack_sbuffer sbuf;
 equeue *equeue_root;
 uv_loop_t loop;
 
 int connection_init(void)
 {
-  connections = hashmap_new(cstr_t, ptr_t)();
+  connections = hashmap_new(uint64_t, ptr_t)();
+  pluginkeys = hashmap_new(cstr_t, uint64_t)();
 
   if (dispatch_table_init() == -1)
     return (-1);
 
-  if (!connections)
+  if (!connections || !pluginkeys)
     return (-1);
 
   msgpack_sbuffer_init(&sbuf);
@@ -87,10 +93,11 @@ int connection_teardown(void)
 
   hashmap_foreach_value(connections, con, {
     connection_close(con);
-    FREE(con);
   });
 
-  hashmap_free(cstr_t, ptr_t)(connections);
+  hashmap_free(uint64_t, ptr_t)(connections);
+  hashmap_free(cstr_t, uint64_t)(pluginkeys);
+
   dispatch_teardown();
   msgpack_sbuffer_destroy(&sbuf);
 
@@ -108,7 +115,9 @@ int connection_create(uv_stream_t *stream)
   if (con == NULL)
     return (-1);
 
+  con->id = next_con_id++;
   con->msgid = 1;
+  con->refcount = 1;
   con->mpac = msgpack_unpacker_new(MSGPACK_UNPACKER_INIT_BUFFER_SIZE);
   con->closed = false;
   con->queue = equeue_new(equeue_root);
@@ -133,6 +142,7 @@ int connection_create(uv_stream_t *stream)
   r = uv_timer_start(&con->minutekey_timer, timer_cb, 60000, 60000);
   sbassert(r == 0);
 
+  con->packet.data = NULL;
   con->packet.start = 0;
   con->packet.end = 0;
   con->packet.pos = 0;
@@ -143,7 +153,46 @@ int connection_create(uv_stream_t *stream)
   inputstream_start(con->streams.read);
   outputstream_set(con->streams.write, stream);
 
+  hashmap_put(uint64_t, ptr_t)(connections, con->id, con);
+
   return (0);
+}
+
+STATIC void incref(struct connection *con)
+{
+  con->refcount++;
+}
+
+STATIC void decref(struct connection *con)
+{
+  if (!(--con->refcount)) {
+    free_connection(con);
+  }
+}
+
+
+int connection_hashmap_put(uint64_t id, struct connection *con)
+{
+  hashmap_put(uint64_t, ptr_t)(connections, id, con);
+}
+
+int pluginkeys_hashmap_put(char *pluginkey, uint64_t id)
+{
+  hashmap_put(cstr_t, uint64_t)(pluginkeys, pluginkey, id);
+}
+
+STATIC void free_connection(struct connection *con)
+{
+  hashmap_del(uint64_t, ptr_t)(connections, con->id);
+  hashmap_del(cstr_t, uint64_t)(pluginkeys, con->cc.pluginkeystring);
+  msgpack_unpacker_free(con->mpac);
+  kv_destroy(con->callvector);
+  equeue_free(con->queue);
+
+  if (con->packet.data)
+    FREE(con->packet.data);
+
+  FREE(con);
 }
 
 STATIC void timer_cb(uv_timer_t *timer)
@@ -156,22 +205,29 @@ STATIC void connection_close(struct connection *con)
 {
   int is_closing;
   uv_handle_t *handle;
+  uv_handle_t *timer_handle;
 
   if (con->closed)
     return;
+
+  timer_handle = (uv_handle_t*) &con->minutekey_timer;
+  if (timer_handle) {
+    uv_close(timer_handle, NULL);
+    uv_run(&loop, UV_RUN_ONCE);
+  }
 
   inputstream_free(con->streams.read);
   outputstream_free(con->streams.write);
   handle = (uv_handle_t *)con->streams.uv;
 
-  is_closing = uv_is_closing(handle);
-
-  if (handle && !is_closing)
+  if (handle)
     uv_close(handle, close_cb);
 
   kv_destroy(con->callvector);
 
   con->closed = 0;
+
+  decref(con);
 }
 
 
@@ -191,7 +247,6 @@ STATIC void reset_packet(struct connection *con)
 STATIC void reset_parser(struct connection *con)
 {
   FREE(con->packet.data);
-  msgpack_unpacker_free(con->mpac);
   reset_packet(con);
 }
 
@@ -201,6 +256,8 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
   unsigned char hellopacket[192];
   unsigned char initiatepacket[256];
   struct connection *con = data;
+
+  incref(con);
 
   size_t read = 0;
   size_t pending;
@@ -212,7 +269,7 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
 
   if (eof) {
     connection_close(con);
-    return (-1);
+    goto fail;
   }
 
   if (con->cc.state == TUNNEL_INITIAL) {
@@ -220,7 +277,8 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
     if (crypto_recv_hello_send_cookie(&con->cc, hellopacket,
         con->streams.write) != 0)
       LOG_WARNING("establishing crypto tunnel failed at hello-cookie packet");
-    return -1;
+
+    goto fail;
   } else if (con->cc.state == TUNNEL_COOKIE_SENT) {
     size = inputstream_read(istream, initiatepacket, 256);
     if (crypto_recv_initiate(&con->cc, initiatepacket) != 0) {
@@ -228,14 +286,14 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
       con->cc.state = TUNNEL_INITIAL;
     }
 
-    connection_hashmap_put(con->cc.pluginkeystring, con);
-
+    hashmap_put(cstr_t, uint64_t)(pluginkeys, con->cc.pluginkeystring,
+      con->id);
   }
 
   pending = inputstream_pending(istream);
 
   if (pending <= 0 || con->cc.state != TUNNEL_ESTABLISHED)
-    return -1;
+    goto fail;
 
   if (con->packet.end <= 0) {
     packet = inputstream_get_read(istream, &read);
@@ -243,20 +301,21 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
     /* read the packet length */
     if (crypto_verify_header(&con->cc, packet, &con->packet.length)) {
       reset_packet(con);
-      return (-1);
+      goto fail;
     }
 
     con->packet.end = con->packet.length;
     con->packet.data = MALLOC_ARRAY(MAX(con->packet.end, read), unsigned char);
+
     if (!con->packet.data) {
       LOG_ERROR("Failed to alloc mem for con packet.");
-      return -1;
+      goto fail;
     }
 
     if (msgpack_unpacker_reserve_buffer(con->mpac,
       MAX(read, con->packet.end)) == false) {
       LOG_ERROR("Failed to reserve mem msgpack buffer.");
-      return -1;
+      goto fail;
     };
 
     /* get decrypted message start position */
@@ -274,7 +333,7 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
       if (crypto_read(&con->cc, con->packet.data, con->unpackbuf +
           consumedlen, con->packet.length, &plaintextlen) != 0) {
         reset_parser(con);
-        return (-1);
+        goto fail;
       }
 
       consumedlen += plaintextlen;
@@ -282,12 +341,12 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
 
       if (packet == NULL) {
         reset_parser(con);
-        return (-1);
+        goto fail;
       }
 
       if (crypto_verify_header(&con->cc, packet, &con->packet.length)) {
         reset_parser(con);
-        return (-1);
+        goto fail;
       }
 
       con->packet.end = con->packet.length;
@@ -295,13 +354,15 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
       continue;
     }
 
-    if (con->packet.end > 0 && read == 0)
+    if (con->packet.end > 0 && read == 0) {
+      decref(con);
       return (0);
+    }
 
     if (crypto_read(&con->cc, con->packet.data, con->unpackbuf +
         consumedlen, con->packet.length, &plaintextlen) != 0) {
       reset_parser(con);
-      return (-1);
+      goto fail;
     }
 
     consumedlen += plaintextlen;
@@ -332,24 +393,32 @@ STATIC int parse_cb(inputstream *istream, void *data, bool eof)
     }
   }
 
-  return (0);
-}
-
-int connection_hashmap_put(char *pluginkey, struct connection *con)
-{
-  hashmap_put(cstr_t, ptr_t)(connections, pluginkey, con);
+  decref(con);
 
   return (0);
+
+fail:
+  decref(con);
+  return (-1);
 }
 
 struct callinfo connection_send_request(char *pluginkey, string method,
     array params, struct api_error *api_error)
 {
+  uint64_t id;
   struct connection *con;
   msgpack_packer packer;
   struct message_request request;
 
-  con = hashmap_get(cstr_t, ptr_t)(connections, pluginkey);
+  id = hashmap_get(cstr_t, uint64_t)(pluginkeys, pluginkey);
+
+  if (id == 0) {
+    free_params(params);
+    error_set(api_error, API_ERROR_TYPE_VALIDATION, "plugin not registered");
+    return CALLINFO_INIT;
+  }
+
+  con = hashmap_get(uint64_t, ptr_t)(connections, id);
 
   /*
    * if no connection is available for the key, set the connection to the
@@ -361,6 +430,7 @@ struct callinfo connection_send_request(char *pluginkey, string method,
     return CALLINFO_INIT;
   }
 
+  incref(con);
   request.msgid = con->msgid++;
   request.method = method;
   request.params = params;
@@ -380,17 +450,22 @@ struct callinfo connection_send_request(char *pluginkey, string method,
 
   msgpack_sbuffer_clear(&sbuf);
 
+  decref(con);
+
   if (cinfo.errorresponse)
     return CALLINFO_INIT;
 
   return cinfo;
 }
 
-int connection_send_response(struct connection *con, uint32_t msgid,
+int connection_send_response(uint64_t con_id, uint32_t msgid,
     array params, struct api_error *api_error)
 {
   msgpack_packer packer;
   struct message_response response;
+  struct connection *con;
+
+  con = hashmap_get(uint64_t, ptr_t)(connections, con_id);
 
   /*
    * if no connection is available for the key, set the connection to the
@@ -406,15 +481,17 @@ int connection_send_response(struct connection *con, uint32_t msgid,
 
   msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
   message_serialize_response(&response, &packer);
-  free_params(params);
 
-  if (api_error->isset)
+  if (api_error->isset) {
     return (-1);
+  }
 
-  if (crypto_write(&con->cc, sbuf.data, sbuf.size, con->streams.write) != 0)
+  if (crypto_write(&con->cc, sbuf.data, sbuf.size, con->streams.write) != 0) {
     return (-1);
+  }
 
   msgpack_sbuffer_clear(&sbuf);
+  free_params(params);
 
   return 0;
 }
@@ -453,6 +530,8 @@ STATIC int connection_handle_request(struct connection *con,
   eventinfo.api_error = api_error;
   eventinfo.dispatcher = dispatcher;
 
+  incref(con);
+
   if (dispatcher.async)
     connection_request_event(&eventinfo);
   else {
@@ -470,8 +549,12 @@ STATIC int connection_handle_request(struct connection *con,
 STATIC void connection_request_event(connection_request_event_info *eventinfo)
 {
   msgpack_packer packer;
+  struct connection *con;
 
-  eventinfo->dispatcher.func(eventinfo);
+  con = eventinfo->con;
+
+  eventinfo->dispatcher.func(con->id, &eventinfo->request,
+      con->cc.pluginkeystring, &eventinfo->api_error);
 
   if (eventinfo->api_error.isset) {
     msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
@@ -486,6 +569,8 @@ STATIC void connection_request_event(connection_request_event_info *eventinfo)
 
   free_params(eventinfo->request.params);
   free_string(eventinfo->request.method);
+
+  decref(con);
 }
 
 STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con)
