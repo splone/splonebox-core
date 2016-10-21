@@ -18,6 +18,8 @@
 
 #include "sb-common.h"
 #include "rpc/db/sb-db.h"
+#include "api/helpers.h"
+#include "api/sb-api.h"
 
 #include "helper-unix.h"
 #include "helper-all.h"
@@ -76,26 +78,26 @@ struct plugin *helper_get_example_plugin(void)
     LOG_ERROR("[test] Failed to alloc mem for example plugin.\n");
 
   p->key = (string) {.str = "0123456789ABCDEF",
-                     .length = sizeof("0123456789ABCDEF") - 1};
+      .length = sizeof("0123456789ABCDEF") - 1};
   p->name = (string) {.str = "plugin name",
-                      .length = sizeof("plugin name") - 1};
+      .length = sizeof("plugin name") - 1};
   p->description = (string) {.str = "plugin desc",
-                             .length = sizeof("plugin desc") - 1};
+      .length = sizeof("plugin desc") - 1};
   p->license = (string) {.str = "plugin license",
-                         .length = sizeof("plugin license") - 1};
+      .length = sizeof("plugin license") - 1};
   p->author = (string) {.str = "plugin author",
-                        .length = sizeof("plugin author") - 1};
+      .length = sizeof("plugin author") - 1};
 
   p->callid = 0;
 
   f->name = (string) {.str = "function name",
-                      .length = sizeof("function name") - 1};
+      .length = sizeof("function name") - 1};
   f->description = (string) {.str = "function desc",
-                             .length = sizeof("function desc") - 1};
+      .length = sizeof("function desc") - 1};
   f->args[0] = (string) {.str = "arg 1",
-                         .length = sizeof("arg 1") - 1};
+      .length = sizeof("arg 1") - 1};
   f->args[1] = (string) {.str = "arg 2",
-                         .length = sizeof("arg 2") - 1};
+      .length = sizeof("arg 2") - 1};
 
   p->function = f;
   return p;
@@ -105,222 +107,4 @@ void helper_free_plugin(struct plugin *p)
 {
   FREE(p->function);
   FREE(p);
-}
-
-
-/* Builds a register call and executes handle_register in order
- * to register the plugin. */
-void helper_register_plugin(struct plugin *p)
-{
-  connection_request_event_info info;
-  struct message_request *register_request;
-  array *meta, *functions, *func1, *args;
-  struct api_error err = ERROR_INIT;
-
-  info.request.msgid = 1;
-  register_request = &info.request;
-  assert_non_null(register_request);
-
-  info.api_error = err;
-
-  info.con = CALLOC(1, struct connection);
-  info.con->closed = true;
-  info.con->msgid = 1;
-  info.con->id = (uint64_t) randommod(281474976710656LL);
-
-  assert_non_null(info.con);
-
-  strlcpy(info.con->cc.pluginkeystring, p->key.str, p->key.length+1);
-
-  connect_to_db();
-  assert_int_equal(0, connection_init());
-
-  /* first level arrays:
-   *
-   * [meta] args->obj[0]
-   * [functions] args->obj[1]
-   */
-  register_request->params.size = 2;
-  register_request->params.obj = CALLOC(2, struct message_object);
-  register_request->params.obj[0].type = OBJECT_TYPE_ARRAY;
-  register_request->params.obj[1].type = OBJECT_TYPE_ARRAY;
-
-  /* meta array:
-   *
-   * [name]
-   * [desciption]
-   * [author]
-   * [license]
-   */
-  meta = &register_request->params.obj[0].data.params;
-  meta->size = 4;
-  meta->obj = CALLOC(meta->size, struct message_object);
-  meta->obj[0].type = OBJECT_TYPE_STR;
-  meta->obj[0].data.string = cstring_copy_string(p->name.str);
-  meta->obj[1].type = OBJECT_TYPE_STR;
-  meta->obj[1].data.string = cstring_copy_string(p->description.str);
-  meta->obj[2].type = OBJECT_TYPE_STR;
-  meta->obj[2].data.string = cstring_copy_string(p->author.str);
-  meta->obj[3].type = OBJECT_TYPE_STR;
-  meta->obj[3].data.string = cstring_copy_string(p->license.str);
-
-  functions = &register_request->params.obj[1].data.params;
-  functions->size = 1;
-  functions->obj = CALLOC(functions->size, struct message_object);
-  functions->obj[0].type = OBJECT_TYPE_ARRAY;
-
-  func1 = &functions->obj[0].data.params;
-  func1->size = 3;
-  func1->obj = CALLOC(3, struct message_object);
-  func1->obj[0].type = OBJECT_TYPE_STR;
-  func1->obj[0].data.string = cstring_copy_string(p->function->name.str);
-  func1->obj[1].type = OBJECT_TYPE_STR;
-  func1->obj[1].data.string = cstring_copy_string(p->function->description.str);
-  func1->obj[2].type = OBJECT_TYPE_ARRAY;
-
-  /* function arguments */
-  args = &func1->obj[2].data.params;
-  args->size = 2;
-  args->obj = CALLOC(2, struct message_object);
-  args->obj[0].type = OBJECT_TYPE_STR;
-  args->obj[0].data.string = cstring_copy_string(p->function->args[0].str);
-  args->obj[1].type = OBJECT_TYPE_STR;
-  args->obj[1].data.string = cstring_copy_string(p->function->args[1].str);
-
-  /* before running function, it must be registered successfully */
-  info.api_error.isset = false;
-  expect_check(__wrap_crypto_write, &deserialized,
-                validate_register_response,
-                NULL);
-
-  info.con->refcount++;
-
-  connection_hashmap_put(info.con->id, info.con);
-  pluginkeys_hashmap_put(info.con->cc.pluginkeystring, info.con->id);
-
-  assert_int_equal(0, handle_register(info.con->id, &info.request,
-      info.con->cc.pluginkeystring, &info.api_error));
-  assert_false(info.api_error.isset);
-
-  //hashmap_put(uint64_t, ptr_t)(connections, info.con->id, info.con);
-  free_params(register_request->params);
-  //FREE(args->obj);
-  //FREE(func1->obj);
-  //FREE(functions->obj);
-  //FREE(meta->obj);
-  //FREE(register_request->params.obj);
-}
-
-/* Builds a run request */
-void helper_build_run_request(struct message_request *rr,
-    struct plugin *plugin,
-    message_object_type metaarraytype,
-    size_t metasize,
-    message_object_type metaclientidtype,
-    message_object_type metacallidtype,
-    message_object_type functionnametype,
-    message_object_type argstype
-)
-{
-  array argsarray = ARRAY_INIT;
-  array *meta;
-
-  rr->msgid = 1;
-
-  rr->params.size = 3;
-  rr->params.obj = CALLOC(rr->params.size, struct message_object);
-  rr->params.obj[0].type = metaarraytype;
-
-  meta = &rr->params.obj[0].data.params;
-  meta->size = metasize;
-  meta->obj = CALLOC(meta->size, struct message_object);
-  meta->obj[0].type = metaclientidtype;
-  meta->obj[0].data.string = cstring_copy_string(plugin->key.str);
-  meta->obj[1].type = metacallidtype;
-
-  rr->params.obj[1].type = functionnametype;
-  rr->params.obj[1].data.string = cstring_copy_string(plugin->function->name.str);
-
-  argsarray.size = 2;
-  argsarray.obj = CALLOC(argsarray.size, struct message_object);
-  argsarray.obj[0].type = OBJECT_TYPE_STR; /* first argument */
-  argsarray.obj[0].data.string = cstring_copy_string(plugin->function->args[0].str);
-  argsarray.obj[1].type = OBJECT_TYPE_STR; /* second argument */
-  argsarray.obj[1].data.string = cstring_copy_string(plugin->function->args[1].str);
-
-  rr->params.obj[2].type = argstype;
-  rr->params.obj[2].data.params = argsarray;
-}
-
-
-void helper_build_result_request(struct message_request *rr,
-    struct plugin *plugin,
-    message_object_type metaarraytype,
-    size_t metasize,
-    message_object_type metacallidtype,
-    message_object_type argstype)
-{
-  array argsarray = ARRAY_INIT;
-  array *meta;
-
-  rr->msgid = 1;
-
-  rr->params.size = 2;
-  rr->params.obj = CALLOC(rr->params.size, struct message_object);
-  rr->params.obj[0].type = metaarraytype;
-  meta = &rr->params.obj[0].data.params;
-  meta->size = metasize;
-  meta->obj = CALLOC(meta->size, struct message_object);
-  meta->obj[0].type = metacallidtype;
-  meta->obj[0].data.uinteger = plugin->callid;
-
-  argsarray.size = 2;
-  argsarray.obj = CALLOC(argsarray.size, struct message_object);
-  argsarray.obj[0].type = OBJECT_TYPE_STR; /* first argument */
-  argsarray.obj[0].data.string = cstring_copy_string(plugin->function->args[0].str);
-  argsarray.obj[1].type = OBJECT_TYPE_STR; /* second argument */
-  argsarray.obj[1].data.string = cstring_copy_string(plugin->function->args[1].str);
-
-  rr->params.obj[1].type = argstype;
-  rr->params.obj[1].data.params = argsarray;
-}
-
-void helper_request_set_callid(struct message_request *rr,
-  message_object_type callidtype)
-{
-  array *meta = &rr->params.obj[0].data.params;
-
-  meta->obj[0].type = callidtype;
-}
-
-void helper_request_set_meta_size(struct message_request *rr,
-  message_object_type metatype, uint64_t metasize)
-{
-  rr->params.obj[0].type = metatype;
-  rr->params.obj[0].data.params.size = metasize;
-}
-
-void helper_request_set_args_size(struct message_request *rr,
-  message_object_type argstype, uint64_t argssize)
-{
-  rr->params.obj[1].type = argstype;
-  rr->params.obj[1].data.params.size = argssize;
-}
-
-void helper_request_set_function_name(struct message_request *rr,
-  message_object_type nametype, char *name)
-{
-  free_string(rr->params.obj[1].data.string);
-  rr->params.obj[1].type = nametype;
-  rr->params.obj[1].data.string = cstring_copy_string(name);
-}
-
-void helper_request_set_pluginkey_type(struct message_request *rr,
-  message_object_type pluginkeytype, char *pluginkey)
-{
-  array *meta = &rr->params.obj[0].data.params;
-
-  free_string(meta->obj[0].data.string);
-  meta->obj[0].data.string = cstring_copy_string(pluginkey);
-  meta->obj[0].type = pluginkeytype;
 }

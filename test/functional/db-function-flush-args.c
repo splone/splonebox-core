@@ -20,6 +20,7 @@
 #include "helper-all.h"
 #include "rpc/db/sb-db.h"
 #include "sb-common.h"
+#include "api/sb-api.h"
 #include "helper-unix.h"
 
 
@@ -59,23 +60,23 @@ void functional_db_function_flush_args(UNUSED(void **state))
   ssize_t argc = 0;
 
   params.size = 4;
-  params.obj =  CALLOC(params.size, struct message_object);
+  params.items =  CALLOC(params.size, object);
 
-  params.obj[0].type = OBJECT_TYPE_STR;
-  params.obj[0].data.string = name;
+  params.items[0].type = OBJECT_TYPE_STR;
+  params.items[0].data.string = name;
 
-  params.obj[1].type = OBJECT_TYPE_STR;
-  params.obj[1].data.string = desc;
+  params.items[1].type = OBJECT_TYPE_STR;
+  params.items[1].data.string = desc;
 
-  params.obj[2].type = OBJECT_TYPE_ARRAY;
-  params.obj[2].data.params.size = 1;
-  params.obj[2].data.params.obj = CALLOC(params.obj[2].data.params.size,
-                                        struct message_object);
-  params.obj[2].data.params.obj[0].type = OBJECT_TYPE_INT;
-  params.obj[2].data.params.obj[0].data.uinteger = 6;
+  params.items[2].type = OBJECT_TYPE_ARRAY;
+  params.items[2].data.array.size = 1;
+  params.items[2].data.array.items = CALLOC(params.items[2].data.array.size,
+      object);
+  params.items[2].data.array.items[0].type = OBJECT_TYPE_INT;
+  params.items[2].data.array.items[0].data.uinteger = 6;
 
   connect_and_create(pluginkey);
-  args = &params.obj[2].data.params;
+  args = &params.items[2].data.array;
 
   /* register function */
   assert_int_equal(0, db_function_add(pluginkey, &params));
@@ -96,14 +97,15 @@ void functional_db_function_flush_args(UNUSED(void **state))
 
 
   /* now test with two arguments */
-  free_params(params.obj[2].data.params);
-  params.obj[2].data.params.size = 2;
-  params.obj[2].data.params.obj = CALLOC(params.obj[2].data.params.size,
-                                        struct message_object);
-  params.obj[2].data.params.obj[0].type = OBJECT_TYPE_INT;
-  params.obj[2].data.params.obj[0].data.uinteger = 6;
-  params.obj[2].data.params.obj[0].type = OBJECT_TYPE_INT;
-  params.obj[2].data.params.obj[0].data.uinteger = 12;
+  api_free_array(params.items[2].data.array);
+
+  params.items[2].data.array.size = 2;
+  params.items[2].data.array.items = CALLOC(params.items[2].data.array.size,
+      object);
+  params.items[2].data.array.items[0].type = OBJECT_TYPE_INT;
+  params.items[2].data.array.items[0].data.uinteger = 6;
+  params.items[2].data.array.items[0].type = OBJECT_TYPE_INT;
+  params.items[2].data.array.items[0].data.uinteger = 12;
 
   assert_int_equal(0, db_function_add(pluginkey, &params));
   argc = db_function_get_argc(pluginkey, name);
@@ -117,5 +119,5 @@ void functional_db_function_flush_args(UNUSED(void **state))
 
   db_close();
 
-  free_params(params);
+  api_free_array(params);
 }

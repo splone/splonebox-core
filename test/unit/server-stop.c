@@ -15,6 +15,7 @@
  */
 
 #include "sb-common.h"
+#include "helper-all.h"
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 #include "rpc/db/sb-db.h"

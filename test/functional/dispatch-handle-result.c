@@ -18,71 +18,190 @@
 
 #include "helper-all.h"
 #include "sb-common.h"
-#include "rpc/msgpack/sb-msgpack-rpc.h"
 #include "rpc/sb-rpc.h"
+#include "api/helpers.h"
+#include "api/sb-api.h"
+#ifdef __linux__
+#include <bsd/string.h>
+#endif
 
 #include "helper-all.h"
 #include "helper-unix.h"
 #include "helper-validate.h"
 
-static struct plugin *prepare_test(connection_request_event_info *info)
+static array api_result_valid(struct plugin * plugin)
 {
-  struct api_error err = ERROR_INIT;
-  info->api_error = err;
+  array meta = ARRAY_DICT_INIT;
+  ADD(meta, UINTEGER_OBJ(plugin->callid));
 
-  /* create test plugin that is used for the tests */
-  struct plugin *plugin = helper_get_example_plugin();
-  helper_register_plugin(plugin);
+  array args = ARRAY_DICT_INIT;
+  ADD(args, STRING_OBJ(cstring_copy_string(plugin->function->args[0].str)));
+  ADD(args, STRING_OBJ(cstring_copy_string(plugin->function->args[1].str)));
 
-  /* establish fake connection to plugin */
-  info->con = CALLOC(1, struct connection);
-  info->con->closed = true;
-  connection_hashmap_put(info->con->id, info->con);
-  strlcpy(info->con->cc.pluginkeystring, plugin->key.str, plugin->key.length+1);
-  assert_non_null(info->con);
+  array request = ARRAY_DICT_INIT;
+  ADD(request, ARRAY_OBJ(meta));
+  ADD(request, ARRAY_OBJ(args));
 
-  expect_check(__wrap_crypto_write, &deserialized, validate_run_request, plugin);
-  expect_check(__wrap_crypto_write, &deserialized, validate_run_response, plugin);
-
-  helper_build_run_request(&info->request, plugin
-    ,OBJECT_TYPE_ARRAY  /* meta array type */
-    ,2                  /* meta size */
-    ,OBJECT_TYPE_STR    /* target plugin key */
-    ,OBJECT_TYPE_NIL     /* call id type */
-    ,OBJECT_TYPE_STR    /* function name */
-    ,OBJECT_TYPE_ARRAY  /* arguments */
-  );
-
-  assert_int_equal(0, handle_run(info->con->id, &info->request, info->con->cc.pluginkeystring, &info->api_error));
-  free_params(info->request.params);
-
-  return plugin;
+  return request;
 }
+
+static array api_result_wrong_args_size_small(struct plugin * plugin)
+{
+  array meta = ARRAY_DICT_INIT;
+  ADD(meta, UINTEGER_OBJ(plugin->callid));
+
+  array request = ARRAY_DICT_INIT;
+  ADD(request, ARRAY_OBJ(meta));
+
+  return request;
+}
+
+static array api_result_wrong_args_size_big(struct plugin * plugin)
+{
+  array meta = ARRAY_DICT_INIT;
+  ADD(meta, UINTEGER_OBJ(plugin->callid));
+
+  array args = ARRAY_DICT_INIT;
+  ADD(args, STRING_OBJ(cstring_copy_string(plugin->function->args[0].str)));
+  ADD(args, STRING_OBJ(cstring_copy_string(plugin->function->args[1].str)));
+
+  array wrong = ARRAY_DICT_INIT;
+
+  array request = ARRAY_DICT_INIT;
+  ADD(request, ARRAY_OBJ(meta));
+  ADD(request, ARRAY_OBJ(args));
+  ADD(request, ARRAY_OBJ(wrong));
+
+  return request;
+}
+
+static array api_result_wrong_meta_size(struct plugin * plugin)
+{
+  array meta = ARRAY_DICT_INIT;
+  ADD(meta, UINTEGER_OBJ(plugin->callid));
+  ADD(meta, STRING_OBJ(cstring_copy_string("wrong")));
+
+  array args = ARRAY_DICT_INIT;
+  ADD(args, STRING_OBJ(cstring_copy_string(plugin->function->args[0].str)));
+  ADD(args, STRING_OBJ(cstring_copy_string(plugin->function->args[1].str)));
+
+  array request = ARRAY_DICT_INIT;
+  ADD(request, ARRAY_OBJ(meta));
+  ADD(request, ARRAY_OBJ(args));
+
+  return request;
+}
+
+static array api_result_wrong_meta_type(struct plugin * plugin)
+{
+  array args = ARRAY_DICT_INIT;
+  ADD(args, STRING_OBJ(cstring_copy_string(plugin->function->args[0].str)));
+  ADD(args, STRING_OBJ(cstring_copy_string(plugin->function->args[1].str)));
+
+  array request = ARRAY_DICT_INIT;
+  ADD(request, STRING_OBJ(cstring_copy_string("wrong")));
+  ADD(request, ARRAY_OBJ(args));
+
+  return request;
+}
+
+static array api_result_wrong_meta_callid_type(struct plugin * plugin)
+{
+  array meta = ARRAY_DICT_INIT;
+  ADD(meta, STRING_OBJ(cstring_copy_string("wrong")));
+
+  array args = ARRAY_DICT_INIT;
+  ADD(args, STRING_OBJ(cstring_copy_string(plugin->function->args[0].str)));
+  ADD(args, STRING_OBJ(cstring_copy_string(plugin->function->args[1].str)));
+
+  array request = ARRAY_DICT_INIT;
+  ADD(request, ARRAY_OBJ(meta));
+  ADD(request, ARRAY_OBJ(args));
+
+  return request;
+}
+
 
 void functional_dispatch_handle_result(UNUSED(void **state))
 {
-  connection_request_event_info info;
-  struct plugin *plugin;
+  struct api_error error = ERROR_INIT;
+  array request = ARRAY_DICT_INIT;
+  struct connection *con;
 
-  plugin = prepare_test(&info);
+  /* create test plugin that is used for the tests */
+  struct plugin *plugin = helper_get_example_plugin();
+
+  con = CALLOC(1, struct connection);
+  con->closed = true;
+  con->id = (uint64_t) randommod(281474976710656LL);
+  con->msgid = 4321;
+
+  assert_non_null(con);
+
+  strlcpy(con->cc.pluginkeystring, plugin->key.str, plugin->key.length+1);
+
+  array registermeta = ARRAY_DICT_INIT;
+  ADD(registermeta, STRING_OBJ(cstring_copy_string(plugin->name.str)));
+  ADD(registermeta, STRING_OBJ(cstring_copy_string(plugin->description.str)));
+  ADD(registermeta, STRING_OBJ(cstring_copy_string(plugin->author.str)));
+  ADD(registermeta, STRING_OBJ(cstring_copy_string(plugin->license.str)));
+
+  array registerarguments = ARRAY_DICT_INIT;
+  ADD(registerarguments, STRING_OBJ(cstring_copy_string(plugin->function->args[0].str)));
+  ADD(registerarguments, STRING_OBJ(cstring_copy_string(plugin->function->args[1].str)));
+
+  array registerfunc1 = ARRAY_DICT_INIT;
+  ADD(registerfunc1, STRING_OBJ(cstring_copy_string(plugin->function->name.str)));
+  ADD(registerfunc1, STRING_OBJ(cstring_copy_string(plugin->function->description.str)));
+  ADD(registerfunc1, ARRAY_OBJ(registerarguments));
+
+  array registerfunctions = ARRAY_DICT_INIT;
+  ADD(registerfunctions, ARRAY_OBJ(registerfunc1));
+
+  array registerrequest = ARRAY_DICT_INIT;
+  ADD(registerrequest, ARRAY_OBJ(registermeta));
+  ADD(registerrequest, ARRAY_OBJ(registerfunctions));
+
+  connect_to_db();
+  assert_int_equal(0, connection_init());
+
+  error.isset = false;
+
+  con->refcount++;
+
+  connection_hashmap_put(con->id, con);
+  pluginkeys_hashmap_put(con->cc.pluginkeystring, con->id);
+
+  handle_register(con->id, 123, con->cc.pluginkeystring, registerrequest,
+      &error);
+  assert_false(error.isset);
+  api_free_array(registerrequest);
+
+  expect_check(__wrap_crypto_write, &deserialized, validate_run_request, plugin);
+
+  // RUN API CALL
+  array runmeta = ARRAY_DICT_INIT;
+  ADD(runmeta, STRING_OBJ(cstring_copy_string(plugin->key.str)));
+  ADD(runmeta, OBJECT_OBJ((object) OBJECT_INIT));
+
+  array runargs = ARRAY_DICT_INIT;
+  ADD(runargs, STRING_OBJ(cstring_copy_string(plugin->function->args[0].str)));
+  ADD(runargs, STRING_OBJ(cstring_copy_string(plugin->function->args[1].str)));
+
+  array runrequest = ARRAY_DICT_INIT;
+  ADD(runrequest, ARRAY_OBJ(runmeta));
+  ADD(runrequest, STRING_OBJ(cstring_copy_string(plugin->function->name.str)));
+  ADD(runrequest, ARRAY_OBJ(runargs));
+
+  handle_run(con->id, 1234, con->cc.pluginkeystring, runrequest, &error);
+  api_free_array(runrequest);
 
   expect_check(__wrap_crypto_write, &deserialized, validate_result_request, NULL);
-  expect_check(__wrap_crypto_write, &deserialized, validate_result_response, NULL);
 
-  /*
-   * The following asserts verifies a legitim run call. In detail, it
-   * verifies, that the forwarded run request by the server is of proper
-   * format.
-   * */
-  helper_build_result_request(&info.request, plugin
-    ,OBJECT_TYPE_ARRAY  /* meta array type */
-    ,1                  /* meta array size */
-    ,OBJECT_TYPE_UINT   /* call id type */
-    ,OBJECT_TYPE_ARRAY  /* arguments */
-  );
-
-  assert_int_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
-
+  request = api_result_valid(plugin);
+  handle_result(con->id, 1234, con->cc.pluginkeystring, request, &error);
+  assert_false(error.isset);
+  api_free_array(request);
   /*
    * The following asserts verify, that the handle_result method cancels
    * as soon as illegitim result calls are processed. A API_ERROR must be
@@ -90,83 +209,47 @@ void functional_dispatch_handle_result(UNUSED(void **state))
    */
 
   /* size of payload too small */
-  info.request.params.size = 1;
-
-  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
+  request = api_result_wrong_args_size_small(plugin);
+  handle_result(con->id, 1234, con->cc.pluginkeystring, request, &error);
+  assert_true(error.isset);
+  assert_true(error.type == API_ERROR_TYPE_VALIDATION);
+  error.isset = false;
+  api_free_array(request);
 
   /* size of payload too big */
-  info.request.params.size = 3;
-
-  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-
-  info.request.params.size = 2;
+  request = api_result_wrong_args_size_big(plugin);
+  handle_result(con->id, 1234, con->cc.pluginkeystring, request, &error);
+  assert_true(error.isset);
+  assert_true(error.type == API_ERROR_TYPE_VALIDATION);
+  error.isset = false;
+  api_free_array(request);
 
   /* wrong meta size */
-  helper_request_set_meta_size(&info.request,
-    OBJECT_TYPE_ARRAY, 2);
-
-  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-
-  helper_request_set_meta_size(&info.request,
-    OBJECT_TYPE_ARRAY, 1);
+  request = api_result_wrong_meta_size(plugin);
+  handle_result(con->id, 1234, con->cc.pluginkeystring, request, &error);
+  assert_true(error.isset);
+  assert_true(error.type == API_ERROR_TYPE_VALIDATION);
+  error.isset = false;
+  api_free_array(request);
 
   /* wrong meta type */
-  helper_request_set_meta_size(&info.request,
-    OBJECT_TYPE_STR, 1);
-
-  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-
-  helper_request_set_meta_size(&info.request,
-    OBJECT_TYPE_ARRAY, 1);
+  request = api_result_wrong_meta_type(plugin);
+  handle_result(con->id, 1234, con->cc.pluginkeystring, request, &error);
+  assert_true(error.isset);
+  assert_true(error.type == API_ERROR_TYPE_VALIDATION);
+  error.isset = false;
+  api_free_array(request);
 
   /* wrong callid type */
-  helper_request_set_callid(&info.request, OBJECT_TYPE_STR);
+  request = api_result_wrong_meta_callid_type(plugin);
+  handle_result(con->id, 1234, con->cc.pluginkeystring, request, &error);
+  assert_true(error.isset);
+  assert_true(error.type == API_ERROR_TYPE_VALIDATION);
+  error.isset = false;
+  api_free_array(request);
 
-  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-
-  helper_request_set_callid(&info.request, OBJECT_TYPE_UINT);
-
-  /* wrong callid */
-  info.request.params.obj[0].data.params.obj[0].data.uinteger = 0;
-
-  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-
-  info.request.params.obj[0].data.params.obj[0].data.uinteger = plugin->callid;
-
-  /* wrong argument type */
-  helper_request_set_args_size(&info.request,
-    OBJECT_TYPE_STR, 2);
-
-  assert_int_not_equal(0, handle_result(info.con->id, &info.request, info.con->cc.pluginkeystring, &info.api_error));
-  assert_true(info.api_error.isset);
-  assert_true(info.api_error.type == API_ERROR_TYPE_VALIDATION);
-  info.api_error.isset = false;
-
-  helper_request_set_args_size(&info.request,
-    OBJECT_TYPE_ARRAY, 2);
-
-
-  free_params(info.request.params);
   helper_free_plugin(plugin);
   connection_teardown();
-  FREE(info.con);
+  FREE(con);
   db_close();
 }

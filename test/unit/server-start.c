@@ -17,6 +17,7 @@
 #include <time.h>
 #include <stdlib.h>
 
+#include "helper-all.h"
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"

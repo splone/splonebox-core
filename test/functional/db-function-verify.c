@@ -20,6 +20,7 @@
 
 #include "helper-all.h"
 #include "rpc/sb-rpc.h"
+#include "api/sb-api.h"
 #include "sb-common.h"
 #include "helper-unix.h"
 
@@ -33,22 +34,22 @@ void functional_db_function_verify(UNUSED(void **state))
   array params, *args;
 
   params.size = 4;
-  params.obj =  CALLOC(params.size, struct message_object);
+  params.items =  CALLOC(params.size, object);
 
-  params.obj[0].type = OBJECT_TYPE_STR;
-  params.obj[0].data.string = name;
+  params.items[0].type = OBJECT_TYPE_STR;
+  params.items[0].data.string = name;
 
-  params.obj[1].type = OBJECT_TYPE_STR;
-  params.obj[1].data.string = desc;
+  params.items[1].type = OBJECT_TYPE_STR;
+  params.items[1].data.string = desc;
 
-  params.obj[2].type = OBJECT_TYPE_ARRAY;
-  params.obj[2].data.params.size = 1;
-  params.obj[2].data.params.obj = CALLOC(params.obj[2].data.params.size,
-                                        struct message_object);
-  params.obj[2].data.params.obj[0].type = OBJECT_TYPE_INT;
-  params.obj[2].data.params.obj[0].data.uinteger = 6;
+  params.items[2].type = OBJECT_TYPE_ARRAY;
+  params.items[2].data.array.size = 1;
+  params.items[2].data.array.items = CALLOC(params.items[2].data.array.size,
+      object);
+  params.items[2].data.array.items[0].type = OBJECT_TYPE_INT;
+  params.items[2].data.array.items[0].data.uinteger = 6;
 
-  args = &params.obj[2].data.params;
+  args = &params.items[2].data.array;
 
   connect_and_create(pluginkey);
 
@@ -73,11 +74,11 @@ void functional_db_function_verify(UNUSED(void **state))
 
   /* verifying an existing function with wrong arguments' type */
   args->size = 1;
-  args->obj[0].type = OBJECT_TYPE_UINT;
-  args->obj[0].data.integer = -1;
+  args->items[0].type = OBJECT_TYPE_UINT;
+  args->items[0].data.integer = -1;
   assert_int_not_equal(0, db_function_verify(pluginkey, name, args));
 
-  free_params(params);
-  free_string(invalid_name);
+  api_free_array(params);
+  api_free_string(invalid_name);
   db_close();
 }
