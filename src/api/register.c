@@ -19,13 +19,12 @@
 
 #include "rpc/db/sb-db.h"
 #include "api/sb-api.h"
+#include "api/helpers.h"
 
-int api_register(string name, string desc,
-    string author, string license, array functions, uint64_t con_id,
-    uint32_t msgid, char *pluginkey, struct api_error *api_error)
+int api_register(string name, string desc, string author, string license,
+    array functions, char *pluginkey, struct api_error *api_error)
 {
-  struct message_object *func;
-  array params = ARRAY_INIT;
+  object *func;
 
   if (functions.size == 0) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -40,7 +39,7 @@ int api_register(string name, string desc,
   }
 
   for (size_t i = 0; i < functions.size; i++) {
-    func = &functions.obj[i];
+    func = &functions.items[i];
 
     if (func->type != OBJECT_TYPE_ARRAY) {
       error_set(api_error, API_ERROR_TYPE_VALIDATION,
@@ -48,7 +47,7 @@ int api_register(string name, string desc,
       continue;
     }
 
-    if (db_function_add(pluginkey, &func->data.params) == -1) {
+    if (db_function_add(pluginkey, &func->data.array) == -1) {
       error_set(api_error, API_ERROR_TYPE_VALIDATION,
           "Failed to register function in database.");
       continue;
@@ -57,10 +56,6 @@ int api_register(string name, string desc,
 
   if (api_error->isset)
     return (-1);
-
-  if (connection_send_response(con_id, msgid, params, api_error) < 0) {
-    return (-1);
-  };
 
   return (0);
 }
