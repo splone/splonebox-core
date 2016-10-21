@@ -83,7 +83,8 @@
 #define API_ERROR_MESSAGE_LEN 512
 
 typedef enum {
-  API_ERROR_TYPE_VALIDATION,
+  API_ERROR_TYPE_EXCEPTION,
+  API_ERROR_TYPE_VALIDATION
 } api_error_type;
 
 typedef struct {
@@ -442,7 +443,8 @@ define UNUSED(x) x
 
 #define BOX_ADDR_BUF_LEN 48
 
-#define ARRAY_INIT {.size = 0, .capacity = 0, .obj = NULL}
+#define ARRAY_INIT {.size = 0, .capacity = 0, .items = NULL}
+#define ARRAY_DICT_INIT {.size = 0, .capacity = 0, .items = NULL}
 #define STRING_INIT {.str = NULL, .length = 0}
 #define ERROR_INIT {.isset = false}
 
@@ -526,6 +528,8 @@ uint64_t parse_units(const char *val, struct unit_table_t *u, int *ok);
 const char * eat_whitespace(const char *s);
 char * box_strdup(const char *s);
 char * box_strndup(const char *s, size_t n);
+void * sb_memdup(const void *mem, size_t len);
+void * sb_memdup_nulterm(const void *mem, size_t len);
 int box_sscanf(const char *buf, const char *pattern, ...);
 int box_vsscanf(const char *buf, const char *pattern, va_list ap);
 

@@ -43,7 +43,7 @@
 /* Typedefs */
 typedef struct outputstream   outputstream;
 typedef struct inputstream inputstream;
-typedef int (*inputstream_cb)(inputstream *inputstream, void *data, bool eof);
+typedef void (*inputstream_cb)(inputstream *inputstream, void *data, bool eof);
 typedef struct api_event api_event;
 typedef struct equeue equeue;
 typedef struct queue_entry queue_entry;
@@ -53,13 +53,13 @@ typedef struct connection_request_event_info connection_request_event_info;
 
 #define MESSAGE_REQUEST_ARRAY_SIZE 4
 #define MESSAGE_RESPONSE_ARRAY_SIZE 4
-#define MESSAGE_TYPE_REQUEST 0
-#define MESSAGE_TYPE_RESPONSE 1
 #define MESSAGE_RESPONSE_UNKNOWN UINT32_MAX
+
+#define METHOD_MAXLEN 512
 
 #define STREAM_BUFFER_SIZE 0xffff
 
-#define CALLINFO_INIT (struct callinfo) {0, false, false,((struct message_response) {0, ARRAY_INIT})}
+#define CALLINFO_INIT (struct callinfo) {0, false, false, NIL}
 
 
 /*
@@ -74,15 +74,23 @@ typedef struct connection_request_event_info connection_request_event_info;
 /* Enums */
 
 typedef enum {
+  MESSAGE_TYPE_REQUEST,
+  MESSAGE_TYPE_RESPONSE,
+  MESSAGE_TYPE_NOTIFICATION
+} message_type;
+
+typedef struct object object;
+
+typedef enum {
   OBJECT_TYPE_NIL,
   OBJECT_TYPE_INT,
   OBJECT_TYPE_UINT,
   OBJECT_TYPE_BOOL,
   OBJECT_TYPE_FLOAT,
   OBJECT_TYPE_STR,
-  OBJECT_TYPE_BIN,
   OBJECT_TYPE_ARRAY,
-} message_object_type;
+  OBJECT_TYPE_DICTIONARY
+} object_type;
 
 typedef enum {
   TUNNEL_INITIAL,
@@ -92,14 +100,22 @@ typedef enum {
 
 /* Structs */
 
+typedef struct key_value_pair key_value_pair;
+
 typedef struct {
-  message_object *obj;
+  object *items;
   size_t size;
   size_t capacity;
 } array;
 
-struct message_object {
-  message_object_type type;
+typedef struct {
+  key_value_pair *items;
+  size_t size;
+  size_t capacity;
+} dictionary;
+
+struct object {
+  object_type type;
   union {
     int64_t integer;
     uint64_t uinteger;
@@ -107,7 +123,8 @@ struct message_object {
     char *bin;
     bool boolean;
     double floating;
-    array params;
+    array array;
+    dictionary dictionary;
   } data;
 };
 
@@ -122,6 +139,12 @@ struct message_response {
   array params;
 };
 
+struct key_value_pair {
+  string key;
+  object value;
+};
+
+
 /*****************************************************************************
  * The following crypto_context structure should be considered PRIVATE to    *
  * the rpc connection layer. No non-rpc connection layer code should be      *
@@ -130,6 +153,23 @@ struct message_response {
 #define PLUGINKEY_SIZE 8
 #define PLUGINKEY_STRING_SIZE ((PLUGINKEY_SIZE * 2) + 1)
 #define CLIENTLONGTERMPK_ARRAY_SIZE 32
+
+typedef object (*apidispatchwrapper)(uint64_t con_id, uint64_t msgid,
+    char *pluginkey, array args, struct api_error *error);
+
+typedef struct {
+  apidispatchwrapper func;
+  bool async;
+  string name;
+} dispatch_info;
+
+/* hashmap declarations */
+MAP_DECLS(uint64_t, string)
+MAP_DECLS(string, ptr_t)
+MAP_DECLS(uint64_t, ptr_t) /* maps callid <> pluginkey */
+MAP_DECLS(cstr_t, ptr_t) /* maps pluginkey <> connection */
+MAP_DECLS(string, dispatch_info)
+MAP_DECLS(cstr_t, uint64_t)
 
 struct crypto_context {
   crypto_state state;
@@ -144,10 +184,18 @@ struct crypto_context {
   char pluginkeystring[PLUGINKEY_STRING_SIZE];
 };
 
+typedef struct wbuffer wbuffer;
+
+struct wbuffer {
+  size_t size;
+  size_t refcount;
+  char *data;
+};
+
 struct connection {
   uint64_t id;
   uint32_t msgid;
-  uint32_t pendingcalls;
+  size_t pending_requests;
   size_t refcount;
   msgpack_unpacker *mpac;
   msgpack_sbuffer *sbuf;
@@ -160,6 +208,7 @@ struct connection {
     uv_stream_t *uv;
   } streams;
   kvec_t(struct callinfo *) callvector;
+  kvec_t(wbuffer *) delayed_notifications;
   struct crypto_context cc;
   struct {
     uint64_t start;
@@ -169,24 +218,15 @@ struct connection {
     unsigned char *data;
   } packet;
   uv_timer_t minutekey_timer;
+  hashmap(cstr_t, ptr_t) *subscribed_events;
 };
 
 struct callinfo {
   uint32_t msgid;
-  bool hasresponse;
-  bool errorresponse;
-  struct message_response response;
+  bool returned;
+  bool errored;
+  object result;
 };
-
-typedef int (*apidispatchwrapper)(uint64_t con_id,
-    struct message_request *request, char *pluginkey,
-    struct api_error *error);
-
-typedef struct {
-  apidispatchwrapper func;
-  bool async;
-  string name;
-} dispatch_info;
 
 struct outputstream {
   uv_stream_t *stream;
@@ -216,9 +256,9 @@ struct inputstream {
 /* this structure holds a request and all information to send a response */
 struct connection_request_event_info {
   struct connection *con;
-  struct message_request request;
   dispatch_info dispatcher;
-  struct api_error api_error;
+  array args;
+  uint64_t msgid;
 };
 
 /* this structure holds the request event information and a callback to a
@@ -246,14 +286,6 @@ struct queue_entry {
   TAILQ_ENTRY(queue_entry) node;
 };
 
-/* hashmap declarations */
-MAP_DECLS(uint64_t, string)
-MAP_DECLS(string, ptr_t)
-MAP_DECLS(uint64_t, ptr_t) /* maps callid <> pluginkey */
-MAP_DECLS(cstr_t, ptr_t) /* maps pluginkey <> connection */
-MAP_DECLS(string, dispatch_info)
-MAP_DECLS(cstr_t, uint64_t)
-
 /* define global root event queue */
 extern equeue *equeue_root;
 
@@ -276,15 +308,18 @@ int connection_init(void);
  */
 int connection_create(uv_stream_t *stream);
 
-struct callinfo connection_send_request(char *pluginkey, string method,
-    array params, struct api_error *api_error);
+object connection_send_request(char *pluginkey, string method,
+    array args, struct api_error *err);
 int connection_send_response(uint64_t con_id, uint32_t msgid,
-    array params, struct api_error *api_error);
-int connection_hashmap_put(uint64_t id, struct connection *con);
-int pluginkeys_hashmap_put(char *pluginkey, uint64_t id);
+    object arg, struct api_error *api_error);
+void connection_hashmap_put(uint64_t id, struct connection *con);
+void pluginkeys_hashmap_put(char *pluginkey, uint64_t id);
 void loop_wait_for_response(struct connection *con,
     struct callinfo *cinfo);
 int connection_teardown(void);
+void connection_subscribe(uint64_t id, char *event);
+void connection_unsubscribe(uint64_t id, char *event);
+bool connection_send_event(uint64_t id, char *name, array args);
 
 /**
  * Create a new `outputstream` instance. A `outputstream` instance contains the
@@ -478,16 +513,18 @@ inputstream * streamhandle_get_inputstream(uv_handle_t *handle);
 int dispatch_table_init(void);
 int dispatch_teardown(void);
 dispatch_info dispatch_table_get(string method);
+dispatch_info msgpack_rpc_get_handler_for(const char *name, size_t name_len);
 void dispatch_table_put(string method, dispatch_info info);
-int handle_run(uint64_t con_id, struct message_request *request,
-    char *pluginkey, struct api_error *error);
-int handle_result(uint64_t con_id, struct message_request *request,
-    char *pluginkey, struct api_error *error);
-int handle_register(uint64_t con_id, struct message_request *request,
-    char *pluginkey, struct api_error *error);
-int handle_error(uint64_t con_id, struct message_request *request,
-    char *pluginkey, struct api_error *error);
-
+object handle_run(uint64_t con_id, uint64_t msgid, char *pluginkey,
+    array args, struct api_error *error);
+object handle_result(uint64_t con_id, uint64_t msgid, char *pluginkey,
+    array args, struct api_error *error);
+object handle_register(uint64_t con_id, uint64_t msgid, char *pluginkey,
+    array args, struct api_error *error);
+object msgpack_rpc_handle_invalid_arguments(uint64_t channel_id,
+    uint64_t msgid, char *pluginkey, array args, struct api_error *error);
+object msgpack_rpc_handle_missing_method(uint64_t channel_id,
+    uint64_t msgid, char *pluginkey, array args, struct api_error *error);
 
 /* Message Functions */
 void free_params(array params);
@@ -508,6 +545,7 @@ void message_dispatch(msgpack_object *req, msgpack_packer *res);
 uint64_t message_get_id(msgpack_object *obj);
 bool message_is_error_response(msgpack_object *obj);
 struct message_object message_object_copy(struct message_object obj);
+object copy_object(object obj);
 
 
 
@@ -601,3 +639,9 @@ uint64_t uint64_unpack(const unsigned char *x);
  * returns -1 in case of error otherwise 0
  */
 int byte_isequal(const void *yv, long long ylen, const void *xv);
+
+void msgpack_rpc_serialize_response(uint64_t response_id, struct api_error *err,
+    object arg, msgpack_packer *pac);
+
+void msgpack_rpc_serialize_request(uint64_t request_id, string method,
+    array args, msgpack_packer *pac);

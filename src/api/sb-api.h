@@ -55,6 +55,10 @@ int api_run(char *targetpluginkey, string function_name, uint64_t callid,
  * @param[in] key string to store the API key.
  * @return 0 in case of success otherwise -1
  */
+
+int api_broadcast(string eventname, array args, struct api_error *api_error);
+int api_subscribe(uint64_t id, string event, struct api_error *api_error);
+int api_unsubscribe(uint64_t id, string event, struct api_error *api_error);
 int api_get_key(string key);
 
 int api_result(char *targetpluginkey, uint64_t callid, array args,

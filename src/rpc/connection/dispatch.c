@@ -34,16 +34,29 @@
 
 #include "rpc/sb-rpc.h"
 #include "api/sb-api.h"
+#include "api/helpers.h"
 #include "sb-common.h"
 
 static msgpack_sbuffer sbuf;
 static hashmap(string, dispatch_info) *dispatch_table = NULL;
 static hashmap(uint64_t, ptr_t) *callids = NULL;
 
-int handle_error(uint64_t con_id, struct message_request *request,
-    char *pluginkey, struct api_error *error)
+object msgpack_rpc_handle_missing_method(UNUSED(uint64_t channel_id),
+    UNUSED(uint64_t msgid), UNUSED(char *pluginkey), UNUSED(array args),
+    struct api_error *error)
 {
-  return (0);
+  snprintf(error->msg, sizeof(error->msg), "Invalid method name");
+  error->isset = true;
+  return NIL;
+}
+
+object msgpack_rpc_handle_invalid_arguments(UNUSED(uint64_t channel_id),
+    UNUSED(uint64_t msgid), UNUSED(char *pluginkey), UNUSED(array args),
+    struct api_error *error)
+{
+  snprintf(error->msg, sizeof(error->msg), "Invalid method arguments");
+  error->isset = true;
+  return NIL;
 }
 
 /*
@@ -53,29 +66,31 @@ int handle_error(uint64_t con_id, struct message_request *request,
  * @param api_error `struct api_error` error object-instance
  * @return 0 if success, -1 otherwise
  */
-int handle_register(uint64_t con_id, struct message_request *request,
-    char *pluginkey, struct api_error *error)
+object handle_register(UNUSED(uint64_t con_id), UNUSED(uint64_t msgid),
+    char *pluginkey, array args, struct api_error *error)
 {
-  array *meta = NULL;
-  array functions;
+  array rv = ARRAY_DICT_INIT;
+  object ret = ARRAY_OBJ(rv);
+  array meta = ARRAY_DICT_INIT;
+  array functions = ARRAY_DICT_INIT;
   string name, description, author, license;
 
-  if (!error || !request)
-    return (-1);
+  if (!error)
+    goto end;
 
   /* check params size */
-  if (request->params.size != 2) {
+  if (args.size != 2) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid params size");
-    return (-1);
+    goto end;
   }
 
-  if (request->params.obj[0].type == OBJECT_TYPE_ARRAY)
-    meta = &request->params.obj[0].data.params;
+  if (args.items[0].type == OBJECT_TYPE_ARRAY)
+    meta = args.items[0].data.array;
   else {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. meta params has wrong type");
-    return (-1);
+    goto end;
   }
 
   /*
@@ -83,239 +98,352 @@ int handle_register(uint64_t con_id, struct message_request *request,
    * [name, description, author, license]
    */
 
-  if (!meta) {
-    error_set(error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching register API request. meta params is NULL");
-    return (-1);
-  }
-
-  if (meta->size != 4) {
+  if (meta.size != 4) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid meta params size");
-    return (-1);
+    goto end;
   }
 
   /* extract meta information */
-  if ((meta->obj[0].type != OBJECT_TYPE_STR) ||
-      (meta->obj[1].type != OBJECT_TYPE_STR) ||
-      (meta->obj[2].type != OBJECT_TYPE_STR) ||
-      (meta->obj[3].type != OBJECT_TYPE_STR)) {
+  if ((meta.items[0].type != OBJECT_TYPE_STR) ||
+      (meta.items[1].type != OBJECT_TYPE_STR) ||
+      (meta.items[2].type != OBJECT_TYPE_STR) ||
+      (meta.items[3].type != OBJECT_TYPE_STR)) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. meta element has wrong type");
-    return (-1);
+    goto end;
   }
 
-  if (!meta->obj[0].data.string.str || !meta->obj[1].data.string.str ||
-      !meta->obj[2].data.string.str || !meta->obj[3].data.string.str) {
+  if (!meta.items[0].data.string.str || !meta.items[1].data.string.str ||
+      !meta.items[2].data.string.str || !meta.items[3].data.string.str) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. Invalid meta params size");
-    return (-1);
+    goto end;
   }
 
-  name = meta->obj[0].data.string;
-  description = meta->obj[1].data.string;
-  author = meta->obj[2].data.string;
-  license = meta->obj[3].data.string;
+  name = meta.items[0].data.string;
+  description = meta.items[1].data.string;
+  author = meta.items[2].data.string;
+  license = meta.items[3].data.string;
 
-  if (request->params.obj[1].type != OBJECT_TYPE_ARRAY) {
+  if (args.items[1].type == OBJECT_TYPE_ARRAY) {
+    functions = args.items[1].data.array;
+  } else {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching register API request. functions has wrong type");
-    return (-1);
+    goto end;
   }
 
-  functions = request->params.obj[1].data.params;
-
-  if (api_register(name, description, author, license,
-      functions, con_id, request->msgid, pluginkey, error) == -1) {
+  if (api_register(name, description, author, license, functions, pluginkey,
+      error) == -1) {
 
     if (!error->isset)
       error_set(error, API_ERROR_TYPE_VALIDATION,
          "Error running register API request.");
 
-    return (-1);
+    goto end;
   }
 
-  return (0);
+end:
+  return ret;
 }
 
 
-int handle_run(uint64_t con_id, struct message_request *request,
-    char *pluginkey, struct api_error *error)
+object handle_run(UNUSED(uint64_t con_id), UNUSED(uint64_t msgid),
+    char *pluginkey, array args, struct api_error *error)
 {
+  array rv = ARRAY_DICT_INIT;
+  array meta = ARRAY_DICT_INIT;
+  array runargs = ARRAY_DICT_INIT;
+  string function_name = STRING_INIT;
+  object ret = ARRAY_OBJ(rv);
   uint64_t callid;
-  array *meta = NULL;
-  string function_name;
   char *targetpluginkey;
 
-  struct message_object args_object;
-
-  if (!error || !request)
-    return (-1);
+  if (!error)
+    goto end;
 
   /* check params size */
-  if (request->params.size != 3) {
+  if (args.size != 3) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid params size");
-    return (-1);
+    goto end;
   }
 
-  if (request->params.obj[0].type == OBJECT_TYPE_ARRAY)
-    meta = &request->params.obj[0].data.params;
+  if (args.items[0].type == OBJECT_TYPE_ARRAY)
+    meta = args.items[0].data.array;
   else {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. meta params has wrong type");
-    return (-1);
-  }
-
-  if (!meta) {
-    error_set(error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching run API request. meta params is NULL");
-    return (-1);
+    goto end;
   }
 
   /* meta = [targetpluginkey, nil]*/
-  if (meta->size != 2) {
+  if (meta.size != 2) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid meta params size");
-    return (-1);
+    goto end;
   }
 
   /* extract meta information */
-  if (meta->obj[0].type != OBJECT_TYPE_STR) {
+  if (meta.items[0].type != OBJECT_TYPE_STR) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. meta elements have wrong type");
-    return (-1);
+    goto end;
   }
 
-  if (!meta->obj[0].data.string.str ||
-    meta->obj[0].data.string.length+1 != PLUGINKEY_STRING_SIZE) {
+  if (!meta.items[0].data.string.str ||
+    meta.items[0].data.string.length + 1 != PLUGINKEY_STRING_SIZE) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. Invalid meta params size");
-    return (-1);
+    goto end;
   }
 
-  targetpluginkey = meta->obj[0].data.string.str;
+  targetpluginkey = meta.items[0].data.string.str;
   to_upper(targetpluginkey);
 
-  if (meta->obj[1].type != OBJECT_TYPE_NIL) {
+  if (meta.items[1].type != OBJECT_TYPE_NIL) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. meta elements have wrong type");
-    return (-1);
+    goto end;
   }
 
-  if (request->params.obj[1].type != OBJECT_TYPE_STR) {
+  if (args.items[1].type == OBJECT_TYPE_STR) {
+    function_name = args.items[1].data.string;
+  } else {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. function string has wrong type");
-    return (-1);
+    goto end;
   }
 
-  if (!request->params.obj[1].data.string.str) {
-    error_set(error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching register API request. Invalid meta params size");
-    return (-1);
-  }
-
-  function_name = request->params.obj[1].data.string;
-
-  if (request->params.obj[2].type != OBJECT_TYPE_ARRAY) {
+  if (args.items[2].type == OBJECT_TYPE_ARRAY) {
+    runargs = args.items[2].data.array;
+  } else {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API request. function string has wrong type");
-    return (-1);
+    goto end;
   }
 
-  args_object = request->params.obj[2];
   callid = (uint64_t) randommod(281474976710656LL);
   LOG_VERBOSE(VERBOSE_LEVEL_1, "generated callid %lu\n", callid);
   hashmap_put(uint64_t, ptr_t)(callids, callid, pluginkey);
 
-  if (api_run(targetpluginkey, function_name, callid, args_object, con_id,
-      request->msgid, error) == -1) {
+  if (api_run(targetpluginkey, function_name, callid, runargs, error) == -1) {
     if (false == error->isset)
       error_set(error, API_ERROR_TYPE_VALIDATION,
          "Error executing run API request.");
-    return (-1);
+    goto end;
   }
 
-  return (0);
+  ret = ARRAY_OBJ(((array) {
+    .size = 1,
+    .capacity = 1,
+    .items = &UINTEGER_OBJ(callid)
+  }));
+
+end:
+  return ret;
 }
 
-int handle_result(uint64_t con_id, struct message_request *request,
-    char *pluginkey, struct api_error *error)
+object handle_result(UNUSED(uint64_t con_id), UNUSED(uint64_t msgid),
+    UNUSED(char *pluginkey), array args, struct api_error *error)
 {
+  array rv = ARRAY_DICT_INIT;
+  array meta = ARRAY_DICT_INIT;
+  array resultargs = ARRAY_DICT_INIT;
+  object ret = ARRAY_OBJ(rv);
   uint64_t callid;
-  array *meta = NULL;
-  struct message_object args_object;
 
   char * targetpluginkey;
 
-  if (!error || !request)
-    return (-1);
+  if (!error)
+    goto end;
 
   /* check params size */
-  if (request->params.size != 2) {
+  if (args.size != 2) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching result API request. Invalid params size");
-    return (-1);
+    goto end;
   }
 
-  if (request->params.obj[0].type == OBJECT_TYPE_ARRAY)
-    meta = &request->params.obj[0].data.params;
+  if (args.items[0].type == OBJECT_TYPE_ARRAY)
+    meta = args.items[0].data.array;
   else {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching result API request. meta params has wrong type");
-    return (-1);
-  }
-
-  if (!meta) {
-    error_set(error, API_ERROR_TYPE_VALIDATION,
-        "Error dispatching result API request. meta params is NULL");
-    return (-1);
+    goto end;
   }
 
   /* meta = [callid]*/
-  if (meta->size != 1) {
+  if (meta.size != 1) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching result API request. Invalid meta params size");
-    return (-1);
+    goto end;
   }
 
   /* extract meta information */
-  if (meta->obj[0].type != OBJECT_TYPE_UINT) {
+  if (meta.items[0].type == OBJECT_TYPE_UINT) {
+    callid = meta.items[0].data.uinteger;
+  } else {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching result API request. meta elements have wrong type");
-    return (-1);
+    goto end;
   }
 
-  callid = meta->obj[0].data.uinteger;
-
-  if (request->params.obj[1].type != OBJECT_TYPE_ARRAY) {
+  if (args.items[1].type == OBJECT_TYPE_ARRAY) {
+    resultargs = args.items[1].data.array;
+  } else {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching result API request. function string has wrong type");
-    return (-1);
+    goto end;
   }
-
-  args_object = request->params.obj[1];
 
   targetpluginkey = hashmap_get(uint64_t, ptr_t)(callids, callid);
 
   if (!targetpluginkey) {
     error_set(error, API_ERROR_TYPE_VALIDATION,
       "Failed to find target's key associated with given callid.");
-    return (-1);
+    goto end;
   }
 
-  if (api_result(targetpluginkey, callid, args_object, con_id, request->msgid,
-      error) == -1) {
+  if (api_result(targetpluginkey, callid, resultargs, error) == -1) {
     if (false == error->isset)
       error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error executing result API request.");
-    return (-1);
+    goto end;
   }
 
   hashmap_del(uint64_t, ptr_t)(callids, callid);
 
-  return (0);
+  ret = ARRAY_OBJ(((array) {
+    .size = 1,
+    .capacity = 1,
+    .items = &UINTEGER_OBJ(callid)
+  }));
+
+end:
+  return ret;
 }
+
+
+object handle_broadcast(UNUSED(uint64_t con_id), UNUSED(uint64_t msgid),
+    UNUSED(char *pluginkey), array args, struct api_error *error)
+{
+  array rv = ARRAY_DICT_INIT;
+  array eventargs = ARRAY_DICT_INIT;
+  object ret = ARRAY_OBJ(rv);
+  string eventname = STRING_INIT;
+
+  if (!error)
+    goto end;
+
+  /* check params size */
+  if (args.size != 2) {
+    error_set(error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching broadcast API request. Invalid params size");
+    goto end;
+  }
+
+  if (args.items[0].type == OBJECT_TYPE_STR)
+    eventname = args.items[0].data.string;
+  else {
+    error_set(error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching broadcast API request. event name has wrong type");
+    goto end;
+  }
+
+  if (args.items[1].type == OBJECT_TYPE_ARRAY)
+    eventargs = args.items[0].data.array;
+  else {
+    error_set(error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching broadcast API request. event args has wrong type");
+    goto end;
+  }
+
+  if (api_broadcast(eventname, eventargs, error) == -1) {
+    if (false == error->isset)
+      error_set(error, API_ERROR_TYPE_VALIDATION,
+        "Error executing broadcast API request.");
+    goto end;
+  }
+
+end:
+  return ret;
+}
+
+
+object handle_subscribe(uint64_t con_id, UNUSED(uint64_t msgid),
+    UNUSED(char *pluginkey), array args, struct api_error *error)
+{
+  array rv = ARRAY_DICT_INIT;
+  object ret = ARRAY_OBJ(rv);
+  string eventname = STRING_INIT;
+
+  if (!error)
+    goto end;
+
+  /* check params size */
+  if (args.size != 1) {
+    error_set(error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching broadcast API request. Invalid params size");
+    goto end;
+  }
+
+  if (args.items[0].type == OBJECT_TYPE_STR)
+    eventname = args.items[0].data.string;
+  else {
+    error_set(error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching broadcast API request. event name has wrong type");
+    goto end;
+  }
+
+  if (api_subscribe(con_id, eventname, error) == -1) {
+    if (false == error->isset)
+      error_set(error, API_ERROR_TYPE_VALIDATION,
+        "Error executing broadcast API request.");
+    goto end;
+  }
+
+end:
+  return ret;
+}
+
+object handle_unsubscribe(uint64_t con_id, UNUSED(uint64_t msgid),
+    UNUSED(char *pluginkey), array args, struct api_error *error)
+{
+  array rv = ARRAY_DICT_INIT;
+  object ret = ARRAY_OBJ(rv);
+  string eventname = STRING_INIT;
+
+  if (!error)
+    goto end;
+
+  /* check params size */
+  if (args.size != 1) {
+    error_set(error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching broadcast API request. Invalid params size");
+    goto end;
+  }
+
+  if (args.items[0].type == OBJECT_TYPE_STR)
+    eventname = args.items[0].data.string;
+  else {
+    error_set(error, API_ERROR_TYPE_VALIDATION,
+        "Error dispatching broadcast API request. event name has wrong type");
+    goto end;
+  }
+
+  if (api_unsubscribe(con_id, eventname, error) == -1) {
+    if (false == error->isset)
+      error_set(error, API_ERROR_TYPE_VALIDATION,
+        "Error executing broadcast API request.");
+    goto end;
+  }
+
+end:
+  return ret;
+}
+
 
 void dispatch_table_put(string method, dispatch_info info)
 {
@@ -337,6 +465,19 @@ int dispatch_teardown(void)
   return (0);
 }
 
+dispatch_info msgpack_rpc_get_handler_for(const char *name, size_t name_len)
+{
+  string m = { .str = (char *)name, .length = name_len };
+  dispatch_info rv =
+    hashmap_get(string, dispatch_info)(dispatch_table, m);
+
+  if (!rv.func) {
+    rv.func = msgpack_rpc_handle_missing_method;
+  }
+
+  return rv;
+}
+
 
 int dispatch_table_init(void)
 {
@@ -344,10 +485,15 @@ int dispatch_table_init(void)
       .name = (string) {.str = "register", .length = sizeof("register") - 1}};
   dispatch_info run_info = {.func = handle_run, .async = true,
       .name = (string) {.str = "run", .length = sizeof("run") - 1}};
-  dispatch_info error_info = {.func = handle_error, .async = true,
-      .name = (string) {.str = "error", .length = sizeof("error") - 1}};
   dispatch_info result_info = {.func = handle_result, .async = true,
       .name = (string) {.str = "result", .length = sizeof("result") - 1,}};
+  dispatch_info broadcast_info = {.func = handle_broadcast, .async = true,
+      .name = (string) {.str = "broadcast", .length = sizeof("broadcast") - 1,}};
+  dispatch_info subscribe_info = {.func = handle_subscribe, .async = false,
+      .name = (string) {.str = "subscribe", .length = sizeof("subscribe") - 1,}};
+  dispatch_info unsubscribe_info = {.func = handle_unsubscribe, .async = false,
+      .name = (string) {.str = "unsubscribe", .length = sizeof("unsubscribe") - 1,}};
+
 
   msgpack_sbuffer_init(&sbuf);
 
@@ -359,9 +505,10 @@ int dispatch_table_init(void)
 
   dispatch_table_put(register_info.name, register_info);
   dispatch_table_put(run_info.name, run_info);
-  dispatch_table_put(error_info.name, error_info);
   dispatch_table_put(result_info.name, result_info);
-
+  dispatch_table_put(broadcast_info.name, broadcast_info);
+  dispatch_table_put(subscribe_info.name, subscribe_info);
+  dispatch_table_put(unsubscribe_info.name, unsubscribe_info);
 
   return (0);
 }

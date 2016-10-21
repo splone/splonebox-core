@@ -59,13 +59,13 @@ void loop_wait_for_response(struct connection *con,
 {
 
   /* push callinfo to connection callinfo vector */
-  kv_push(struct callinfo *, con->callvector, cinfo);
-  con->pendingcalls++;
+  kv_push(con->callvector, cinfo);
+  con->pending_requests++;
 
   /* wait until requestinfo returned, in time process events */
-  loop_poll_events_until(con, &cinfo->hasresponse);
+  loop_poll_events_until(con, &cinfo->returned);
 
   /* delete last from callinfo vector */
   kv_pop(con->callvector);
-  con->pendingcalls--;
+  con->pending_requests--;
 }
