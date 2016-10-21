@@ -127,6 +127,11 @@ set(SPLONEBOX-SOURCES
   src/api/register.c
   src/api/result.c
   src/api/run.c
+  src/api/broadcast.c
+  src/api/subscribe.c
+  src/api/unsubscribe.c
+  src/api/helpers.c
+  src/api/helpers.h
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
   src/rpc/connection/event.h
@@ -144,10 +149,8 @@ set(SPLONEBOX-SOURCES
   src/rpc/connection/crypto.c
   src/rpc/connection/crypto.h
   src/rpc/connection/loop.c
-  src/rpc/msgpack/sb-msgpack-rpc.h
-  src/rpc/msgpack/message.c
-  src/rpc/msgpack/pack.c
-  src/rpc/msgpack/unpack.c
+  src/rpc/msgpack/helpers.c
+  src/rpc/msgpack/helpers.h
   src/rpc/db/sb-db.h
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
@@ -209,6 +212,11 @@ set(TEST-SOURCES
   src/api/register.c
   src/api/run.c
   src/api/result.c
+  src/api/broadcast.c
+  src/api/subscribe.c
+  src/api/unsubscribe.c
+  src/api/helpers.c
+  src/api/helpers.h
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
   src/rpc/connection/event.h
@@ -226,10 +234,8 @@ set(TEST-SOURCES
   src/rpc/connection/crypto.c
   src/rpc/connection/crypto.h
   src/rpc/connection/loop.c
-  src/rpc/msgpack/sb-msgpack-rpc.h
-  src/rpc/msgpack/message.c
-  src/rpc/msgpack/pack.c
-  src/rpc/msgpack/unpack.c
+  src/rpc/msgpack/helpers.c
+  src/rpc/msgpack/helpers.h
   src/rpc/db/sb-db.h
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
@@ -245,28 +251,9 @@ set(TEST-SOURCES
   test/helper-validate.h
   test/unit/server-start.c
   test/unit/server-stop.c
-  test/unit/pack-string.c
-  test/unit/pack-int.c
-  test/unit/pack-uint.c
-  test/unit/pack-array.c
-  test/unit/pack-nil.c
-  test/unit/pack-float.c
-  test/unit/pack-bool.c
-  test/unit/regression-issue-60.c
-  test/unit/unpack-string.c
-  test/unit/unpack-uint.c
-  test/unit/unpack-array.c
   test/unit/dispatch-table-get.c
   test/unit/event-queue-put.c
   test/unit/event-queue-get.c
-  test/unit/message-deserialize-request.c
-  test/unit/message-deserialize-response.c
-  test/unit/message-deserialize-error-response.c
-  test/unit/message-serialize-request.c
-  test/unit/message-serialize-response.c
-  test/unit/message-serialize-error-response.c
-  test/unit/message-is-request.c
-  test/unit/message-is-response.c
   test/functional/db-connect.c
   test/functional/db-plugin-add.c
   test/functional/db-pluginkey-verify.c
