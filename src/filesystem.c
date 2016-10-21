@@ -153,6 +153,9 @@ int filesystem_save_sync(const char *fn, const void *x, size_t xlen)
   int fd;
   int r;
 
+  if (!x)
+    return -1;
+
   fd = filesystem_open_write(fn);
 
   if (fd == -1)
@@ -173,6 +176,9 @@ int filesystem_load(const char *fn, void *x, size_t xlen)
 {
   int fd;
   int r;
+
+  if (!x)
+    return -1;
 
   fd = filesystem_open_read(fn);
 
