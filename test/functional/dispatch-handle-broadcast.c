@@ -19,6 +19,7 @@
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
 #include "api/helpers.h"
+#include "rpc/msgpack/helpers.h"
 #include "api/sb-api.h"
 #ifdef __linux__
 #include <bsd/string.h>
@@ -36,6 +37,33 @@ static array api_broadcast_valid(void)
 
   array request = ARRAY_DICT_INIT;
   ADD(request, STRING_OBJ(cstring_copy_string("testname")));
+  ADD(request, ARRAY_OBJ(args));
+
+  return request;
+}
+
+static array api_broadcast_wrong_args_size(void)
+{
+  array args = ARRAY_DICT_INIT;
+  ADD(args, STRING_OBJ(cstring_copy_string("abc")));
+  ADD(args, STRING_OBJ(cstring_copy_string("def")));
+
+  array request = ARRAY_DICT_INIT;
+  ADD(request, STRING_OBJ(cstring_copy_string("testname")));
+  ADD(request, ARRAY_OBJ(args));
+  ADD(request, STRING_OBJ(cstring_copy_string("wrong")));
+
+  return request;
+}
+
+static array api_broadcast_wrong_args_type(void)
+{
+  array args = ARRAY_DICT_INIT;
+  ADD(args, STRING_OBJ(cstring_copy_string("abc")));
+  ADD(args, STRING_OBJ(cstring_copy_string("def")));
+
+  array request = ARRAY_DICT_INIT;
+  ADD(request, OBJECT_OBJ((object) OBJECT_INIT));
   ADD(request, ARRAY_OBJ(args));
 
   return request;
@@ -131,6 +159,18 @@ void functional_dispatch_handle_broadcast(UNUSED(void **state))
   request = api_broadcast_valid();
   handle_broadcast(con2->id, 123, con2->cc.pluginkeystring, request, &error);
   assert_false(error.isset);
+  api_free_array(request);
+
+  request = api_broadcast_wrong_args_size();
+  handle_broadcast(con2->id, 123, con2->cc.pluginkeystring, request, &error);
+  assert_true(error.isset);
+  error.isset = false;
+  api_free_array(request);
+
+  request = api_broadcast_wrong_args_type();
+  handle_broadcast(con2->id, 123, con2->cc.pluginkeystring, request, &error);
+  assert_true(error.isset);
+  error.isset = false;
   api_free_array(request);
 
   request = api_subscribe_valid();
