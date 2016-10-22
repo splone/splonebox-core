@@ -263,9 +263,11 @@ struct connection_request_event_info {
 
 /* this structure holds the request event information and a callback to a
    handler function */
+typedef void (*argv_callback)(void **argv);
+
 struct api_event {
-  connection_request_event_info info;
-  void (*handler)(connection_request_event_info *info);
+  argv_callback handler;
+  void **info;
 };
 
 TAILQ_HEAD(queue, queue_entry);

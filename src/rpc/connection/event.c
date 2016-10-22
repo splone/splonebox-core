@@ -179,6 +179,6 @@ void equeue_run_events(equeue *queue)
     event = equeue_get(queue);
 
     if (event.handler)
-      event.handler(&event.info);
+      event.handler(event.info);
   }
 }

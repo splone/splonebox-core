@@ -397,9 +397,10 @@ define UNUSED(x) x
 #define REALLOC_ARRAY(pointer, number, type)              \
   ((type *)reallocarray(pointer, number,  sizeof(type)))
 
-#define FREE(pointer) do {                      \
-    free(pointer);                              \
-    pointer = NULL;                             \
+#define FREE(p) do {                      \
+  if (PREDICT_LIKELY((p)!=NULL))          \
+    free(p);                              \
+    p= NULL;                              \
   } while (0)
 
 #define LOG(...)                  \

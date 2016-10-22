@@ -23,7 +23,7 @@ STATIC void connection_handle_request(struct connection *con,
     msgpack_object *obj);
 STATIC void connection_handle_response(struct connection *con,
     msgpack_object *obj);
-STATIC void connection_request_event(connection_request_event_info *info);
+STATIC void connection_request_event(void **argv);
 STATIC void connection_close(struct connection *con);
 STATIC void parse_cb(inputstream *istream, void *data, bool eof);
 STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con);

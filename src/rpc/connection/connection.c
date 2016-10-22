@@ -58,7 +58,7 @@ STATIC void connection_handle_request(struct connection *con,
     msgpack_object *obj);
 STATIC void connection_handle_response(struct connection *con,
     msgpack_object *obj);
-STATIC void connection_request_event(connection_request_event_info *info);
+STATIC void connection_request_event(void **argv);
 STATIC void connection_close(struct connection *con);
 STATIC void call_set_error(struct connection *con, char *msg);
 STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con);
@@ -704,7 +704,6 @@ STATIC void connection_handle_request(struct connection *con,
   dispatch_info dispatcher;
   msgpack_object *method;
   struct api_error api_error = ERROR_INIT;
-  connection_request_event_info eventinfo;
   api_event event;
 
   msgpack_rpc_validate(&msgid, obj, &api_error);
@@ -728,18 +727,19 @@ STATIC void connection_handle_request(struct connection *con,
     dispatcher.async = true;
   }
 
-  eventinfo.con = con;
-  eventinfo.dispatcher = dispatcher;
-  eventinfo.args = args;
-  eventinfo.msgid = msgid;
+  connection_request_event_info *eventinfo = MALLOC(connection_request_event_info);
+  eventinfo->con = con;
+  eventinfo->dispatcher = dispatcher;
+  eventinfo->args = args;
+  eventinfo->msgid = msgid;
 
   incref(con);
 
   if (dispatcher.async)
-    connection_request_event(&eventinfo);
+    connection_request_event((void**)&eventinfo);
   else {
     event.handler = connection_request_event;
-    event.info = eventinfo;
+    event.info = (void**)&eventinfo;
     equeue_put(con->queue, event);
     /* TODO: move this call to a suitable place (main?) */
     equeue_run_events(equeue_root);
@@ -747,8 +747,9 @@ STATIC void connection_handle_request(struct connection *con,
 }
 
 
-STATIC void connection_request_event(connection_request_event_info *eventinfo)
+STATIC void connection_request_event(void **argv)
 {
+  connection_request_event_info *eventinfo = argv[0];
   object result;
   msgpack_packer packer;
   struct connection *con;
@@ -774,6 +775,7 @@ STATIC void connection_request_event(connection_request_event_info *eventinfo)
   api_free_array(args);
 
   decref(con);
+  FREE(eventinfo);
 }
 
 STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con)
