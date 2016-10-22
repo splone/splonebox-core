@@ -36,7 +36,6 @@ void functional_filesystem_save_sync(void **state);
 void functional_dispatch_handle_register(void **state);
 void functional_dispatch_handle_run(void **state);
 void functional_dispatch_handle_result(void **state);
-void functional_dispatch_handle_subscribe(void **state);
 void functional_crypto(void **state);
 void functional_confparse(void **state);
 void functional_db_whitelist(void **state);
@@ -57,7 +56,6 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(functional_dispatch_handle_register),
   cmocka_unit_test(functional_dispatch_handle_run),
   cmocka_unit_test(functional_dispatch_handle_result),
-  cmocka_unit_test(functional_dispatch_handle_subscribe),
   cmocka_unit_test(functional_crypto),
   cmocka_unit_test(functional_confparse),
   cmocka_unit_test(functional_db_whitelist),

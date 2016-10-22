@@ -521,10 +521,6 @@ object handle_result(uint64_t con_id, uint64_t msgid, char *pluginkey,
     array args, struct api_error *error);
 object handle_register(uint64_t con_id, uint64_t msgid, char *pluginkey,
     array args, struct api_error *error);
-object handle_subscribe(uint64_t con_id, uint64_t msgid, char *pluginkey,
-    array args, struct api_error *error);
-object handle_unsubscribe(uint64_t con_id, uint64_t msgid, char *pluginkey,
-    array args, struct api_error *error);
 object msgpack_rpc_handle_invalid_arguments(uint64_t channel_id,
     uint64_t msgid, char *pluginkey, array args, struct api_error *error);
 object msgpack_rpc_handle_missing_method(uint64_t channel_id,
