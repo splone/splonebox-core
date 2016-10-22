@@ -22,12 +22,14 @@
 #include "api/helpers.h"
 
 
-int api_broadcast(string eventname, array args, struct api_error *api_error)
+int api_broadcast(string event, array args, struct api_error *api_error)
 {
   if (!api_error)
     return -1;
 
-  if (!connection_send_event(0, eventname.str, args)) {
+  object o = copy_object(ARRAY_OBJ(args));
+
+  if (!connection_send_event(0, event.str, o.data.array)) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Broadcasting event failed");
     return -1;

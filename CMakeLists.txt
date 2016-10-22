@@ -266,6 +266,7 @@ set(TEST-SOURCES
   test/functional/dispatch-handle-run.c
   test/functional/dispatch-handle-result.c
   test/functional/dispatch-handle-subscribe.c
+  test/functional/dispatch-handle-broadcast.c
   test/functional/crypto.c
   test/functional/confparse.c
   test/functional/db-whitelist.c

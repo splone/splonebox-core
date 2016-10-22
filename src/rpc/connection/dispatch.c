@@ -353,7 +353,7 @@ object handle_broadcast(UNUSED(uint64_t con_id), UNUSED(uint64_t msgid),
   }
 
   if (args.items[1].type == OBJECT_TYPE_ARRAY)
-    eventargs = args.items[0].data.array;
+    eventargs = args.items[1].data.array;
   else {
     error_set(error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching broadcast API request. event args has wrong type");
