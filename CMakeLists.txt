@@ -270,6 +270,7 @@ set(TEST-SOURCES
   test/functional/crypto.c
   test/functional/confparse.c
   test/functional/db-whitelist.c
+  test/functional/msgpack-rpc-helper.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
