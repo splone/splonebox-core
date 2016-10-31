@@ -222,7 +222,7 @@ struct connection {
 };
 
 struct callinfo {
-  uint32_t msgid;
+  uint64_t msgid;
   bool returned;
   bool errored;
   object result;

@@ -600,8 +600,10 @@ object connection_send_request(char *pluginkey, string method,
 
   incref(con);
 
+  uint64_t msgid = con->msgid++;
+
   msgpack_packer_init(&packer, &sbuf, msgpack_sbuffer_write);
-  msgpack_rpc_serialize_request(con->msgid++, method, args, &packer);
+  msgpack_rpc_serialize_request(msgid, method, args, &packer);
 
   api_free_array(args);
 
@@ -612,7 +614,7 @@ object connection_send_request(char *pluginkey, string method,
 
   msgpack_sbuffer_clear(&sbuf);
 
-  struct callinfo cinfo = (struct callinfo) { con->msgid, false, false, NIL };
+  struct callinfo cinfo = (struct callinfo) { msgid, false, false, NIL };
 
   loop_wait_for_response(con, &cinfo);
 
@@ -794,7 +796,7 @@ STATIC void connection_handle_response(struct connection *con,
 
   cinfo = kv_A(con->callvector, kv_size(con->callvector) - 1);
 
-  LOG_VERBOSE(VERBOSE_LEVEL_0, "received response: callinfo id = %u\n",
+  LOG_VERBOSE(VERBOSE_LEVEL_0, "received response: callinfo id = %lu\n",
       cinfo->msgid);
 
   cinfo->returned = true;
