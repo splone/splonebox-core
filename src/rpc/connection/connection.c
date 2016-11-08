@@ -413,6 +413,15 @@ STATIC void parse_cb(inputstream *istream, void *data, bool eof)
       con->cc.state = TUNNEL_INITIAL;
     }
 
+    if (hashmap_has(cstr_t, uint64_t)(pluginkeys,
+        con->cc.pluginkeystring)) {
+      LOG_WARNING("pluginkey already registered, closing connection");
+      sbmemzero(con->cc.pluginkeystring,
+          sizeof con->cc.pluginkeystring);
+      connection_close(con);
+      goto end;
+    }
+
     hashmap_put(cstr_t, uint64_t)(pluginkeys, con->cc.pluginkeystring,
       con->id);
   }
