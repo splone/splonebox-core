@@ -22,8 +22,7 @@
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 #include "rpc/db/sb-db.h"
-
-uv_loop_t loop;
+#include "main.h"
 
 void unit_server_start(UNUSED(void **state))
 {
@@ -40,7 +39,7 @@ void unit_server_start(UNUSED(void **state))
 
   srand((unsigned)time(NULL));
   assert_int_equal(0, server_init());
-  uv_loop_init(&loop);
+  loop_init(&main_loop, NULL);
 
   snprintf(buf1, 19, "/tmp/splnbx-%d", rand() % (999999 + 1 - 100000) + 100000);
   assert_int_equal(0, server_start_pipe(buf1));
@@ -59,8 +58,8 @@ void unit_server_start(UNUSED(void **state))
 
   server_close();
 
-  uv_run(&loop, UV_RUN_ONCE);
-  uv_loop_close(&loop);
+  uv_run(&main_loop.uv, UV_RUN_ONCE);
+  uv_loop_close(&main_loop.uv);
 
   db_close();
 }

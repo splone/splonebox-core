@@ -17,8 +17,10 @@
 #include "test-list.h"
 #include "helper-unix.h"
 #include "sb-common.h"
+#include "main.h"
 
 int8_t verbose_level;
+loop main_loop;
 
 int main(UNUSED(int argc), UNUSED(char **argv))
 {

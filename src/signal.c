@@ -15,6 +15,7 @@
  */
 
 #include "sb-common.h"
+#include "main.h"
 
 static void signal_sigint_cb(uv_signal_t *uvhandle, int signum);
 
@@ -23,7 +24,7 @@ uv_signal_t sigint;
 int signal_init(void)
 {
   /* SIGINT */
-  if (uv_signal_init(&loop, &sigint) != 0) {
+  if (uv_signal_init(&main_loop.uv, &sigint) != 0) {
     return (-1);
   }
 

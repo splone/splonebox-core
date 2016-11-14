@@ -21,8 +21,6 @@
 void unit_server_start(void **state);
 void unit_server_stop(void **state);
 void unit_dispatch_table_get(void **state);
-void unit_event_queue_put(void **state);
-void unit_event_queue_get(void **state);
 
 void functional_client_connect(void **state);
 void functional_db_connect(void **state);
@@ -47,7 +45,6 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_dispatch_table_get),
   cmocka_unit_test(unit_server_start),
   cmocka_unit_test(unit_server_stop),
-  cmocka_unit_test(unit_event_queue_put),
   cmocka_unit_test(functional_db_connect),
   cmocka_unit_test(functional_db_plugin_add),
   cmocka_unit_test(functional_db_pluginkey_verify),

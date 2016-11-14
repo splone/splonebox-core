@@ -3,6 +3,7 @@
 #include <msgpack/object.h>
 #include "rpc/sb-rpc.h"
 #include "rpc/msgpack/helpers.h"
+#include "rpc/connection/loop.h"
 #include "api/helpers.h"
 #include "helper-unix.h"
 #include "helper-all.h"
@@ -54,8 +55,8 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
   return (0);
 }
 
-void __wrap_loop_wait_for_response(UNUSED(struct connection *con),
-    struct callinfo *cinfo)
+void __wrap_loop_process_events_until(UNUSED(loop *loop),
+    UNUSED(struct connection *con), struct callinfo *cinfo)
 {
   assert_non_null(cinfo);
 

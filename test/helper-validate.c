@@ -67,8 +67,8 @@ int validate_run_request(const unsigned long data1,
    * sender of the rpc call, we need to push the callid on the cmocka test
    * stack. this allows verifying of it later on */
   uint64_t callid = meta.data.array.items[1].data.uinteger;
-  will_return(__wrap_loop_wait_for_response, OBJECT_TYPE_UINT);
-  will_return(__wrap_loop_wait_for_response, callid);
+  will_return(__wrap_loop_process_events_until, OBJECT_TYPE_UINT);
+  will_return(__wrap_loop_process_events_until, callid);
 
   p->callid = callid;
 
@@ -135,8 +135,8 @@ int validate_result_request(const unsigned long data1,
    * stack. this allows verifying of it later on */
   uint64_t callid = meta.data.array.items[0].data.uinteger;
 
-  will_return(__wrap_loop_wait_for_response, OBJECT_TYPE_UINT);
-  will_return(__wrap_loop_wait_for_response, callid);
+  will_return(__wrap_loop_process_events_until, OBJECT_TYPE_UINT);
+  will_return(__wrap_loop_process_events_until, callid);
 
   api_free_array(message);
 

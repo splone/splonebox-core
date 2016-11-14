@@ -107,8 +107,10 @@ file(GLOB MANPAGES
 # splonebox target sources
 set(SPLONEBOX-SOURCES
   src/main.c
+  src/main.h
   src/sb-common.h
   src/khash.h
+  src/klist.h
   src/kvec.h
   src/queue.h
   src/string.c
@@ -159,6 +161,7 @@ set(SPLONEBOX-SOURCES
   src/rpc/connection/crypto.c
   src/rpc/connection/crypto.h
   src/rpc/connection/loop.c
+  src/rpc/connection/loop.h
   src/rpc/msgpack/helpers.c
   src/rpc/msgpack/helpers.h
   src/rpc/db/sb-db.h
@@ -193,8 +196,10 @@ set(SB-MAKEKEY-SOURCES
 
 # splonebox test(s) sources
 set(TEST-SOURCES
+  src/main.h
   src/sb-common.h
   src/khash.h
+  src/klist.h
   src/queue.h
   src/string.c
   src/reallocarray.c
@@ -244,6 +249,7 @@ set(TEST-SOURCES
   src/rpc/connection/crypto.c
   src/rpc/connection/crypto.h
   src/rpc/connection/loop.c
+  src/rpc/connection/loop.h
   src/rpc/msgpack/helpers.c
   src/rpc/msgpack/helpers.h
   src/rpc/db/sb-db.h
@@ -262,8 +268,6 @@ set(TEST-SOURCES
   test/unit/server-start.c
   test/unit/server-stop.c
   test/unit/dispatch-table-get.c
-  test/unit/event-queue-put.c
-  test/unit/event-queue-get.c
   test/functional/db-connect.c
   test/functional/db-plugin-add.c
   test/functional/db-pluginkey-verify.c
@@ -315,7 +319,7 @@ add_executable(sb-test ${TEST-SOURCES})
 add_executable(sb-pluginkey ${SB-PLUGINKEY-SOURCES})
 
 # wrap some functions for testing
-set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response,--wrap=crypto_write ")
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_process_events_until,--wrap=crypto_write ")
 set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DBOX_UNIT_TESTS ")
 
 target_link_libraries(sb-test

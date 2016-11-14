@@ -30,42 +30,117 @@
  *    limitations under the License.
  */
 
-#include <stdbool.h>
+#include "rpc/connection/loop.h"
+#include <stdbool.h>     // for bool
+#include <stdlib.h>      // for NULL, abort
+#include "rpc/sb-rpc.h"  // for event
 
-#include "rpc/sb-rpc.h"
-#include "sb-common.h"
+static void async_cb(uv_async_t *handle);
+static void timer_cb(uv_timer_t *handle);
 
-static inline void loop_poll_events_until(struct connection *con,
-    bool *condition);
-equeue *equeue_root;
-uv_loop_t loop;
-
-static inline void loop_poll_events_until(struct connection *con,
-    bool *condition)
+void loop_init(UNUSED(loop *loop), UNUSED(void *data))
 {
-  while (!*condition) {
-    if (con->queue && !equeue_empty(con->queue)) {
-      equeue_run_events(con->queue);
-    } else {
-      uv_run(&loop, UV_RUN_ONCE);
-      equeue_run_events(equeue_root);
-    }
-  }
+  uv_loop_init(&loop->uv);
+  loop->recursive = 0;
+  loop->uv.data = loop;
+  loop->children = kl_init(WatcherPtr);
+  loop->children_stop_requests = 0;
+  loop->events = multiqueue_new_parent(loop_on_put, loop);
+  loop->fast_events = multiqueue_new_child(loop->events);
+  loop->thread_events = multiqueue_new_parent(NULL, NULL);
+  uv_mutex_init(&loop->mutex);
+  uv_async_init(&loop->uv, &loop->async, async_cb);
+  uv_signal_init(&loop->uv, &loop->children_watcher);
+  uv_timer_init(&loop->uv, &loop->children_kill_timer);
+  uv_timer_init(&loop->uv, &loop->poll_timer);
 }
 
+void loop_poll_events(loop *loop, int ms)
+{
+  if (loop->recursive++) {
+    abort();
+  }
 
-void loop_wait_for_response(struct connection *con,
+  uv_run_mode mode = UV_RUN_ONCE;
+
+  if (ms > 0) {
+    uv_timer_start(&loop->poll_timer, timer_cb, (uint64_t)ms, (uint64_t)ms);
+  } else if (ms == 0) {
+    mode = UV_RUN_NOWAIT;
+  }
+
+  uv_run(&loop->uv, mode);
+
+  if (ms > 0) {
+    uv_timer_stop(&loop->poll_timer);
+  }
+
+  loop->recursive--;  // Can re-enter uv_run now
+  multiqueue_process_events(loop->fast_events);
+}
+
+// Schedule an event from another thread
+void loop_schedule(loop *loop, event event)
+{
+  uv_mutex_lock(&loop->mutex);
+  multiqueue_put_event(loop->thread_events, event);
+  uv_async_send(&loop->async);
+  uv_mutex_unlock(&loop->mutex);
+}
+
+void loop_on_put(UNUSED(multiqueue *queue), void *data)
+{
+  loop *loop = data;
+  // Sometimes libuv will run pending callbacks(timer for example) before
+  // blocking for a poll. If this happens and the callback pushes a event to one
+  // of the queues, the event would only be processed after the poll
+  // returns(user hits a key for example). To avoid this scenario, we call
+  // uv_stop when a event is enqueued.
+  uv_stop(&loop->uv);
+}
+
+void loop_close(loop *loop, bool wait)
+{
+  uv_mutex_destroy(&loop->mutex);
+  uv_close((uv_handle_t *)&loop->children_watcher, NULL);
+  uv_close((uv_handle_t *)&loop->children_kill_timer, NULL);
+  uv_close((uv_handle_t *)&loop->poll_timer, NULL);
+  uv_close((uv_handle_t *)&loop->async, NULL);
+  do {
+    uv_run(&loop->uv, wait ? UV_RUN_DEFAULT : UV_RUN_NOWAIT);
+  } while (uv_loop_close(&loop->uv) && wait);
+  multiqueue_free(loop->fast_events);
+  multiqueue_free(loop->thread_events);
+  multiqueue_free(loop->events);
+  kl_destroy(WatcherPtr, loop->children);
+}
+
+static void async_cb(uv_async_t *handle)
+{
+  loop *l = handle->loop->data;
+  uv_mutex_lock(&l->mutex);
+  while (!multiqueue_empty(l->thread_events)) {
+    event ev = multiqueue_get(l->thread_events);
+    multiqueue_put_event(l->fast_events, ev);
+  }
+  uv_mutex_unlock(&l->mutex);
+}
+
+static void timer_cb(UNUSED(uv_timer_t *handle))
+{
+}
+
+void loop_process_events_until(loop *loop, struct connection *con,
     struct callinfo *cinfo)
 {
-
   /* push callinfo to connection callinfo vector */
   kv_push(con->callvector, cinfo);
   con->pending_requests++;
 
   /* wait until requestinfo returned, in time process events */
-  loop_poll_events_until(con, &cinfo->returned);
+  LOOP_PROCESS_EVENTS_UNTIL(loop, con->events, -1, cinfo->returned);
 
   /* delete last from callinfo vector */
-  kv_pop(con->callvector);
+  (void)kv_pop(con->callvector);
   con->pending_requests--;
 }

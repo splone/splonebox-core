@@ -45,8 +45,6 @@ typedef struct outputstream   outputstream;
 typedef struct inputstream inputstream;
 typedef void (*inputstream_cb)(inputstream *inputstream, void *data, bool eof);
 typedef struct api_event api_event;
-typedef struct equeue equeue;
-typedef struct queue_entry queue_entry;
 typedef struct message_object message_object;
 typedef struct connection_request_event_info connection_request_event_info;
 
@@ -192,35 +190,6 @@ struct wbuffer {
   char *data;
 };
 
-struct connection {
-  uint64_t id;
-  uint32_t msgid;
-  size_t pending_requests;
-  size_t refcount;
-  msgpack_unpacker *mpac;
-  msgpack_sbuffer *sbuf;
-  char *unpackbuf;
-  bool closed;
-  equeue *queue;
-  struct {
-    inputstream *read;
-    outputstream *write;
-    uv_stream_t *uv;
-  } streams;
-  kvec_t(struct callinfo *) callvector;
-  kvec_t(wbuffer *) delayed_notifications;
-  struct crypto_context cc;
-  struct {
-    uint64_t start;
-    uint64_t end;
-    uint64_t pos;
-    uint64_t length;
-    unsigned char *data;
-  } packet;
-  uv_timer_t minutekey_timer;
-  hashmap(cstr_t, ptr_t) *subscribed_events;
-};
-
 struct callinfo {
   uint64_t msgid;
   bool returned;
@@ -261,36 +230,39 @@ struct connection_request_event_info {
   uint64_t msgid;
 };
 
-/* this structure holds the request event information and a callback to a
-   handler function */
+#define EVENT_HANDLER_MAX_ARGC 6
+
 typedef void (*argv_callback)(void **argv);
-
-struct api_event {
+typedef struct message {
+  int priority;
   argv_callback handler;
-  void **info;
-};
+  void *argv[EVENT_HANDLER_MAX_ARGC];
+} event;
 
-TAILQ_HEAD(queue, queue_entry);
+typedef void(*event_scheduler)(event event, void *data);
 
-struct equeue {
-  struct queue head;
-  equeue *root;
-};
+#define VA_EVENT_INIT(event, p, h, a) \
+  do { \
+    sbassert(a <= EVENT_HANDLER_MAX_ARGC); \
+    (event)->priority = p; \
+    (event)->handler = h; \
+    if (a) { \
+      va_list args; \
+      va_start(args, a); \
+      for (int i = 0; i < a; i++) { \
+        (event)->argv[i] = va_arg(args, void *); \
+      } \
+      va_end(args); \
+    } \
+  } while (0)
 
-struct queue_entry {
-  union {
-    equeue *queue;
-    struct {
-      queue_entry *root;
-      api_event event;
-    } entry;
-  } data;
-  TAILQ_ENTRY(queue_entry) node;
-};
-
-/* define global root event queue */
-extern equeue *equeue_root;
-
+static inline event event_create(int priority, argv_callback cb, int argc, ...)
+{
+  sbassert(argc <= EVENT_HANDLER_MAX_ARGC);
+  event event;
+  VA_EVENT_INIT(&event, priority, cb, argc);
+  return event;
+}
 
 /* Functions */
 
@@ -449,61 +421,6 @@ int server_start_pipe(char *name);
  */
 int server_stop(char * endpoint);
 int server_close(void);
-
-int event_initialize(void);
-
-/**
- * create a new queue or child queue
- *
- * @params root if NULL a root queue is created, if not NULL a child queue for
- *              `root` is created
- * @returns queue instance
- */
-equeue * equeue_new(equeue *root);
-
-/**
- * get a queue element
- *
- * this function first checks if the passed queue is empty, if yes it return
- * an empty event object. if it's not empty the first queue entry will be
- * returned and removed from the queue.
- *
- * if the queue entry is a child, the first child queue entry is returned and
- * removed from the child queue. after that, the child queue entry associated
- * event is returned.
- *
- * if the queue entry is no child. the queue entry associated event is returned
- *
- * @param queue queue instance
- */
-api_event equeue_get(equeue *queue);
-
-/**
- * put an event in a queue
- *
- * @param queue queue instance
- * @param event event to enqueue
- */
-int equeue_put(equeue *queue, api_event event);
-
-/**
- * run all events of a queue
- *
- * @params queue queue instance
- */
-void equeue_run_events(equeue *queue);
-
-/**
- * free queue
- *
- * @params queue queue instance
- */
-void equeue_free(equeue *queue);
-
-bool equeue_empty(equeue *queue);
-
-
-
 
 void streamhandle_set_inputstream(uv_handle_t *handle,
     inputstream *inputstream);

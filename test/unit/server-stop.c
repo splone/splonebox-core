@@ -19,15 +19,14 @@
 #include "rpc/sb-rpc.h"
 #include "helper-unix.h"
 #include "rpc/db/sb-db.h"
-
-uv_loop_t loop;
+#include "main.h"
 
 void unit_server_stop(UNUSED(void **state))
 {
   boxaddr addr;
   uint16_t port;
 
-  uv_loop_init(&loop);
+  loop_init(&main_loop, NULL);
   connect_to_db();
 
   box_addr_port_lookup("127.0.0.1:11111", &addr, &port);
@@ -39,8 +38,8 @@ void unit_server_stop(UNUSED(void **state))
 
   server_close();
 
-  uv_run(&loop, UV_RUN_ONCE);
-  uv_loop_close(&loop);
+  uv_run(&main_loop.uv, UV_RUN_ONCE);
+  uv_loop_close(&main_loop.uv);
 
   db_close();
 }

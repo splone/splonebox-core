@@ -48,8 +48,6 @@ struct server {
 
 static hashmap(cstr_t, ptr_t) *servers = NULL;
 
-uv_loop_t loop;
-
 int server_init(void)
 {
   servers = hashmap_new(cstr_t, ptr_t)();
@@ -86,7 +84,7 @@ int server_start_tcp(boxaddr *addr, uint16_t port)
   box_addr_to_sockaddr(addr, port, &server->socket.tcp.addr,
       sizeof(struct sockaddr_in));
 
-  uv_tcp_init(&loop, &server->socket.tcp.handle);
+  uv_tcp_init(&main_loop.uv, &server->socket.tcp.handle);
   result = uv_tcp_bind(&server->socket.tcp.handle,
       (const struct sockaddr *)&server->socket.tcp.addr, 0);
 
@@ -138,7 +136,7 @@ int server_start_pipe(char *name)
     return (-1);
   }
 
-  uv_pipe_init(&loop, &server->socket.pipe.handle, 0);
+  uv_pipe_init(&main_loop.uv, &server->socket.pipe.handle, 0);
   result = uv_pipe_bind(&server->socket.pipe.handle, server->socket.pipe.addr);
 
   if (result) {
@@ -220,9 +218,9 @@ STATIC void connection_cb(uv_stream_t *server_stream, int status)
     return;
 
   if (server->type == SERVER_TYPE_TCP)
-    uv_tcp_init(&loop, (uv_tcp_t *)client);
+    uv_tcp_init(&main_loop.uv, (uv_tcp_t *)client);
   else
-    uv_pipe_init(&loop, (uv_pipe_t *)client, 0);
+    uv_pipe_init(&main_loop.uv, (uv_pipe_t *)client, 0);
 
   result = uv_accept(server_stream, client);
 

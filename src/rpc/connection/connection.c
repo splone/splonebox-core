@@ -73,8 +73,6 @@ static hashmap(uint64_t, ptr_t) *connections = NULL;
 static hashmap(cstr_t, uint64_t) *pluginkeys = NULL;
 static hashmap(cstr_t, ptr_t) *event_strings = NULL;
 static msgpack_sbuffer sbuf;
-equeue *equeue_root;
-uv_loop_t loop;
 
 int connection_init(void)
 {
@@ -131,7 +129,7 @@ int connection_create(uv_stream_t *stream)
   con->refcount = 1;
   con->mpac = msgpack_unpacker_new(MSGPACK_UNPACKER_INIT_BUFFER_SIZE);
   con->closed = false;
-  con->queue = equeue_new(equeue_root);
+  con->events = multiqueue_new_child(main_loop.events);
   con->streams.read = inputstream_new(parse_cb, STREAM_BUFFER_SIZE, con);
   con->streams.write = outputstream_new(1024 * 1024);
   con->streams.uv = stream;
@@ -150,7 +148,7 @@ int connection_create(uv_stream_t *stream)
   randombytes(con->cc.minutekey, sizeof con->cc.minutekey);
   randombytes(con->cc.lastminutekey, sizeof con->cc.lastminutekey);
   con->minutekey_timer.data = &con->cc;
-  r = uv_timer_init(&loop, &con->minutekey_timer);
+  r = uv_timer_init(&main_loop.uv, &con->minutekey_timer);
   sbassert(r == 0);
   r = uv_timer_start(&con->minutekey_timer, timer_cb, 60000, 60000);
   sbassert(r == 0);
@@ -293,7 +291,7 @@ STATIC void free_connection(struct connection *con)
   hashmap_free(cstr_t, ptr_t)(con->subscribed_events);
   kv_destroy(con->callvector);
   kv_destroy(con->delayed_notifications);
-  equeue_free(con->queue);
+  multiqueue_free(con->events);
 
   if (con->packet.data)
     FREE(con->packet.data);
@@ -320,7 +318,7 @@ STATIC void connection_close(struct connection *con)
   timer_handle = (uv_handle_t*) &con->minutekey_timer;
   if (timer_handle) {
     uv_close(timer_handle, NULL);
-    uv_run(&loop, UV_RUN_ONCE);
+    uv_run(&main_loop.uv, UV_RUN_ONCE);
   }
 
   inputstream_free(con->streams.read);
@@ -625,7 +623,7 @@ object connection_send_request(char *pluginkey, string method,
 
   struct callinfo cinfo = (struct callinfo) { msgid, false, false, NIL };
 
-  loop_wait_for_response(con, &cinfo);
+  loop_process_events_until(&main_loop, con, &cinfo);
 
   if (cinfo.errored) {
     if (cinfo.result.type == OBJECT_TYPE_STR) {
@@ -715,7 +713,6 @@ STATIC void connection_handle_request(struct connection *con,
   dispatch_info dispatcher;
   msgpack_object *method;
   struct api_error api_error = ERROR_INIT;
-  api_event event;
 
   msgpack_rpc_validate(&msgid, obj, &api_error);
 
@@ -749,11 +746,7 @@ STATIC void connection_handle_request(struct connection *con,
   if (dispatcher.async)
     connection_request_event((void**)&eventinfo);
   else {
-    event.handler = connection_request_event;
-    event.info = (void**)&eventinfo;
-    equeue_put(con->queue, event);
-    /* TODO: move this call to a suitable place (main?) */
-    equeue_run_events(equeue_root);
+    multiqueue_put(con->events, connection_request_event, 1, eventinfo);
   }
 }
 

@@ -20,6 +20,7 @@
 #include "rpc/sb-rpc.h"
 #include "api/helpers.h"
 #include "rpc/msgpack/helpers.h"
+#include "rpc/connection/connection.h"
 #include "api/sb-api.h"
 #ifdef __linux__
 #include <bsd/string.h>

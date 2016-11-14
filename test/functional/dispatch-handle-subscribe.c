@@ -18,6 +18,7 @@
 
 #include "sb-common.h"
 #include "rpc/sb-rpc.h"
+#include "rpc/connection/connection.h"
 #include "api/helpers.h"
 #include "api/sb-api.h"
 #ifdef __linux__

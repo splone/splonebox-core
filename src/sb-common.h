@@ -236,9 +236,6 @@ typedef const char * cstr_t;
 /* verbosity global */
 extern int8_t verbose_level;
 
-/* uv loop global */
-extern uv_loop_t loop;
-
 /* address parsing helper inline functions */
 /** Helper: given a hex digit, return its value, or -1 if it isn't hex. */
 static inline int hex_decode_digit(char c)
