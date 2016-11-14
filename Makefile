@@ -26,35 +26,56 @@ endif
 
 BUILD_CMD = $(BUILD_TOOL) $(VERBOSE_FLAG)
 
+USE_BUNDLED_DEPS ?=
+
+ifneq (,$(USE_BUNDLED_DEPS))
+  BUNDLED_CMAKE_FLAG := -DUSE_BUNDLED=$(USE_BUNDLED_DEPS)
+endif
+
 all: sb test sb-makekey sb-pluginkey
 
-sb:
-	test -d $(BUILD_DIR) || mkdir $(BUILD_DIR)
-	cd out && cmake -G '$(BUILD_TYPE)' $(FLAGS) $(EXTRA_FLAGS) ..
-	$(BUILD_CMD) -C out sb
+sb: build/.ran-cmake deps
+	+$(BUILD_CMD) -C build sb
 
-test:
-	test -d $(BUILD_DIR) || mkdir $(BUILD_DIR)
-	cd out && cmake -G '$(BUILD_TYPE)' $(FLAGS) $(EXTRA_FLAGS) ..
-	$(BUILD_CMD) -C out sb-test
+cmake:
+	touch CMakeLists.txt
+	$(MAKE) build/.ran-cmake
 
-sb-makekey:
-	test -d $(BUILD_DIR) || mkdir $(BUILD_DIR)
-	cd out && cmake -G '$(BUILD_TYPE)' $(FLAGS) $(EXTRA_FLAGS) ..
-	$(BUILD_CMD) -C out sb-makekey
+build/.ran-cmake: | deps
+	cd build && cmake -G '$(BUILD_TYPE)' $(CMAKE_FLAGS) $(CMAKE_EXTRA_FLAGS) ..
+	touch $@
 
-sb-pluginkey:
-	test -d $(BUILD_DIR) || mkdir $(BUILD_DIR)
-	cd out && cmake -G '$(BUILD_TYPE)' $(FLAGS) $(EXTRA_FLAGS) ..
-	$(BUILD_CMD) -C out sb-pluginkey
+deps: | build/.ran-third-party-cmake
+ifeq ($(call filter-true,$(USE_BUNDLED_DEPS)),)
+	+$(BUILD_CMD) -C .deps
+endif
+
+build/.ran-third-party-cmake:
+ifeq ($(call filter-true,$(USE_BUNDLED_DEPS)),)
+		mkdir -p .deps
+		cd .deps && \
+			cmake -G '$(BUILD_TYPE)' $(BUNDLED_CMAKE_FLAG) $(BUNDLED_LUA_CMAKE_FLAG) \
+			$(DEPS_CMAKE_FLAGS) ../third-party
+endif
+		mkdir -p build
+		touch $@
+
+test: build/.ran-cmake deps
+	+$(BUILD_CMD) -C build sb-test
+
+sb-makekey: build/.ran-cmake deps
+	+$(BUILD_CMD) -C build sb-makekey
+
+sb-pluginkey: build/.ran-cmake deps
+	+$(BUILD_CMD) -C build sb-pluginkey
 
 clean:
-	+test -d out && $(BUILD_CMD) -C out clean || true
+	+test -d build && $(BUILD_CMD) -C build clean || true
 
 distclean: clean
-	rm -rf out
+	rm -rf .deps build
 
 install: | sb
 	+$(BUILD_CMD) -C out install
 
-.PHONY: test clean distclean sb install sb-makekey
+.PHONY: test clean distclean sb install sb-makekey deps cmake

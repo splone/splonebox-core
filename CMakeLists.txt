@@ -7,6 +7,16 @@ option(CLANG_MEMORY_SANITIZER "Enable clang memory sanitizer." OFF)
 option(CLANG_THREAD_SANITIZER "Enable clang thread sanitizer." OFF)
 option(CLANG_ANALYZER "Enable clang static analyzer." OFF)
 
+# Prefer our bundled versions of dependencies.
+set(DEPS_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr" CACHE PATH "Path prefix for finding dependencies")
+if(CMAKE_CROSSCOMPILING AND NOT UNIX)
+  list(INSERT CMAKE_FIND_ROOT_PATH 0 ${DEPS_PREFIX})
+  list(INSERT CMAKE_PREFIX_PATH 0 ${DEPS_PREFIX}/../host/bin)
+else()
+  list(INSERT CMAKE_PREFIX_PATH 0 ${DEPS_PREFIX})
+  set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${DEPS_PREFIX}/lib/pkgconfig")
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -279,7 +289,11 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/test)
-include_directories(${BSD_INCLUDE_DIRS} ${LIBUV_INCLUDE_DIRS} ${MSGPACK_INCLUDE_DIRS} ${HIREDIS_INCLUDE_DIRS} ${CMOCKA_INCLUDE_DIRS})
+include_directories(SYSTEM ${BSD_INCLUDE_DIRS})
+include_directories(SYSTEM ${LIBUV_INCLUDE_DIRS})
+include_directories(SYSTEM ${MSGPACK_INCLUDE_DIRS})
+include_directories(SYSTEM ${HIREDIS_INCLUDE_DIRS})
+include_directories(SYSTEM ${CMOCKA_INCLUDE_DIRS})
 
 # sb target
 add_executable(sb ${SPLONEBOX-SOURCES})
