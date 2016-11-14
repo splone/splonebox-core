@@ -84,8 +84,8 @@ include(ExternalProject)
 set(LIBUV_URL https://github.com/libuv/libuv/archive/v1.10.0.tar.gz)
 set(LIBUV_SHA256 50f4ed57d65af4ab634e2cbdd90c49213020e15b4d77d3631feb633cbba9239f)
 
-set(MSGPACK_URL https://github.com/msgpack/msgpack-c/archive/cpp-1.4.2.tar.gz)
-set(MSGPACK_SHA256 c739aab4f9ec1cc4352e1520fe0d0ec9271e98c2815e0e25fe4c6a2eb61a56ad)
+set(MSGPACK_URL https://github.com/msgpack/msgpack-c/archive/cpp-2.0.0.tar.gz)
+set(MSGPACK_SHA256 eb20b4bf15f20bad149ec82fffac74f16de2a8a797e321a3f8189d63263a511e)
 
 if(USE_BUNDLED_LIBUV)
   include(BuildLibuv)
