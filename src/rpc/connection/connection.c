@@ -30,26 +30,30 @@
  *    limitations under the License.
  */
 
-#include <msgpack/object.h>
-#include <msgpack/pack.h>
-#include <msgpack/sbuffer.h>
-#include <msgpack/unpack.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-#include <uv.h>
-#ifdef __linux__
-#include <bsd/string.h>
-#endif
-
-#include "tweetnacl.h"
-#include "rpc/sb-rpc.h"
 #include "rpc/connection/connection.h"
-#include "rpc/msgpack/helpers.h"
-#include "api/sb-api.h"
-#include "api/helpers.h"
+#ifdef __linux__
+#include <bsd/string.h>            // for strlcpy
+#endif
+#include <msgpack/object.h>        // for msgpack_object, msgpack_object_union
+#include <msgpack/pack.h>          // for msgpack_packer_init, msgpack_packer
+#include <msgpack/sbuffer.h>       // for msgpack_sbuffer, msgpack_sbuffer_c...
+#include <msgpack/unpack.h>        // for msgpack_unpacked, msgpack_unpacked...
+#include <stdbool.h>               // for true, bool, false
+#include <stddef.h>                // for NULL, size_t
+#include <stdint.h>                // for uint64_t, UINT64_MAX, uint32_t
+#include <stdlib.h>                // for abort, exit, realloc
+#include <string.h>                // for strlen
+#include <uv.h>                    // for uv_handle_t, uv_close, uv_timer_t
+#include "api/helpers.h"           // for NIL
+#include "api/sb-api.h"            // for api_free_array, api_free_object
+#include "khash.h"                 // for __i, khint32_t
+#include "main.h"                  // for main_loop
+#include "rpc/connection/event.h"  // for multiqueue_free, multiqueue_new_child
+#include "rpc/connection/loop.h"   // for loop, LOOP_PROCESS_EVENTS_UNTIL
+#include "rpc/msgpack/helpers.h"   // for msgpack_rpc_serialize_request, msg...
+#include "rpc/sb-rpc.h"            // for callinfo, crypto_context, object
+#include "tweetnacl.h"             // for randombytes
+
 
 STATIC void parse_cb(inputstream *istream, void *data, bool eof);
 STATIC void close_cb(uv_handle_t *handle);
@@ -499,8 +503,7 @@ STATIC void parse_cb(inputstream *istream, void *data, bool eof)
     }
 
     consumedlen += plaintextlen;
-    reset_packet(con);
-    FREE(con->packet.data);
+    reset_parser(con);
   }
 
   msgpack_unpacker_buffer_consumed(con->mpac, consumedlen);

@@ -14,18 +14,21 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stddef.h>
-#include <string.h>
-#ifdef __linux__
-#include <bsd/string.h>
-#endif
-#include <stdlib.h>
-
-#include "sb-common.h"
-#include "rpc/sb-rpc.h"
-#include "rpc/db/sb-db.h"
 #include "rpc/connection/server.h"
-
+#ifdef __linux__
+#include <bsd/string.h>           // for strlcpy
+#endif
+#include <netdb.h>                // for getnameinfo, NI_MAXHOST, NI_MAXSERV
+#include <netinet/in.h>           // for sockaddr_in
+#include <stddef.h>               // for NULL, size_t
+#include <stdint.h>               // for uint16_t
+#include <sys/socket.h>           // for sockaddr
+#include "khash.h"                // for __i, khint32_t
+#include "main.h"                 // for main_loop
+#include "rpc/connection/loop.h"  // for loop
+#include "rpc/db/sb-db.h"         // for db_authorized_set_whitelist_all
+#include "rpc/sb-rpc.h"           // for hashmap_cstr_t_ptr_t, hashmap_cstr_...
+#include "sb-common.h"            // for fmt_addr, ::SERVER_TYPE_TCP, LOG_ERROR
 
 #define ADDRESS_MAX_SIZE 256
 #define MAX_CONNECTIONS 16

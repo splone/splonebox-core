@@ -30,12 +30,15 @@
  *    limitations under the License.
  */
 
-#include <stdlib.h>
-
-#include "rpc/sb-rpc.h"
-#include "api/sb-api.h"
-#include "api/helpers.h"
-#include "sb-common.h"
+#include <msgpack/sbuffer.h>  // for msgpack_sbuffer_init, msgpack_sbuffer
+#include <stdbool.h>          // for false, true
+#include <stdint.h>           // for uint64_t
+#include <stdio.h>            // for snprintf
+#include <stdlib.h>           // for NULL, size_t
+#include "api/helpers.h"      // for ARRAY_OBJ, ADD, NIL, UINTEGER_OBJ
+#include "api/sb-api.h"       // for api_broadcast, api_register, api_result
+#include "rpc/sb-rpc.h"       // for object, array, object::(anonymous), dis...
+#include "sb-common.h"        // for ::API_ERROR_TYPE_VALIDATION, error_set
 
 static msgpack_sbuffer sbuf;
 static hashmap(string, dispatch_info) *dispatch_table = NULL;

@@ -16,7 +16,8 @@
 
 #pragma once
 
-#include "rpc/sb-rpc.h"
+#include <uv.h>         // for uv_handle_t, uv_stream_t
+#include "sb-common.h"  // for STATIC
 
 STATIC void connection_cb(uv_stream_t *server_stream, int status);
 STATIC void client_free_cb(uv_handle_t *handle);
