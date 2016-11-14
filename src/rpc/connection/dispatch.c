@@ -238,11 +238,8 @@ object handle_run(UNUSED(uint64_t con_id), UNUSED(uint64_t msgid),
     goto end;
   }
 
-  ret = ARRAY_OBJ(((array) {
-    .size = 1,
-    .capacity = 1,
-    .items = &UINTEGER_OBJ(callid)
-  }));
+  ADD(rv, UINTEGER_OBJ(callid));
+  ret = ARRAY_OBJ(rv);
 
 end:
   return ret;
@@ -318,11 +315,8 @@ object handle_result(UNUSED(uint64_t con_id), UNUSED(uint64_t msgid),
 
   hashmap_del(uint64_t, ptr_t)(callids, callid);
 
-  ret = ARRAY_OBJ(((array) {
-    .size = 1,
-    .capacity = 1,
-    .items = &UINTEGER_OBJ(callid)
-  }));
+  ADD(rv, UINTEGER_OBJ(callid));
+  ret = ARRAY_OBJ(rv);
 
 end:
   return ret;
@@ -484,11 +478,11 @@ dispatch_info msgpack_rpc_get_handler_for(const char *name, size_t name_len)
 
 int dispatch_table_init(void)
 {
-  dispatch_info register_info = {.func = handle_register, .async = true,
+  dispatch_info register_info = {.func = handle_register, .async = false,
       .name = (string) {.str = "register", .length = sizeof("register") - 1}};
-  dispatch_info run_info = {.func = handle_run, .async = true,
+  dispatch_info run_info = {.func = handle_run, .async = false,
       .name = (string) {.str = "run", .length = sizeof("run") - 1}};
-  dispatch_info result_info = {.func = handle_result, .async = true,
+  dispatch_info result_info = {.func = handle_result, .async = false,
       .name = (string) {.str = "result", .length = sizeof("result") - 1,}};
   dispatch_info broadcast_info = {.func = handle_broadcast, .async = true,
       .name = (string) {.str = "broadcast", .length = sizeof("broadcast") - 1,}};
