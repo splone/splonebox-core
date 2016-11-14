@@ -53,5 +53,5 @@ addons:
       - libhiredis-dev
 
 before_script: redis-server redis-test.conf
-script: make sb && make test && make sb-makekey && ./out/bin/sb-makekey && ./out/bin/sb-test
+script: make sb && make test && make sb-makekey && ./build/bin/sb-makekey && ./build/bin/sb-test
 after_success: .ci/after_success.sh
