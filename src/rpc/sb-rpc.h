@@ -230,40 +230,6 @@ struct connection_request_event_info {
   uint64_t msgid;
 };
 
-#define EVENT_HANDLER_MAX_ARGC 6
-
-typedef void (*argv_callback)(void **argv);
-typedef struct message {
-  int priority;
-  argv_callback handler;
-  void *argv[EVENT_HANDLER_MAX_ARGC];
-} event;
-
-typedef void(*event_scheduler)(event event, void *data);
-
-#define VA_EVENT_INIT(event, p, h, a) \
-  do { \
-    sbassert(a <= EVENT_HANDLER_MAX_ARGC); \
-    (event)->priority = p; \
-    (event)->handler = h; \
-    if (a) { \
-      va_list args; \
-      va_start(args, a); \
-      for (int i = 0; i < a; i++) { \
-        (event)->argv[i] = va_arg(args, void *); \
-      } \
-      va_end(args); \
-    } \
-  } while (0)
-
-static inline event event_create(int priority, argv_callback cb, int argc, ...)
-{
-  sbassert(argc <= EVENT_HANDLER_MAX_ARGC);
-  event event;
-  VA_EVENT_INIT(&event, priority, cb, argc);
-  return event;
-}
-
 /* Functions */
 
 /**

@@ -147,6 +147,7 @@ set(SPLONEBOX-SOURCES
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
   src/rpc/connection/event.h
+  src/rpc/connection/event-defs.h
   src/rpc/connection/streamhandle.c
   src/rpc/connection/streamhandle.h
   src/rpc/connection/inputstream.c
@@ -235,6 +236,7 @@ set(TEST-SOURCES
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
   src/rpc/connection/event.h
+  src/rpc/connection/event-defs.h
   src/rpc/connection/streamhandle.c
   src/rpc/connection/streamhandle.h
   src/rpc/connection/inputstream.c
