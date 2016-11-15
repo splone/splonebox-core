@@ -26,11 +26,3 @@ else
   # After this, pip in PATH will refer to Python 3's pip.
   python3.3 "${HOME}/get-pip.py" --user --upgrade
 fi
-
-# cmocka
-wget https://cmocka.org/files/1.0/cmocka-1.0.1.tar.xz
-tar -xJvf cmocka-1.0.1.tar.xz
-cd cmocka-1.0.1 && mkdir build && cd build
-cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr .. && make -j2 && sudo make install
-cd ../..
-rm -rf cmocka-1.0.1
