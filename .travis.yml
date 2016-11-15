@@ -53,6 +53,7 @@ addons:
       - libbsd-dev
       - libhiredis-dev
 
+before_install: .ci/before_install.sh
 before_script: redis-server redis-test.conf
 script: make sb && make test && make sb-makekey && ./build/bin/sb-makekey && ./build/bin/sb-test
 after_success: .ci/after_success.sh
