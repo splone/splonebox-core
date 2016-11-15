@@ -7,7 +7,7 @@ matrix:
       env: EXTRA_FLAGS="-DCLANG_ADDRESS_SANITIZER=ON"
     - os: linux
       compiler: gcc-5
-      env: GCOV=gcov-5 EXTRA_FLAGS="-DUSE_COVERAGE=ON"
+      env: GCOV=gcov-5 CMAKE_FLAGS="-DUSE_COVERAGE=ON"
 
 before_install:
   # cmocka

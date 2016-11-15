@@ -1,6 +1,6 @@
 BUILD_DIR := out
 CMAKE_BUILD_TYPE ?= Debug
-FLAGS := -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
+CMAKE_FLAGS := -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
 EXTRA_FLAGS ?=
 
 BUILD_TYPE ?= $(shell (type ninja > /dev/null 2>&1 && echo "Ninja") || echo "Unix Makefiles")
@@ -26,7 +26,10 @@ endif
 
 BUILD_CMD = $(BUILD_TOOL) $(VERBOSE_FLAG)
 
+# Extra CMake flags which extend the default set
+CMAKE_EXTRA_FLAGS ?=
 USE_BUNDLED_DEPS ?=
+DEPS_CMAKE_FLAGS ?=
 
 ifneq (,$(USE_BUNDLED_DEPS))
   BUNDLED_CMAKE_FLAG := -DUSE_BUNDLED=$(USE_BUNDLED_DEPS)
