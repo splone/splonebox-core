@@ -24,9 +24,6 @@
 
 int api_subscribe(uint64_t con_id, string event, struct api_error *api_error)
 {
-  if (!api_error)
-    return -1;
-
   size_t length = (event.length < METHOD_MAXLEN ? event.length : METHOD_MAXLEN);
   char e[METHOD_MAXLEN + 1];
   memcpy(e, event.str, length);

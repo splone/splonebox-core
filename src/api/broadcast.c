@@ -24,9 +24,6 @@
 
 int api_broadcast(string event, array args, struct api_error *api_error)
 {
-  if (!api_error)
-    return -1;
-
   object o = copy_object(ARRAY_OBJ(args));
 
   if (!connection_send_event(0, event.str, o.data.array)) {
