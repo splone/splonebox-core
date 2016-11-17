@@ -27,8 +27,8 @@ int api_result(char *targetpluginkey, uint64_t callid, array args,
   string result;
   object res;
 
-  if (!api_error)
-    return (-1);
+  sbassert(targetpluginkey);
+  sbassert(api_error);
 
   array meta = ARRAY_DICT_INIT;
   ADD(meta, UINTEGER_OBJ(callid));

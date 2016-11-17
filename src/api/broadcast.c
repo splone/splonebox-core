@@ -26,6 +26,8 @@ int api_broadcast(string event, array args, struct api_error *api_error)
 {
   object o = copy_object(ARRAY_OBJ(args));
 
+  sbassert(api_error);
+
   if (!connection_send_event(0, event.str, o.data.array)) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Broadcasting event failed");

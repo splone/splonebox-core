@@ -26,6 +26,9 @@ int api_unsubscribe(uint64_t con_id, string event, struct api_error *api_error)
 {
   size_t length = (event.length < METHOD_MAXLEN ? event.length : METHOD_MAXLEN);
   char e[METHOD_MAXLEN + 1];
+
+  sbassert(api_error);
+
   memcpy(e, event.str, length);
   e[length] = '\000';
 

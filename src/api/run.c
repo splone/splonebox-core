@@ -28,6 +28,8 @@ int api_run(char *targetpluginkey, string function_name, uint64_t callid,
   string run;
   object result;
 
+  sbassert(api_error);
+
   if (db_plugin_verify(targetpluginkey) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
     return (-1);

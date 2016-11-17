@@ -26,6 +26,9 @@ int api_register(string name, string desc, string author, string license,
 {
   object *func;
 
+  sbassert(pluginkey);
+  sbassert(api_error);
+
   if (functions.size == 0) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error in register API request. Invalid params size.");
