@@ -92,7 +92,6 @@ void api_free_dictionary(dictionary value)
   FREE(value.items);
 }
 
-/// Creates a deep clone of an object
 object copy_object(object obj)
 {
   switch (obj.type) {

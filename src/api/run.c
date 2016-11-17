@@ -27,6 +27,8 @@ int api_run(char *targetpluginkey, string function_name, uint64_t callid,
 {
   string run;
   object result;
+  array meta = ARRAY_DICT_INIT;
+  array request = ARRAY_DICT_INIT;
 
   sbassert(api_error);
 
@@ -41,12 +43,10 @@ int api_run(char *targetpluginkey, string function_name, uint64_t callid,
     return (-1);
   }
 
-  array meta = ARRAY_DICT_INIT;
   ADD(meta, OBJECT_OBJ((object) OBJECT_INIT));
   ADD(meta, UINTEGER_OBJ(callid));
 
-  array request = ARRAY_DICT_INIT;
-  ADD(request, ARRAY_OBJ(meta));
+    ADD(request, ARRAY_OBJ(meta));
   ADD(request, STRING_OBJ(cstring_copy_string(function_name.str)));
   ADD(request, copy_object(ARRAY_OBJ(args)));
 
