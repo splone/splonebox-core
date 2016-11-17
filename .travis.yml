@@ -7,7 +7,7 @@ matrix:
       env: EXTRA_FLAGS="-DCLANG_ADDRESS_SANITIZER=ON"
     - os: linux
       compiler: gcc-5
-      env: GCOV=gcov-5 EXTRA_FLAGS="-DUSE_COVERAGE=ON"
+      env: GCOV=gcov-5 CMAKE_FLAGS="-DUSE_COVERAGE=ON"
 
 before_install:
   # cmocka
@@ -17,16 +17,9 @@ before_install:
   - cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr .. && make -j2 && sudo make install
   - cd ../..
   - rm -rf cmocka-1.0.1
-  # libuv
-  - curl -L https://github.com/libuv/libuv/archive/v1.8.0.tar.gz | tar xzf -
-  - (cd libuv-1.8.0 && ./autogen.sh && ./configure --prefix=/usr && make && sudo make install)
-  - rm -rf libuv-1.8.0
-  # msgpack-c
-  - curl -L https://github.com/msgpack/msgpack-c/archive/cpp-1.4.1.tar.gz | tar xzf -
-  - (cd msgpack-c-cpp-1.4.1 && ./bootstrap && ./configure --prefix=/usr && make && sudo make install)
-  - rm -rf msgpack-c-cpp-1.4.1
-  # coveralls
-  - pip install --user cpp-coveralls
+  - .ci/before_install.sh
+
+install: .ci/install.sh
 
 addons:
   apt:
@@ -49,6 +42,7 @@ addons:
       - llvm-3.4-dev
       - ninja-build
       - pkg-config
+      - python3.3-dev
       - libbsd-dev
       - libhiredis-dev
 

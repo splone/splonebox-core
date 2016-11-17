@@ -41,6 +41,7 @@
 #include "kvec.h"                       // for connection::(anonymous), kv_pop
 #include "rpc/connection/connection.h"  // for connection
 #include "rpc/connection/event.h"       // for multiqueue, multiqueue_empty
+#include "rpc/connection/event-defs.h"
 #include "rpc/sb-rpc.h"                 // for callinfo, event
 
 
@@ -102,7 +103,7 @@ typedef struct loop {
 
 void loop_init(loop *loop, void *data);
 void loop_poll_events(loop *loop, int ms);
-void loop_schedule(loop *loop, event event);
+void loop_schedule(loop *loop, event e);
 void loop_on_put(multiqueue *queue, void *data);
 void loop_close(loop *loop, bool wait);
 void loop_process_events_until(loop *loop, struct connection *con,

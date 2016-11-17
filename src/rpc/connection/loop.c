@@ -80,10 +80,10 @@ void loop_poll_events(loop *loop, int ms)
 }
 
 // Schedule an event from another thread
-void loop_schedule(loop *loop, event event)
+void loop_schedule(loop *loop, event e)
 {
   uv_mutex_lock(&loop->mutex);
-  multiqueue_put_event(loop->thread_events, event);
+  multiqueue_put_event(loop->thread_events, e);
   uv_async_send(&loop->async);
   uv_mutex_unlock(&loop->mutex);
 }

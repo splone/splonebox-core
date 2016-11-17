@@ -58,7 +58,7 @@ struct multiqueue {
 
 static multiqueue *multiqueue_new(multiqueue *parent, put_callback put_cb, void *data);
 static event multiqueue_remove(multiqueue *this);
-static void multiqueue_push(multiqueue *this, event event);
+static void multiqueue_push(multiqueue *this, event e);
 static multiqueueitem *multiqueue_node_data(QUEUE *q);
 
 static event NILEVENT = { .handler = NULL, .argv = {NULL} };
@@ -107,10 +107,10 @@ event multiqueue_get(multiqueue *this)
   return multiqueue_empty(this) ? NILEVENT : multiqueue_remove(this);
 }
 
-void multiqueue_put_event(multiqueue *this, event event)
+void multiqueue_put_event(multiqueue *this, event e)
 {
   sbassert(this);
-  multiqueue_push(this, event);
+  multiqueue_push(this, e);
   if (this->parent && this->parent->put_cb) {
     this->parent->put_cb(this->parent, this->parent->data);
   }
@@ -120,9 +120,9 @@ void multiqueue_process_events(multiqueue *this)
 {
   sbassert(this);
   while (!multiqueue_empty(this)) {
-    event event = multiqueue_get(this);
-    if (event.handler) {
-      event.handler(event.argv);
+    event e = multiqueue_get(this);
+    if (e.handler) {
+      e.handler(e.argv);
     }
   }
 }
@@ -170,11 +170,11 @@ static event multiqueue_remove(multiqueue *this)
   return rv;
 }
 
-static void multiqueue_push(multiqueue *this, event event)
+static void multiqueue_push(multiqueue *this, event e)
 {
   multiqueueitem *item = MALLOC(multiqueueitem);
   item->link = false;
-  item->data.item.event = event;
+  item->data.item.event = e;
   QUEUE_INSERT_TAIL(&this->headtail, &item->node);
 
   if (this->parent) {
