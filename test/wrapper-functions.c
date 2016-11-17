@@ -2,6 +2,9 @@
 #include <msgpack/unpack.h>
 #include <msgpack/object.h>
 #include "rpc/sb-rpc.h"
+#include "rpc/msgpack/helpers.h"
+#include "rpc/connection/loop.h"
+#include "api/helpers.h"
 #include "helper-unix.h"
 #include "helper-all.h"
 
@@ -42,7 +45,7 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
     break;
   case 'M':
     /* message packet */
-    assert_int_equal(0, validate_crypto_write(buffer, len));
+    assert_int_equal(0, validate_crypto_write((unsigned char*)buffer, len));
     break;
   default:
     LOG_WARNING("Illegal identifier suffix.");
@@ -52,15 +55,19 @@ int __wrap_outputstream_write(UNUSED(outputstream *ostream), char *buffer, size_
   return (0);
 }
 
-void __wrap_loop_wait_for_response(UNUSED(struct connection *con),
-    struct callinfo *cinfo)
+void __wrap_loop_process_events_until(UNUSED(loop *loop),
+    UNUSED(struct connection *con), struct callinfo *cinfo)
 {
   assert_non_null(cinfo);
 
   /* The callid and the message_params type are determined by the unit test. */
-  cinfo->response.params.size = 1;
-  cinfo->response.params.obj = CALLOC(cinfo->response.params.size,
-      struct message_object);
-  cinfo->response.params.obj[0].type = (message_object_type)mock();
-  cinfo->response.params.obj[0].data.uinteger = (uint64_t)mock();
+
+  cinfo->result = ARRAY_OBJ(((array) {
+    .size = 1,
+    .capacity = 1,
+    .items = calloc(1, sizeof(object)),
+  }));
+
+  cinfo->result.data.array.items[0].type = (object_type)mock();
+  cinfo->result.data.array.items[0].data.uinteger = (uint64_t)mock();
 }

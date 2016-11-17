@@ -22,9 +22,10 @@
 #include "tweetnacl.h"
 #include "rpc/sb-rpc.h"
 #include "rpc/db/sb-db.h"
+#include "main.h"
 
 int8_t verbose_level;
-uv_loop_t loop;
+loop main_loop;
 
 int main(int argc, char **argv)
 {
@@ -38,7 +39,7 @@ int main(int argc, char **argv)
       abort();
   }
 
-  uv_loop_init(&loop);
+  loop_init(&main_loop, NULL);
 
   crypto_init();
 
@@ -57,12 +58,6 @@ int main(int argc, char **argv)
   /* initialize signal handler */
   if (signal_init() == -1) {
     LOG_ERROR("Failed to initialize signal handler.");
-    abort();
-  }
-
-  /* initialize event queue */
-  if (event_initialize() == -1) {
-    LOG_ERROR("Failed to initialize event queue.");
     abort();
   }
 
@@ -85,9 +80,9 @@ int main(int argc, char **argv)
     server_start_pipe(globaloptions->ApiNamedPipeListen);
   }
 
-  uv_run(&loop, UV_RUN_DEFAULT);
-
-  options_free(globaloptions);
+  for (;;) {
+    LOOP_PROCESS_EVENTS_UNTIL(&main_loop, main_loop.events, 2000, false);
+  }
 
   return (0);
 }

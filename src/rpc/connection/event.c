@@ -29,156 +29,164 @@
  *    limitations under the License.
  */
 
-#include <uv.h>
-
-#include "sb-common.h"
-#include "rpc/sb-rpc.h"
 #include "rpc/connection/event.h"
+#include <stdbool.h>    // for bool, false, true
+#include <stddef.h>     // for NULL
+#include "queue.h"      // for QUEUE_REMOVE, QUEUE, QUEUE_EMPTY, QUEUE_INSER...
+#include "sb-common.h"  // for sbassert, FREE, MALLOC
 
-equeue *equeue_root;
+typedef struct multiqueue_item multiqueueitem;
 
-int event_initialize(void)
+struct multiqueue_item {
+  union {
+    multiqueue *queue;
+    struct {
+      event event;
+      multiqueueitem *parent;
+    } item;
+  } data;
+  bool link;  // true: current item is just a link to a node in a child queue
+  QUEUE node;
+};
+
+struct multiqueue {
+  multiqueue *parent;
+  QUEUE headtail;
+  put_callback put_cb;
+  void *data;
+};
+
+static multiqueue *multiqueue_new(multiqueue *parent, put_callback put_cb, void *data);
+static event multiqueue_remove(multiqueue *this);
+static void multiqueue_push(multiqueue *this, event e);
+static multiqueueitem *multiqueue_node_data(QUEUE *q);
+
+static event NILEVENT = { .handler = NULL, .argv = {NULL} };
+
+multiqueue *multiqueue_new_parent(put_callback put_cb, void *data)
 {
-  /* initialize event root queue */
-  equeue_root = equeue_new(NULL);
-
-  if (!equeue_root)
-    return (-1);
-
-  return 0;
+  return multiqueue_new(NULL, put_cb, data);
 }
 
-
-equeue *equeue_new(equeue *root)
+multiqueue *multiqueue_new_child(multiqueue *parent)
 {
-  equeue *queue = MALLOC(equeue);
-
-  if (!queue)
-    return (NULL);
-
-  queue->root = root;
-
-  TAILQ_INIT(&queue->head);
-
-  return (queue);
+  sbassert(!parent->parent);
+  return multiqueue_new(parent, NULL, NULL);
 }
 
-
-/**
- * check if queue is empty
- *
- * @params queue queue instance
- */
-bool equeue_empty(equeue *queue)
+static multiqueue *multiqueue_new(multiqueue *parent, put_callback put_cb,
+    void *data)
 {
-  return (TAILQ_EMPTY(&queue->head));
+  multiqueue *rv = MALLOC(multiqueue);
+  QUEUE_INIT(&rv->headtail);
+  rv->parent = parent;
+  rv->put_cb = put_cb;
+  rv->data = data;
+  return rv;
 }
 
-
-int equeue_put(equeue *queue, api_event event)
+void multiqueue_free(multiqueue *this)
 {
-  if (!queue)
-    return (-1);
-
-  /* disallow `put` to root queue */
-  if (!queue->root)
-    return (-1);
-
-  queue_entry *entry = MALLOC(queue_entry);
-  entry->data.entry.event = event;
-  TAILQ_INSERT_TAIL(&queue->head, entry, node);
-
-  entry->data.entry.root = MALLOC(queue_entry);
-  entry->data.entry.root->data.queue = queue;
-  TAILQ_INSERT_TAIL(&queue->root->head, entry->data.entry.root, node);
-
-  return (0);
-}
-
-
-api_event equeue_get(equeue *queue)
-{
-  api_event event;
-  queue_entry *entry;
-
-  if (equeue_empty(queue)) {
-    event.handler = NULL;
-    return (event);
-  }
-
-  if (queue->root) {
-    entry = dequeue_child(queue);
-  } else {
-    entry = dequeue_child_from_root(queue);
-  }
-
-  event = entry->data.entry.event;
-
-  FREE(entry);
-
-  return (event);
-}
-
-
-STATIC queue_entry *dequeue_child(equeue *queue)
-{
-  queue_entry *entry;
-
-  entry = TAILQ_FIRST(&queue->head);
-  TAILQ_REMOVE(&queue->head, entry, node);
-  TAILQ_REMOVE(&queue->root->head, entry->data.entry.root, node);
-
-  FREE(entry->data.entry.root);
-
-  return (entry);
-}
-
-
-STATIC queue_entry *dequeue_child_from_root(equeue *queue)
-{
-  queue_entry *entry, *centry;
-  equeue *cqueue;
-
-  entry = TAILQ_FIRST(&queue->head);
-  TAILQ_REMOVE(&queue->head, entry, node);
-  cqueue = entry->data.queue;
-  centry = TAILQ_FIRST(&cqueue->head);
-  TAILQ_REMOVE(&cqueue->head, centry, node);
-
-  FREE(entry);
-
-  return (centry);
-}
-
-
-void equeue_free(equeue *queue)
-{
-  queue_entry *entry;
-
-  if (queue->root) {
-    while (!equeue_empty(queue)) {
-      entry = dequeue_child(queue);
-      FREE(entry);
+  sbassert(this);
+  while (!QUEUE_EMPTY(&this->headtail)) {
+    QUEUE *q = QUEUE_HEAD(&this->headtail);
+    multiqueueitem *item = multiqueue_node_data(q);
+    if (this->parent) {
+      QUEUE_REMOVE(&item->data.item.parent->node);
+      FREE(item->data.item.parent);
     }
-  } else {
-    while (!equeue_empty(queue)) {
-      entry = dequeue_child_from_root(queue);
-      FREE(entry);
+    QUEUE_REMOVE(q);
+    FREE(item);
+  }
+
+  FREE(this);
+}
+
+event multiqueue_get(multiqueue *this)
+{
+  return multiqueue_empty(this) ? NILEVENT : multiqueue_remove(this);
+}
+
+void multiqueue_put_event(multiqueue *this, event e)
+{
+  sbassert(this);
+  multiqueue_push(this, e);
+  if (this->parent && this->parent->put_cb) {
+    this->parent->put_cb(this->parent, this->parent->data);
+  }
+}
+
+void multiqueue_process_events(multiqueue *this)
+{
+  sbassert(this);
+  while (!multiqueue_empty(this)) {
+    event e = multiqueue_get(this);
+    if (e.handler) {
+      e.handler(e.argv);
     }
   }
-
-  FREE(queue);
 }
 
-
-void equeue_run_events(equeue *queue)
+bool multiqueue_empty(multiqueue *this)
 {
-  api_event event;
+  sbassert(this);
+  return QUEUE_EMPTY(&this->headtail);
+}
 
-  while (!equeue_empty(queue)) {
-    event = equeue_get(queue);
+void multiqueue_replace_parent(multiqueue *this, multiqueue *new_parent)
+{
+  sbassert(multiqueue_empty(this));
+  this->parent = new_parent;
+}
 
-    if (event.handler)
-      event.handler(&event.info);
+static event multiqueue_remove(multiqueue *this)
+{
+  sbassert(!multiqueue_empty(this));
+  QUEUE *h = QUEUE_HEAD(&this->headtail);
+  QUEUE_REMOVE(h);
+  multiqueueitem *item = multiqueue_node_data(h);
+  event rv;
+
+  if (item->link) {
+    sbassert(!this->parent);
+    // remove the next node in the linked queue
+    multiqueue *linked = item->data.queue;
+    sbassert(!multiqueue_empty(linked));
+    multiqueueitem *child =
+      multiqueue_node_data(QUEUE_HEAD(&linked->headtail));
+    QUEUE_REMOVE(&child->node);
+    rv = child->data.item.event;
+    FREE(child);
+  } else {
+    if (this->parent) {
+      // remove the corresponding link node in the parent queue
+      QUEUE_REMOVE(&item->data.item.parent->node);
+      FREE(item->data.item.parent);
+    }
+    rv = item->data.item.event;
   }
+
+  FREE(item);
+  return rv;
+}
+
+static void multiqueue_push(multiqueue *this, event e)
+{
+  multiqueueitem *item = MALLOC(multiqueueitem);
+  item->link = false;
+  item->data.item.event = e;
+  QUEUE_INSERT_TAIL(&this->headtail, &item->node);
+
+  if (this->parent) {
+    // push link node to the parent queue
+    item->data.item.parent = MALLOC(multiqueueitem);
+    item->data.item.parent->link = true;
+    item->data.item.parent->data.queue = this;
+    QUEUE_INSERT_TAIL(&this->parent->headtail, &item->data.item.parent->node);
+  }
+}
+
+static multiqueueitem *multiqueue_node_data(QUEUE *q)
+{
+  return QUEUE_DATA(q, multiqueueitem, node);
 }

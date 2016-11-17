@@ -14,18 +14,21 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <stddef.h>
-#include <string.h>
-#ifdef __linux__
-#include <bsd/string.h>
-#endif
-#include <stdlib.h>
-
-#include "sb-common.h"
-#include "rpc/sb-rpc.h"
-#include "rpc/db/sb-db.h"
 #include "rpc/connection/server.h"
-
+#ifdef __linux__
+#include <bsd/string.h>           // for strlcpy
+#endif
+#include <netdb.h>                // for getnameinfo, NI_MAXHOST, NI_MAXSERV
+#include <netinet/in.h>           // for sockaddr_in
+#include <stddef.h>               // for NULL, size_t
+#include <stdint.h>               // for uint16_t
+#include <sys/socket.h>           // for sockaddr
+#include "khash.h"                // for __i, khint32_t
+#include "main.h"                 // for main_loop
+#include "rpc/connection/loop.h"  // for loop
+#include "rpc/db/sb-db.h"         // for db_authorized_set_whitelist_all
+#include "rpc/sb-rpc.h"           // for hashmap_cstr_t_ptr_t, hashmap_cstr_...
+#include "sb-common.h"            // for fmt_addr, ::SERVER_TYPE_TCP, LOG_ERROR
 
 #define ADDRESS_MAX_SIZE 256
 #define MAX_CONNECTIONS 16
@@ -47,8 +50,6 @@ struct server {
 };
 
 static hashmap(cstr_t, ptr_t) *servers = NULL;
-
-uv_loop_t loop;
 
 int server_init(void)
 {
@@ -86,7 +87,7 @@ int server_start_tcp(boxaddr *addr, uint16_t port)
   box_addr_to_sockaddr(addr, port, &server->socket.tcp.addr,
       sizeof(struct sockaddr_in));
 
-  uv_tcp_init(&loop, &server->socket.tcp.handle);
+  uv_tcp_init(&main_loop.uv, &server->socket.tcp.handle);
   result = uv_tcp_bind(&server->socket.tcp.handle,
       (const struct sockaddr *)&server->socket.tcp.addr, 0);
 
@@ -138,7 +139,7 @@ int server_start_pipe(char *name)
     return (-1);
   }
 
-  uv_pipe_init(&loop, &server->socket.pipe.handle, 0);
+  uv_pipe_init(&main_loop.uv, &server->socket.pipe.handle, 0);
   result = uv_pipe_bind(&server->socket.pipe.handle, server->socket.pipe.addr);
 
   if (result) {
@@ -220,9 +221,9 @@ STATIC void connection_cb(uv_stream_t *server_stream, int status)
     return;
 
   if (server->type == SERVER_TYPE_TCP)
-    uv_tcp_init(&loop, (uv_tcp_t *)client);
+    uv_tcp_init(&main_loop.uv, (uv_tcp_t *)client);
   else
-    uv_pipe_init(&loop, (uv_pipe_t *)client, 0);
+    uv_pipe_init(&main_loop.uv, (uv_pipe_t *)client, 0);
 
   result = uv_accept(server_stream, client);
 

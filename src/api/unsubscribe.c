@@ -14,23 +14,25 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <msgpack.h>
+#include <stdlib.h>
+#include <stddef.h>
 
-#include "sb-common.h"
-#include "rpc/msgpack/sb-msgpack-rpc.h"
-#include "helper-unix.h"
+#include "rpc/db/sb-db.h"
+#include "api/sb-api.h"
+#include "api/helpers.h"
 
 
-void unit_pack_nil(UNUSED(void **state))
+int api_unsubscribe(uint64_t con_id, string event, struct api_error *api_error)
 {
-  msgpack_sbuffer sbuf;
-  msgpack_packer pk;
+  size_t length = (event.length < METHOD_MAXLEN ? event.length : METHOD_MAXLEN);
+  char e[METHOD_MAXLEN + 1];
 
-  msgpack_sbuffer_init(&sbuf);
-  msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+  sbassert(api_error);
 
-  assert_int_equal(0, pack_nil(&pk));
-  assert_int_not_equal(0, pack_nil(NULL));
+  memcpy(e, event.str, length);
+  e[length] = '\000';
 
-  msgpack_sbuffer_destroy(&sbuf);
+  connection_unsubscribe(con_id, e);
+
+  return 0;
 }

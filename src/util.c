@@ -250,6 +250,33 @@ char * box_strndup(const char *s, size_t n)
   return (dup);
 }
 
+/** Allocate a chunk of <b>len</b> bytes, with the same contents as the
+ * <b>len</b> bytes starting at <b>mem</b>. */
+void * sb_memdup(const void *mem, size_t len)
+{
+  char *duplicate;
+  sbassert(mem);
+
+  duplicate = MALLOC_ARRAY(len, char);
+  memcpy(duplicate, mem, len);
+
+  return duplicate;
+}
+
+/** As sb_memdup(), but add an extra 0 byte at the end of the resulting
+ * memory. */
+void * sb_memdup_nulterm(const void *mem, size_t len)
+{
+  char *duplicate;
+
+  sbassert(mem);
+  duplicate = MALLOC_ARRAY((len + 1), char);
+  memcpy(duplicate, mem, len);
+  duplicate[len] = '\0';
+
+  return duplicate;
+}
+
 /** Minimal sscanf replacement: parse <b>buf</b> according to <b>pattern</b>
  * and store the results in the corresponding argument fields.  Differs from
  * sscanf in that:

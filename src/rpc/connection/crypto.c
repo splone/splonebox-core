@@ -1,10 +1,12 @@
-#include <stdint.h>
-#include <unistd.h>
-#include "sb-common.h"
-#include "rpc/sb-rpc.h"
-#include "rpc/db/sb-db.h"
 #include "rpc/connection/crypto.h"
-#include "tweetnacl.h"
+#include <stdint.h>        // for uint64_t
+#include <stdlib.h>        // for exit
+#include <string.h>        // for memcpy, NULL, size_t
+#include <unistd.h>        // for close
+#include "rpc/db/sb-db.h"  // for db_authorized_verify, db_authorized_whitel...
+#include "rpc/sb-rpc.h"    // for crypto_context, outputstream_write, output...
+#include "sb-common.h"     // for sbmemzero, sbassert, FREE, ISODD, STATIC
+#include "tweetnacl.h"     // for crypto_box_NONCEBYTES, crypto_box_open_aft...
 
 #define CRYPTO_PREFIX_SPLONEBOXCLIENT	"splonebox-client"
 #define CRYPTO_PREFIX_SPLONEBOXSERVER	"splonebox-server"

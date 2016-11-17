@@ -52,7 +52,7 @@ static int db_function_add_meta(char *pluginkey, string name, string desc)
 {
   redisReply *reply;
 
-  if (!rc)
+  if (!rc || !name.str || !desc.str)
     return (-1);
 
   reply = redisCommand(rc, "HSET %s:func:%s:meta desc %s", pluginkey,
@@ -71,7 +71,7 @@ static int db_function_add_meta(char *pluginkey, string name, string desc)
 
 
 static int db_function_add_args(char *pluginkey, string name,
-    message_object_type type)
+    object_type type)
 {
   redisReply *reply;
 
@@ -103,6 +103,9 @@ static int db_function_flush_args(char *pluginkey, string name)
 
   /* if start > end, the result will be an empty list (which causes
    * key to be removed) */
+   printf("name: %s\n", name.str);
+   printf("pluginkey: %s\n", pluginkey);
+
   reply = redisCommand(rc, "LTRIM %s:func:%s:args %i %i", pluginkey,
           name.str, start, end);
 
@@ -122,13 +125,13 @@ static int db_function_flush_args(char *pluginkey, string name)
 
 int db_function_add(char *pluginkey, array *func)
 {
-  struct message_object *name_elem, *desc_elem, *args, *arg;
+  object *name_elem, *desc_elem, *args, *arg;
   string name, desc;
 
   if (!func || !rc || (func->size <= 2))
     return (-1);
 
-  name_elem = &func->obj[0];
+  name_elem = &func->items[0];
 
   if (!name_elem) {
     LOG_WARNING("Illegal function name pointer.");
@@ -144,7 +147,7 @@ int db_function_add(char *pluginkey, array *func)
     return (-1);
   }
 
-  desc_elem = &func->obj[1];
+  desc_elem = &func->items[1];
 
   if (!desc_elem) {
     LOG_WARNING("Illegal function description pointer.");
@@ -164,12 +167,12 @@ int db_function_add(char *pluginkey, array *func)
   if (db_function_add_meta(pluginkey, name, desc) == -1)
     return (-1);
 
-  args = &func->obj[2];
+  args = &func->items[2];
 
   db_function_flush_args(pluginkey, name);
 
-  for (size_t i = 0; i < args->data.params.size; i++) {
-    arg = &args->data.params.obj[i];
+  for (size_t i = 0; i < args->data.array.size; i++) {
+    arg = &args->data.array.items[i];
 
     if (db_function_add_args(pluginkey, name, arg->type) == -1) {
       LOG_WARNING("Failed to add function arguments!");
@@ -284,15 +287,15 @@ static int db_function_typecheck(char *pluginkey, string name,
         return (-1);
       }
 
-      if(val == OBJECT_TYPE_INT && args->obj[k].type == OBJECT_TYPE_UINT){
+      if(val == OBJECT_TYPE_INT && args->items[k].type == OBJECT_TYPE_UINT){
         /* Any positive integer will be treated as an unsigned int
          * (see unpack/pack.c) and might be a valid signed integer */
-        if(args->obj[k].data.uinteger > INT64_MAX){
+        if(args->items[k].data.uinteger > INT64_MAX){
           LOG_WARNING("run() function argument has wrong type.");
           freeReplyObject(reply);
           return (-1);
         }
-      } else if (val != args->obj[k].type){
+      } else if (val != args->items[k].type){
         LOG_WARNING("run() function argument has wrong type.");
         freeReplyObject(reply);
         return (-1);

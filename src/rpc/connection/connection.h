@@ -16,15 +16,42 @@
 
 #pragma once
 
-#include "rpc/sb-rpc.h"
+#include <msgpack/sbuffer.h>       // for msgpack_sbuffer
+#include <msgpack/unpack.h>        // for msgpack_unpacker
+#include <stdbool.h>               // for bool
+#include <stddef.h>                // for size_t
+#include <stdint.h>                // for uint64_t, uint32_t
+#include <uv.h>                    // for uv_stream_t, uv_timer_t
+#include "kvec.h"                  // for kvec_t
+#include "rpc/connection/event.h"  // for multiqueue
+#include "rpc/sb-rpc.h"            // for crypto_context, hashmap_cstr_t_ptr_t
+#include "sb-common.h"             // for hashmap
 
-STATIC void close_cb(uv_handle_t *handle);
-STATIC int connection_handle_request(struct connection *con,
-    msgpack_object *obj);
-STATIC void connection_handle_response(struct connection *con,
-    msgpack_object *obj);
-STATIC void connection_request_event(connection_request_event_info *info);
-STATIC void connection_close(struct connection *con);
-STATIC int parse_cb(inputstream *istream, void *data, bool eof);
-STATIC int is_valid_rpc_response(msgpack_object *obj, struct connection *con);
-STATIC void call_set_error(struct connection *con, char *msg);
+struct connection {
+  uint64_t id;
+  uint32_t msgid;
+  size_t pending_requests;
+  size_t refcount;
+  msgpack_unpacker *mpac;
+  msgpack_sbuffer *sbuf;
+  char *unpackbuf;
+  bool closed;
+  multiqueue *events;
+  struct {
+    inputstream *read;
+    outputstream *write;
+    uv_stream_t *uv;
+  } streams;
+  kvec_t(struct callinfo *) callvector;
+  kvec_t(wbuffer *) delayed_notifications;
+  struct crypto_context cc;
+  struct {
+    uint64_t start;
+    uint64_t end;
+    uint64_t pos;
+    uint64_t length;
+    unsigned char *data;
+  } packet;
+  uv_timer_t minutekey_timer;
+  hashmap(cstr_t, ptr_t) *subscribed_events;
+};

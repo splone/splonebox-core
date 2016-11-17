@@ -7,6 +7,16 @@ option(CLANG_MEMORY_SANITIZER "Enable clang memory sanitizer." OFF)
 option(CLANG_THREAD_SANITIZER "Enable clang thread sanitizer." OFF)
 option(CLANG_ANALYZER "Enable clang static analyzer." OFF)
 
+# Prefer our bundled versions of dependencies.
+set(DEPS_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr" CACHE PATH "Path prefix for finding dependencies")
+if(CMAKE_CROSSCOMPILING AND NOT UNIX)
+  list(INSERT CMAKE_FIND_ROOT_PATH 0 ${DEPS_PREFIX})
+  list(INSERT CMAKE_PREFIX_PATH 0 ${DEPS_PREFIX}/../host/bin)
+else()
+  list(INSERT CMAKE_PREFIX_PATH 0 ${DEPS_PREFIX})
+  set(ENV{PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}:${DEPS_PREFIX}/lib/pkgconfig")
+endif()
+
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -97,8 +107,10 @@ file(GLOB MANPAGES
 # splonebox target sources
 set(SPLONEBOX-SOURCES
   src/main.c
+  src/main.h
   src/sb-common.h
   src/khash.h
+  src/klist.h
   src/kvec.h
   src/queue.h
   src/string.c
@@ -127,9 +139,15 @@ set(SPLONEBOX-SOURCES
   src/api/register.c
   src/api/result.c
   src/api/run.c
+  src/api/broadcast.c
+  src/api/subscribe.c
+  src/api/unsubscribe.c
+  src/api/helpers.c
+  src/api/helpers.h
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
   src/rpc/connection/event.h
+  src/rpc/connection/event-defs.h
   src/rpc/connection/streamhandle.c
   src/rpc/connection/streamhandle.h
   src/rpc/connection/inputstream.c
@@ -144,10 +162,9 @@ set(SPLONEBOX-SOURCES
   src/rpc/connection/crypto.c
   src/rpc/connection/crypto.h
   src/rpc/connection/loop.c
-  src/rpc/msgpack/sb-msgpack-rpc.h
-  src/rpc/msgpack/message.c
-  src/rpc/msgpack/pack.c
-  src/rpc/msgpack/unpack.c
+  src/rpc/connection/loop.h
+  src/rpc/msgpack/helpers.c
+  src/rpc/msgpack/helpers.h
   src/rpc/db/sb-db.h
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
@@ -180,8 +197,10 @@ set(SB-MAKEKEY-SOURCES
 
 # splonebox test(s) sources
 set(TEST-SOURCES
+  src/main.h
   src/sb-common.h
   src/khash.h
+  src/klist.h
   src/queue.h
   src/string.c
   src/reallocarray.c
@@ -209,9 +228,15 @@ set(TEST-SOURCES
   src/api/register.c
   src/api/run.c
   src/api/result.c
+  src/api/broadcast.c
+  src/api/subscribe.c
+  src/api/unsubscribe.c
+  src/api/helpers.c
+  src/api/helpers.h
   src/rpc/sb-rpc.h
   src/rpc/connection/event.c
   src/rpc/connection/event.h
+  src/rpc/connection/event-defs.h
   src/rpc/connection/streamhandle.c
   src/rpc/connection/streamhandle.h
   src/rpc/connection/inputstream.c
@@ -226,10 +251,9 @@ set(TEST-SOURCES
   src/rpc/connection/crypto.c
   src/rpc/connection/crypto.h
   src/rpc/connection/loop.c
-  src/rpc/msgpack/sb-msgpack-rpc.h
-  src/rpc/msgpack/message.c
-  src/rpc/msgpack/pack.c
-  src/rpc/msgpack/unpack.c
+  src/rpc/connection/loop.h
+  src/rpc/msgpack/helpers.c
+  src/rpc/msgpack/helpers.h
   src/rpc/db/sb-db.h
   src/rpc/db/connect.c
   src/rpc/db/plugin.c
@@ -245,28 +269,7 @@ set(TEST-SOURCES
   test/helper-validate.h
   test/unit/server-start.c
   test/unit/server-stop.c
-  test/unit/pack-string.c
-  test/unit/pack-int.c
-  test/unit/pack-uint.c
-  test/unit/pack-array.c
-  test/unit/pack-nil.c
-  test/unit/pack-float.c
-  test/unit/pack-bool.c
-  test/unit/regression-issue-60.c
-  test/unit/unpack-string.c
-  test/unit/unpack-uint.c
-  test/unit/unpack-array.c
   test/unit/dispatch-table-get.c
-  test/unit/event-queue-put.c
-  test/unit/event-queue-get.c
-  test/unit/message-deserialize-request.c
-  test/unit/message-deserialize-response.c
-  test/unit/message-deserialize-error-response.c
-  test/unit/message-serialize-request.c
-  test/unit/message-serialize-response.c
-  test/unit/message-serialize-error-response.c
-  test/unit/message-is-request.c
-  test/unit/message-is-response.c
   test/functional/db-connect.c
   test/functional/db-plugin-add.c
   test/functional/db-pluginkey-verify.c
@@ -278,9 +281,12 @@ set(TEST-SOURCES
   test/functional/dispatch-handle-register.c
   test/functional/dispatch-handle-run.c
   test/functional/dispatch-handle-result.c
+  test/functional/dispatch-handle-subscribe.c
+  test/functional/dispatch-handle-broadcast.c
   test/functional/crypto.c
   test/functional/confparse.c
   test/functional/db-whitelist.c
+  test/functional/msgpack-rpc-helper.c
 )
 
 if(CLANG_ADDRESS_SANITIZER OR CLANG_MEMORY_SANITIZER OR CLANG_TSAN)
@@ -289,7 +295,11 @@ endif()
 
 include_directories(${PROJECT_SOURCE_DIR}/src)
 include_directories(${PROJECT_SOURCE_DIR}/test)
-include_directories(${BSD_INCLUDE_DIRS} ${LIBUV_INCLUDE_DIRS} ${MSGPACK_INCLUDE_DIRS} ${HIREDIS_INCLUDE_DIRS} ${CMOCKA_INCLUDE_DIRS})
+include_directories(SYSTEM ${BSD_INCLUDE_DIRS})
+include_directories(SYSTEM ${LIBUV_INCLUDE_DIRS})
+include_directories(SYSTEM ${MSGPACK_INCLUDE_DIRS})
+include_directories(SYSTEM ${HIREDIS_INCLUDE_DIRS})
+include_directories(SYSTEM ${CMOCKA_INCLUDE_DIRS})
 
 # sb target
 add_executable(sb ${SPLONEBOX-SOURCES})
@@ -311,7 +321,7 @@ add_executable(sb-test ${TEST-SOURCES})
 add_executable(sb-pluginkey ${SB-PLUGINKEY-SOURCES})
 
 # wrap some functions for testing
-set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_wait_for_response,--wrap=crypto_write ")
+set_property(TARGET sb-test APPEND_STRING PROPERTY LINK_FLAGS "-Wl,--wrap=outputstream_write,--wrap=loop_process_events_until,--wrap=crypto_write ")
 set_property(TARGET sb-test APPEND_STRING PROPERTY COMPILE_FLAGS "-DBOX_UNIT_TESTS ")
 
 target_link_libraries(sb-test

@@ -19,102 +19,60 @@
 
 #include "rpc/db/sb-db.h"
 #include "api/sb-api.h"
+#include "api/helpers.h"
+
 
 int api_run(char *targetpluginkey, string function_name, uint64_t callid,
-    struct message_object args, struct connection *con,
-    uint32_t msgid, struct api_error *api_error)
+    array args, struct api_error *api_error)
 {
-  struct message_object *data;
-  struct message_object *meta;
-  array run_params;
-  array run_response_params;
   string run;
-  struct callinfo cinfo;
+  object result;
+  array meta = ARRAY_DICT_INIT;
+  array request = ARRAY_DICT_INIT;
 
-  if (!api_error)
-    return (-1);
+  sbassert(api_error);
 
   if (db_plugin_verify(targetpluginkey) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION, "API key is invalid.");
     return (-1);
   }
 
-  if (db_function_verify(targetpluginkey, function_name, &args.data.params) == -1) {
+  if (db_function_verify(targetpluginkey, function_name, &args) == -1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "run() verification failed.");
     return (-1);
   }
 
-  run_params.size = 3;
-  run_params.obj = CALLOC(3, struct message_object);
+  ADD(meta, OBJECT_OBJ((object) OBJECT_INIT));
+  ADD(meta, UINTEGER_OBJ(callid));
 
-  if (!run_params.obj)
-    return (-1);
-
-  /* data refs to first run_params parameter */
-  meta = &run_params.obj[0];
-
-  meta->type = OBJECT_TYPE_ARRAY;
-
-  /* meta = [nil, callid] */
-  meta->data.params.size = 2;
-  meta->data.params.obj = CALLOC(2, struct message_object);
-
-  if (!meta->data.params.obj)
-    return (-1);
-
-  /* add nil */
-  data = &meta->data.params.obj[0];
-  data->type = OBJECT_TYPE_NIL;
-
-  /* add callid */
-  data = &meta->data.params.obj[1];
-  data->type = OBJECT_TYPE_UINT;
-  data->data.uinteger = callid;
-
-  /* add function name, data refs to second run_params parameter */
-  data = &run_params.obj[1];
-  data->type = OBJECT_TYPE_STR;
-  data->data.string = cstring_copy_string(function_name.str);
-
-  /* add function parameters, data refs to third run_params parameter */
-  data = &run_params.obj[2];
-
-  data->type = OBJECT_TYPE_ARRAY;
-  data->data.params = message_object_copy(args).data.params;
+    ADD(request, ARRAY_OBJ(meta));
+  ADD(request, STRING_OBJ(cstring_copy_string(function_name.str)));
+  ADD(request, copy_object(ARRAY_OBJ(args)));
 
   /* send request */
   run = (string) {.str = "run", .length = sizeof("run") - 1};
-  cinfo = connection_send_request(targetpluginkey, run, run_params,
+  result = connection_send_request(targetpluginkey, run, request,
       api_error);
 
   if (api_error->isset)
     return (-1);
 
-  if (cinfo.response.params.size != 1) {
+  if (result.data.array.size != 1) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API response. Either response is broken "
         "or it just has wrong params size.");
     return (-1);
   }
 
-  if (!(cinfo.response.params.obj[0].type == OBJECT_TYPE_UINT &&
-    callid == cinfo.response.params.obj[0].data.uinteger)) {
+  if (!(result.data.array.items[0].type == OBJECT_TYPE_UINT &&
+    callid == result.data.array.items[0].data.uinteger)) {
     error_set(api_error, API_ERROR_TYPE_VALIDATION,
         "Error dispatching run API response. Invalid callid");
     return (-1);
   }
 
-  run_response_params.size = 1;
-  run_response_params.obj = CALLOC(1, struct message_object);
-  run_response_params.obj[0].type = OBJECT_TYPE_UINT;
-  run_response_params.obj[0].data.uinteger = callid;
-
-  if (connection_send_response(con, msgid, run_response_params, api_error) < 0) {
-    return (-1);
-  };
-
-  free_params(cinfo.response.params);
+  api_free_array(result.data.array);
 
   return (0);
 }

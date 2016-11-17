@@ -32,21 +32,39 @@
 
 #pragma once
 
-#include <stdbool.h>     // for bool
-#include "rpc/connection/event-defs.h"
+#include <stdarg.h>
+#include "sb-common.h"
 
+#define EVENT_HANDLER_MAX_ARGC 6
 
-typedef struct multiqueue multiqueue;
-typedef void (*put_callback)(multiqueue *multiq, void *data);
+typedef void (*argv_callback)(void **argv);
+typedef struct message {
+  int priority;
+  argv_callback handler;
+  void *argv[EVENT_HANDLER_MAX_ARGC];
+} event;
 
-multiqueue *multiqueue_new_parent(put_callback put_cb, void *data);
-multiqueue *multiqueue_new_child(multiqueue *parent);
-void multiqueue_free(multiqueue *this);
-event multiqueue_get(multiqueue *this);
-void multiqueue_put_event(multiqueue *this, event e);
-void multiqueue_process_events(multiqueue *this);
-bool multiqueue_empty(multiqueue *this);
-void multiqueue_replace_parent(multiqueue *this, multiqueue *new_parent);
+typedef void(*event_scheduler)(event e, void *data);
 
-#define multiqueue_put(q, h, ...) \
-  multiqueue_put_event(q, event_create(1, h, __VA_ARGS__));
+#define VA_EVENT_INIT(event, p, h, a) \
+  do { \
+    sbassert(a <= EVENT_HANDLER_MAX_ARGC); \
+    (event)->priority = p; \
+    (event)->handler = h; \
+    if (a) { \
+      va_list args; \
+      va_start(args, a); \
+      for (int i = 0; i < a; i++) { \
+        (event)->argv[i] = va_arg(args, void *); \
+      } \
+      va_end(args); \
+    } \
+  } while (0)
+
+static inline event event_create(int priority, argv_callback cb, int argc, ...)
+{
+  sbassert(argc <= EVENT_HANDLER_MAX_ARGC);
+  event e;
+  VA_EVENT_INIT(&e, priority, cb, argc);
+  return e;
+}

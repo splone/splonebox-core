@@ -20,28 +20,7 @@
 
 void unit_server_start(void **state);
 void unit_server_stop(void **state);
-void unit_pack_string(void **state);
-void unit_pack_int(void **state);
-void unit_pack_uint(void **state);
-void unit_pack_array(void **state);
-void unit_pack_nil(void **state);
-void unit_pack_float(void **state);
-void unit_pack_bool(void **state);
-void unit_unpack_string(void **state);
-void unit_unpack_uint(void **state);
-void unit_unpack_array(void **state);
 void unit_dispatch_table_get(void **state);
-void unit_event_queue_put(void **state);
-void unit_event_queue_get(void **state);
-void unit_regression_issue_60(void **state);
-void unit_message_deserialize_request(void **state);
-void unit_message_deserialize_response(void **state);
-void unit_message_deserialize_error_response(void **state);
-void unit_message_serialize_request(void **state);
-void unit_message_serialize_response(void **state);
-void unit_message_serialize_error_response(void **state);
-void unit_message_is_request(void **state);
-void unit_message_is_response(void **state);
 
 void functional_client_connect(void **state);
 void functional_db_connect(void **state);
@@ -55,6 +34,9 @@ void functional_filesystem_save_sync(void **state);
 void functional_dispatch_handle_register(void **state);
 void functional_dispatch_handle_run(void **state);
 void functional_dispatch_handle_result(void **state);
+void functional_dispatch_handle_subscribe(void **state);
+void functional_dispatch_handle_broadcast(void **state);
+void functional_msgpack_rpc_helper(void **state);
 void functional_crypto(void **state);
 void functional_confparse(void **state);
 void functional_db_whitelist(void **state);
@@ -63,23 +45,6 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(unit_dispatch_table_get),
   cmocka_unit_test(unit_server_start),
   cmocka_unit_test(unit_server_stop),
-  cmocka_unit_test(unit_pack_string),
-  cmocka_unit_test(unit_pack_int),
-  cmocka_unit_test(unit_pack_uint),
-  cmocka_unit_test(unit_pack_nil),
-  cmocka_unit_test(unit_pack_float),
-  cmocka_unit_test(unit_pack_bool),
-  cmocka_unit_test(unit_pack_array),
-  cmocka_unit_test(unit_regression_issue_60),
-  cmocka_unit_test(unit_event_queue_put),
-  cmocka_unit_test(unit_message_deserialize_request),
-  cmocka_unit_test(unit_message_deserialize_response),
-  cmocka_unit_test(unit_message_deserialize_error_response),
-  cmocka_unit_test(unit_message_serialize_request),
-  cmocka_unit_test(unit_message_serialize_response),
-  cmocka_unit_test(unit_message_serialize_error_response),
-  cmocka_unit_test(unit_message_is_request),
-  cmocka_unit_test(unit_message_is_response),
   cmocka_unit_test(functional_db_connect),
   cmocka_unit_test(functional_db_plugin_add),
   cmocka_unit_test(functional_db_pluginkey_verify),
@@ -91,6 +56,9 @@ const struct CMUnitTest tests[] = {
   cmocka_unit_test(functional_dispatch_handle_register),
   cmocka_unit_test(functional_dispatch_handle_run),
   cmocka_unit_test(functional_dispatch_handle_result),
+  cmocka_unit_test(functional_dispatch_handle_subscribe),
+  cmocka_unit_test(functional_dispatch_handle_broadcast),
+  cmocka_unit_test(functional_msgpack_rpc_helper),
   cmocka_unit_test(functional_crypto),
   cmocka_unit_test(functional_confparse),
   cmocka_unit_test(functional_db_whitelist),

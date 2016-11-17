@@ -14,25 +14,25 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <msgpack.h>
+#include <stdlib.h>
+#include <stddef.h>
 
-#include "sb-common.h"
-#include "rpc/msgpack/sb-msgpack-rpc.h"
-#include "helper-unix.h"
+#include "rpc/db/sb-db.h"
+#include "api/sb-api.h"
+#include "api/helpers.h"
 
 
-void unit_pack_string(UNUSED(void **state))
+int api_broadcast(string event, array args, struct api_error *api_error)
 {
-  string key = cstring_copy_string("TeiwieDoowuiMeix6SooxieFievee2io3ohhu5uo5ughu8cieja4iu6chuirija");
-  msgpack_sbuffer sbuf;
-  msgpack_packer pk;
+  object o = copy_object(ARRAY_OBJ(args));
 
-  msgpack_sbuffer_init(&sbuf);
-  msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
+  sbassert(api_error);
 
-  assert_int_equal(0, pack_string(&pk, key));
-  assert_int_not_equal(0, pack_string(NULL, key));
+  if (!connection_send_event(0, event.str, o.data.array)) {
+    error_set(api_error, API_ERROR_TYPE_VALIDATION,
+        "Broadcasting event failed");
+    return -1;
+  }
 
-  msgpack_sbuffer_destroy(&sbuf);
-  free_string(key);
+  return 0;
 }

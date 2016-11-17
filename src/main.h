@@ -14,23 +14,8 @@
  *    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <msgpack.h>
+ #pragma once
 
-#include "sb-common.h"
-#include "rpc/msgpack/sb-msgpack-rpc.h"
-#include "helper-unix.h"
+#include "rpc/connection/loop.h"
 
-
-void unit_pack_float(UNUSED(void **state))
-{
-  msgpack_sbuffer sbuf;
-  msgpack_packer pk;
-
-  msgpack_sbuffer_init(&sbuf);
-  msgpack_packer_init(&pk, &sbuf, msgpack_sbuffer_write);
-
-  assert_int_equal(0, pack_float(&pk, 1.234));
-  assert_int_not_equal(0, pack_float(NULL, 1.234));
-
-  msgpack_sbuffer_destroy(&sbuf);
-}
+extern loop main_loop;
