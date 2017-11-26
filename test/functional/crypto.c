@@ -46,11 +46,8 @@ int validate_crypto_cookie_packet(unsigned char *buffer,
   ciphertextlen = 160;
   blocklen = 144;
 
-  block = MALLOC_ARRAY(ciphertextlen, unsigned char);
-  ciphertextpadded = CALLOC(ciphertextlen, unsigned char);
-
-  if (block == NULL || ciphertextpadded == NULL)
-    return (-1);
+  block = malloc_array_or_die(ciphertextlen, sizeof(unsigned char));
+  ciphertextpadded = calloc_or_die(ciphertextlen, sizeof(unsigned char));
 
   memcpy(ciphertextpadded + 16, buffer + 24, blocklen);
 
@@ -100,11 +97,8 @@ int validate_crypto_write(unsigned char *buffer, UNUSED(uint64_t length))
   ciphertextlen = unpackedlen - 24;
   blocklen = unpackedlen - 40;
 
-  block = MALLOC_ARRAY(ciphertextlen, unsigned char);
-  ciphertextpadded = CALLOC(ciphertextlen, unsigned char);
-
-  if (block == NULL || ciphertextpadded == NULL)
-    return (-1);
+  block = malloc_array_or_die(ciphertextlen, sizeof(unsigned char));
+  ciphertextpadded = calloc_or_die(ciphertextlen, sizeof(unsigned char));
 
   memcpy(ciphertextpadded + 16, buffer + 40, blocklen);
 

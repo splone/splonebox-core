@@ -500,10 +500,7 @@ int crypto_write(struct crypto_context *cc, char *data,
    * (crypto_box_ZEROBYTES)
    */
   packetlen = length + 56;
-  packet = MALLOC_ARRAY(packetlen, unsigned char);
-
-  if (packet == NULL)
-    return -1;
+  packet = malloc_array_or_die(packetlen, sizeof(unsigned char));
 
   /* update nonce */
   nonce_update(cc);
@@ -527,11 +524,8 @@ int crypto_write(struct crypto_context *cc, char *data,
   memcpy(packet + 16, lengthbox + 16, 24);
 
   blocklen = length + 32;
-  block = CALLOC(blocklen, unsigned char);
-  ciphertext = MALLOC_ARRAY(blocklen, unsigned char);
-
-  if ((block == NULL) || (ciphertext == NULL))
-    return -1;
+  block = calloc_or_die(blocklen, sizeof(unsigned char));
+  ciphertext = malloc_array_or_die(blocklen, sizeof(unsigned char));
 
   memcpy(block + 32, data, length);
 
@@ -593,11 +587,8 @@ int crypto_read(struct crypto_context *cc, unsigned char *in, char *out,
   /* ciphertextlen = length - 8 (id) - 72 (length) - 8 (nonce) + 16 (padding) */
   ciphertextlen = length - 24;
 
-  block = MALLOC_ARRAY(ciphertextlen, unsigned char);
-  ciphertextpadded = CALLOC(ciphertextlen, unsigned char);
-
-  if ((block == NULL) || (ciphertextpadded == NULL))
-    return -1;
+  block = malloc_array_or_die(ciphertextlen, sizeof(unsigned char));
+  ciphertextpadded = calloc_or_die(ciphertextlen, sizeof(unsigned char));
 
   memcpy(ciphertextpadded + 16, in + 40, blocklen);
 

@@ -48,7 +48,7 @@ int main(int argc, char **argv)
     goto fail;
   }
 
-  pluginkey = MALLOC_ARRAY((PLUGINKEY_SIZE*2) + 1, char);
+  pluginkey = malloc_array_or_die((PLUGINKEY_SIZE*2) + 1, sizeof(char));
   if (!pluginkey) {
     LOG("Failed to alloc mem for pluginkey_base16_encoded.\n");
     goto fail;

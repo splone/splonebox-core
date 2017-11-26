@@ -152,7 +152,7 @@ STATIC setoptionerror options_init_from_string(const char *cf)
   int retval;
   setoptionerror err = SETOPT_ERR_MISC;
 
-  newoptions = CALLOC(1, options);
+  newoptions = calloc_or_die(1, sizeof(options));
   newoptions->magic_ = OR_OPTIONS_MAGIC;
   options_init(newoptions);
 
@@ -212,7 +212,7 @@ STATIC char *load_boxrc_from_disk(void)
     return (NULL);
   }
 
-  string = MALLOC_ARRAY((size_t)(statbuf.st_size+1), char);
+  string = malloc_array_or_die((size_t)(statbuf.st_size+1), sizeof(char));
   ssize_t r = filesystem_read_all(fd, string, (size_t)statbuf.st_size);
 
   if (r < 0) {

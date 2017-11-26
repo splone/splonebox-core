@@ -62,12 +62,12 @@ void functional_dispatch_handle_subscribe(UNUSED(void **state))
   struct api_error error = ERROR_INIT;
   array request;
 
-  con1 = CALLOC(1, struct connection);
+  con1 = calloc_or_die(1, sizeof(struct connection));
   con1->id = (uint64_t) randommod(281474976710656LL);
   con1->msgid = 4321;
   con1->subscribed_events = hashmap_new(cstr_t, ptr_t)();
 
-  con2 = CALLOC(1, struct connection);
+  con2 = calloc_or_die(1, sizeof(struct connection));
   con2->id = (uint64_t) randommod(281474976710656LL);
   con2->msgid = 4321;
   con2->subscribed_events = hashmap_new(cstr_t, ptr_t)();

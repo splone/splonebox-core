@@ -42,10 +42,7 @@
 inputstream *inputstream_new(inputstream_cb cb, uint32_t buffer_size,
     void *data)
 {
-  inputstream *rs = MALLOC(inputstream);
-
-  if (rs == NULL)
-    return (NULL);
+  inputstream *rs = malloc_or_die(sizeof(inputstream));
 
   rs->data = data;
   rs->size = 0;
@@ -54,7 +51,7 @@ inputstream *inputstream_new(inputstream_cb cb, uint32_t buffer_size,
   rs->free_handle = false;
 
   /* initialize circular buffer */
-  rs->circbuf_start = MALLOC_ARRAY(buffer_size, unsigned char);
+  rs->circbuf_start = malloc_array_or_die(buffer_size, sizeof(unsigned char));
   rs->circbuf_read_pos = rs->circbuf_start;
   rs->circbuf_write_pos = rs->circbuf_start;
   rs->circbuf_end = rs->circbuf_start + buffer_size;

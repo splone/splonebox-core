@@ -77,7 +77,7 @@ multiqueue *multiqueue_new_child(multiqueue *parent)
 static multiqueue *multiqueue_new(multiqueue *parent, put_callback put_cb,
     void *data)
 {
-  multiqueue *rv = MALLOC(multiqueue);
+  multiqueue *rv = malloc_or_die(sizeof(multiqueue));
   QUEUE_INIT(&rv->headtail);
   rv->parent = parent;
   rv->put_cb = put_cb;
@@ -172,14 +172,14 @@ static event multiqueue_remove(multiqueue *this)
 
 static void multiqueue_push(multiqueue *this, event e)
 {
-  multiqueueitem *item = MALLOC(multiqueueitem);
+  multiqueueitem *item = malloc_or_die(sizeof(multiqueueitem));
   item->link = false;
   item->data.item.event = e;
   QUEUE_INSERT_TAIL(&this->headtail, &item->node);
 
   if (this->parent) {
     // push link node to the parent queue
-    item->data.item.parent = MALLOC(multiqueueitem);
+    item->data.item.parent = malloc_or_die(sizeof(multiqueueitem));
     item->data.item.parent->link = true;
     item->data.item.parent->data.queue = this;
     QUEUE_INSERT_TAIL(&this->parent->headtail, &item->data.item.parent->node);

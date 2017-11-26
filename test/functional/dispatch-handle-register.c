@@ -181,7 +181,7 @@ void functional_dispatch_handle_register(UNUSED(void **state))
   struct api_error error = ERROR_INIT;
   char pluginkey[PLUGINKEY_STRING_SIZE] = "012345789ABCDEFH";
 
-  con = CALLOC(1, struct connection);
+  con = calloc_or_die(1, sizeof(struct connection));
   con->closed = true;
   con->id = 1234;
   con->msgid = 4321;

@@ -123,10 +123,7 @@ int connection_create(uv_stream_t *stream)
 
   stream->data = NULL;
 
-  struct connection *con = MALLOC(struct connection);
-
-  if (con == NULL)
-    return (-1);
+  struct connection *con = malloc_or_die(sizeof(struct connection));
 
   con->id = next_con_id++;
   con->msgid = 1;
@@ -228,7 +225,7 @@ STATIC void broadcast_event(char *name, array args)
     con = kv_A(subscribed, i);
 
     if (con->pending_requests) {
-      wbuffer *rv = MALLOC(wbuffer);
+      wbuffer *rv = malloc_or_die(sizeof(wbuffer));
       rv->size = sbuf.size;
       rv->data = sb_memdup_nulterm(sbuf.data, sbuf.size);
       kv_push(con->delayed_notifications, rv);
@@ -443,12 +440,7 @@ STATIC void parse_cb(inputstream *istream, void *data, bool eof)
     }
 
     con->packet.end = con->packet.length;
-    con->packet.data = MALLOC_ARRAY(MAX(con->packet.end, read), unsigned char);
-
-    if (!con->packet.data) {
-      LOG_ERROR("Failed to alloc mem for con packet.");
-      goto end;
-    }
+    con->packet.data = malloc_array_or_die(MAX(con->packet.end, read), sizeof(unsigned char));
 
     if (msgpack_unpacker_reserve_buffer(con->mpac,
       MAX(read, con->packet.end)) == false) {
@@ -564,7 +556,7 @@ bool connection_send_event(uint64_t id, char *name, array args)
     api_free_array(args);
 
     if (con->pending_requests) {
-      wbuffer *rv = MALLOC(wbuffer);
+      wbuffer *rv = malloc_or_die(sizeof(wbuffer));
       rv->size = sbuf.size;
       rv->data = sb_memdup_nulterm(sbuf.data, sbuf.size);
       kv_push(con->delayed_notifications, rv);
@@ -738,7 +730,7 @@ STATIC void connection_handle_request(struct connection *con,
     dispatcher.async = true;
   }
 
-  connection_request_event_info *eventinfo = MALLOC(connection_request_event_info);
+  connection_request_event_info *eventinfo = malloc_or_die(sizeof(connection_request_event_info));
   eventinfo->con = con;
   eventinfo->dispatcher = dispatcher;
   eventinfo->args = args;

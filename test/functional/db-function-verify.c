@@ -34,7 +34,7 @@ void functional_db_function_verify(UNUSED(void **state))
   array params, *args;
 
   params.size = 4;
-  params.items =  CALLOC(params.size, object);
+  params.items =  calloc_or_die(params.size, sizeof(object));
 
   params.items[0].type = OBJECT_TYPE_STR;
   params.items[0].data.string = name;
@@ -44,8 +44,8 @@ void functional_db_function_verify(UNUSED(void **state))
 
   params.items[2].type = OBJECT_TYPE_ARRAY;
   params.items[2].data.array.size = 1;
-  params.items[2].data.array.items = CALLOC(params.items[2].data.array.size,
-      object);
+  params.items[2].data.array.items = calloc_or_die(
+      params.items[2].data.array.size, sizeof(object));
   params.items[2].data.array.items[0].type = OBJECT_TYPE_INT;
   params.items[2].data.array.items[0].data.uinteger = 6;
 

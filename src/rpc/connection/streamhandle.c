@@ -74,10 +74,7 @@ STATIC struct streamhandle *init_streamhandle(uv_handle_t *handle)
   struct streamhandle *hd;
 
   if (handle->data == NULL) {
-    hd = MALLOC(struct streamhandle);
-
-    if (hd == NULL)
-      return (NULL);
+    hd = malloc_or_die(sizeof(struct streamhandle));
 
     hd->istream = NULL;
     hd->ostream = NULL;

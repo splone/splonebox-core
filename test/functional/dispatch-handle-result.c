@@ -132,7 +132,7 @@ void functional_dispatch_handle_result(UNUSED(void **state))
   /* create test plugin that is used for the tests */
   struct plugin *plugin = helper_get_example_plugin();
 
-  con = CALLOC(1, struct connection);
+  con = calloc_or_die(1, sizeof(struct connection));
   con->closed = true;
   con->id = (uint64_t) randommod(281474976710656LL);
   con->msgid = 4321;

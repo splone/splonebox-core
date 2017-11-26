@@ -59,7 +59,7 @@
                                                                               \
   hashmap(T, U) *hashmap_##T##_##U##_new()                                    \
   {                                                                           \
-    hashmap(T, U) *rv = MALLOC(hashmap(T, U));                                \
+    hashmap(T, U) *rv = malloc_or_die(sizeof(hashmap(T, U)));                 \
     rv->table = kh_init(T##_##U##_map);                                       \
     return rv;                                                                \
   }                                                                           \
