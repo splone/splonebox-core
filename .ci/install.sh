@@ -14,4 +14,4 @@ fi
 
 # Use default CC to avoid compilation problems when installing Python modules.
 echo "Install coveralls for Python 2."
-CC=cc pip2.7 -q install --user --upgrade cpp-coveralls
+CC=cc pip3.7 -q install --user --upgrade cpp-coveralls

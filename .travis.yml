@@ -42,7 +42,7 @@ addons:
       - llvm-3.4-dev
       - ninja-build
       - pkg-config
-      - python3.3-dev
+      - python3.7-dev
       - libbsd-dev
       - libhiredis-dev
 
