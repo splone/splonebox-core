@@ -35,7 +35,6 @@
 #include <stdbool.h>                    // for bool
 #include <stddef.h>                     // for size_t
 #include <stdint.h>                     // for uint64_t
-#include <uv-unix.h>                    // for uv_mutex_t
 #include <uv.h>                         // for uv_hrtime, uv_timer_t, uv_asy...
 #include "klist.h"                      // for mp, kl, k, p, KLIST_INIT, kli...
 #include "kvec.h"                       // for connection::(anonymous), kv_pop

@@ -15,6 +15,7 @@
  */
 
 #include <msgpack.h>
+#include <bsd/string.h>
 
 #include "helper-all.h"
 #include "sb-common.h"
