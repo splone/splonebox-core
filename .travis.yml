@@ -6,8 +6,8 @@ matrix:
       compiler: clang
       env: EXTRA_FLAGS="-DCLANG_ADDRESS_SANITIZER=ON"
     - os: linux
-      compiler: gcc-5
-      env: GCOV=gcov-5 CMAKE_FLAGS="-DUSE_COVERAGE=ON"
+      compiler: gcc-6
+      env: GCOV=gcov-6 CMAKE_FLAGS="-DUSE_COVERAGE=ON"
 
 before_install:
   # cmocka
@@ -17,29 +17,28 @@ before_install:
   - cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr .. && make -j2 && sudo make install
   - cd ../..
   - rm -rf cmocka-1.1.3
-  - .ci/before_install.sh
-
-install: .ci/install.sh
+  # coveralls
+  - pip -q install --user --upgrade cpp-coveralls
 
 addons:
   apt:
     sources:
       - deadsnakes
       - ubuntu-toolchain-r-test
+      - llvm-toolchain-trusty-5.0
     packages:
       - autoconf
       - automake
       - build-essential
-      - clang-3.4
+      - clang-5.0
       - cmake
-      - g++-5-multilib
+      - g++-6-multilib
       - g++-multilib
-      - gcc-5-multilib
+      - gcc-6-multilib
       - gcc-multilib
       - gdb
       - libc6-dev-i386
       - libtool
-      - llvm-3.4-dev
       - ninja-build
       - pkg-config
       - python3.7-dev
