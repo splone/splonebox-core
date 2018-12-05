@@ -17,9 +17,8 @@ before_install:
   - cmake -DCMAKE_INSTALL_PREFIX:PATH=/usr .. && make -j2 && sudo make install
   - cd ../..
   - rm -rf cmocka-1.1.3
-  - .ci/before_install.sh
-
-install: .ci/install.sh
+  # coveralls
+  - pip -q install --user --upgrade cpp-coveralls
 
 addons:
   apt:
