@@ -72,11 +72,8 @@ void connect_and_create(char *pluginkey)
 
 struct plugin *helper_get_example_plugin(void)
 {
-  struct plugin *p = MALLOC(struct plugin);
-  struct function *f = MALLOC(struct function);
-
-  if (!p || !f)
-    LOG_ERROR("[test] Failed to alloc mem for example plugin.\n");
+  struct plugin *p = malloc_or_die(sizeof(struct plugin));
+  struct function *f = malloc_or_die(sizeof(struct function));
 
   p->key = (string) {.str = "0123456789ABCDEF",
       .length = sizeof("0123456789ABCDEF") - 1};

@@ -40,10 +40,7 @@
 
 outputstream *outputstream_new(uint32_t maxmem)
 {
-  outputstream *ws = MALLOC(outputstream);
-
-  if (ws == NULL)
-    return (NULL);
+  outputstream *ws = malloc_or_die(sizeof(outputstream));
 
   ws->maxmem = maxmem;
   ws->stream = NULL;
@@ -78,18 +75,12 @@ int outputstream_write(outputstream *ostream, char *buffer, size_t len)
   buf.base = buffer;
   buf.len = len;
 
-  data = MALLOC(struct write_request_data);
-
-  if (data == NULL)
-    return (-1);
+  data = malloc_or_die(sizeof(struct write_request_data));
 
   data->ostream = ostream;
   data->buffer = buffer;
   data->len = len;
-  req = MALLOC(uv_write_t);
-
-  if (req == NULL)
-    return (-1);
+  req = malloc_or_die(sizeof(uv_write_t));
 
   req->data = data;
   ostream->curmem += len;

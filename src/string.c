@@ -39,7 +39,7 @@ string cstring_copy_string(const char *str)
     return (string) STRING_INIT;
 
   length = strlen(str);
-  ret = MALLOC_ARRAY(length + 1, char);
+  ret = malloc_array_or_die(length + 1, sizeof(char));
 
   strlcpy(ret, str, length + 1);
 

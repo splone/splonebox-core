@@ -122,7 +122,7 @@ void functional_dispatch_handle_run(UNUSED(void **state))
   struct api_error error = ERROR_INIT;
   array request;
 
-  con = CALLOC(1, struct connection);
+  con = calloc_or_die(1, sizeof(struct connection));
   con->closed = true;
   con->id = (uint64_t) randommod(281474976710656LL);
   con->msgid = 4321;

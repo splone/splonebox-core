@@ -78,6 +78,7 @@
 #include "queue.h"
 #include "khash.h"
 #include "kvec.h"
+#include "mem.h"
 
 /* Structs */
 #define API_ERROR_MESSAGE_LEN 512
@@ -383,23 +384,6 @@ define UNUSED(x) x
 #define PREDICT_UNLIKELY(exp) (exp)
 #endif
 
-#define MALLOC(type) ((type *)reallocarray(NULL, 1, sizeof(type)))
-
-#define MALLOC_ARRAY(number, type)                    \
-  ((type *)reallocarray(NULL, number, sizeof(type)))
-
-#define CALLOC(number, type)                    \
-  ((type *)calloc(number, sizeof(type)))
-
-#define REALLOC_ARRAY(pointer, number, type)              \
-  ((type *)reallocarray(pointer, number,  sizeof(type)))
-
-#define FREE(p) do {                      \
-  if (PREDICT_LIKELY((p)!=NULL))          \
-    free(p);                              \
-    p= NULL;                              \
-  } while (0)
-
 #define LOG(...)                  \
   do {                            \
     fprintf(stdout, __VA_ARGS__); \
@@ -422,6 +406,12 @@ define UNUSED(x) x
       LOG(__VA_ARGS__);                               \
     }                                                 \
   } while (0)
+
+#define LOG_MEMERROR()                    \
+  do {                                    \
+    LOG_ERROR("[%s] %s (%d):\tFailed to alloc memory.\n", \
+        __FILE__, __func__, __LINE__); \
+  } while (0)                             \
 
 #if 8 == 8
 #define ARCH_64

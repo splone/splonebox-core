@@ -72,15 +72,12 @@ int server_start_tcp(boxaddr *addr, uint16_t port)
 
   sbassert(addr);
 
-  server = MALLOC(struct server);
+  server = malloc_or_die(sizeof(struct server));
 
   if (hashmap_has(cstr_t, ptr_t)(servers, fmt_addr(addr))) {
     LOG("Already listening on %s", fmt_addr(addr));
     return (-1);
   }
-
-  if (server == NULL)
-    return (-1);
 
   uv_stream_t *stream = NULL;
 
@@ -121,15 +118,12 @@ int server_start_pipe(char *name)
 
   sbassert(name);
 
-  server = MALLOC(struct server);
+  server = malloc_or_die(sizeof(struct server));
 
   if (hashmap_has(cstr_t, ptr_t)(servers, name)) {
     LOG("Already listening on %s", name);
     return (-1);
   }
-
-  if (server == NULL)
-    return (-1);
 
   uv_stream_t *stream = NULL;
 
@@ -215,10 +209,7 @@ STATIC void connection_cb(uv_stream_t *server_stream, int status)
   hbuflen = sizeof(hbuf);
 
   server = server_stream->data;
-  client = MALLOC(uv_stream_t);
-
-  if (client == NULL)
-    return;
+  client = malloc_or_die(sizeof(uv_stream_t));
 
   if (server->type == SERVER_TYPE_TCP)
     uv_tcp_init(&main_loop.uv, (uv_tcp_t *)client);

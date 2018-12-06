@@ -242,7 +242,7 @@ char * box_strndup(const char *s, size_t n)
 
   sbassert(s);
 
-  dup = MALLOC_ARRAY((n+1), char);
+  dup = malloc_array_or_die((n+1), sizeof(char));
 
   strncpy(dup, s, n);
   dup[n]='\0';
@@ -257,7 +257,7 @@ void * sb_memdup(const void *mem, size_t len)
   char *duplicate;
   sbassert(mem);
 
-  duplicate = MALLOC_ARRAY(len, char);
+  duplicate = malloc_array_or_die(len, sizeof(char));
   memcpy(duplicate, mem, len);
 
   return duplicate;
@@ -270,7 +270,7 @@ void * sb_memdup_nulterm(const void *mem, size_t len)
   char *duplicate;
 
   sbassert(mem);
-  duplicate = MALLOC_ARRAY((len + 1), char);
+  duplicate = malloc_array_or_die((len + 1), sizeof(char));
   memcpy(duplicate, mem, len);
   duplicate[len] = '\0';
 

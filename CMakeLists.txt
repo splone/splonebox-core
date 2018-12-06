@@ -135,6 +135,8 @@ set(SPLONEBOX-SOURCES
   src/address.c
   src/address.h
   src/sbmemzero.c
+  src/mem.c
+  src/mem.h
   src/api/sb-api.h
   src/api/register.c
   src/api/result.c
@@ -176,6 +178,8 @@ set(SPLONEBOX-SOURCES
 set(SB-PLUGINKEY-SOURCES
   src/sb-pluginkey.c
   src/sb-common.h
+  src/mem.c
+  src/mem.h
   src/rpc/sb-rpc.h
   src/util.c
   src/confparse.c
@@ -187,6 +191,8 @@ set(SB-PLUGINKEY-SOURCES
 # sb-makekey target sources
 set(SB-MAKEKEY-SOURCES
   src/sb-common.h
+  src/mem.c
+  src/mem.h
   src/reallocarray.c
   src/tweetnacl.c
   src/tweetnacl.h
@@ -221,6 +227,8 @@ set(TEST-SOURCES
   src/parse.h
   src/util.c
   src/util.h
+  src/mem.c
+  src/mem.h
   src/address.c
   src/address.h
   src/sbmemzero.c

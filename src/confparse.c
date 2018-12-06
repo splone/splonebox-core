@@ -82,7 +82,7 @@ bitarray_init_zero(unsigned int n_bits)
 {
   /* round up to the next int. */
   size_t sz = (n_bits+BITARRAY_MASK) >> BITARRAY_SHIFT;
-  return (CALLOC(sz, unsigned int));
+  return calloc_or_die(sz, sizeof(unsigned int));
 }
 
 /** Free the bit array <b>ba</b>. */
@@ -243,7 +243,7 @@ STATIC void reset(const configformat *fmt, void *options, const configvar *var,
   if (!use_defaults)
     return; /* all done */
   if (var->initvalue) {
-    c = CALLOC(1, configline);
+    c = calloc_or_die(1, sizeof(configline));
     c->key = box_strdup(var->name);
     c->value = box_strdup(var->initvalue);
     if (assign_value(fmt, options, c) < 0) {
@@ -338,7 +338,7 @@ STATIC const char * unescape_string(const char *s, char **result,
     }
   }
 end_of_loop:
-  out = *result = MALLOC_ARRAY((size_t)(cp-s + 1), char);
+  out = *result = malloc_array_or_die((size_t)(cp-s + 1), sizeof(char));
   cp = s+1;
   while (1) {
     switch (*cp)
@@ -405,7 +405,7 @@ STATIC void line_append(configline **lst, const char *key, const char *val)
 {
   configline *newline;
 
-  newline = CALLOC(1, configline);
+  newline = calloc_or_die(1, sizeof(configline));
   newline->key = box_strdup(key);
   newline->value = box_strdup(val);
   newline->next = NULL;
@@ -668,7 +668,7 @@ int confparse_get_lines(const char *string, configline **result, int extended)
       /* This list can get long, so we keep a pointer to the end of it
        * rather than using line_append over and over and getting
        * n^2 performance. */
-      *next = CALLOC(1, configline);
+      *next = calloc_or_die(1, sizeof(configline));
       (*next)->key = k;
       (*next)->value = v;
       (*next)->next = NULL;

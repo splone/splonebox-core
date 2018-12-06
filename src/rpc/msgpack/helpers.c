@@ -192,7 +192,7 @@ bool msgpack_rpc_to_array(const msgpack_object *const obj, array *const arg)
   }
 
   arg->size = obj->via.array.size;
-  arg->items = CALLOC(obj->via.array.size, object);
+  arg->items = calloc_or_die(obj->via.array.size, sizeof(object));
 
   for (uint32_t i = 0; i < obj->via.array.size; i++) {
     if (!msgpack_rpc_to_object(obj->via.array.ptr + i, &arg->items[i])) {
@@ -211,7 +211,7 @@ bool msgpack_rpc_to_dictionary(const msgpack_object *const obj,
   }
 
   arg->size = obj->via.array.size;
-  arg->items = CALLOC(obj->via.map.size, key_value_pair);
+  arg->items = calloc_or_die(obj->via.map.size, sizeof(key_value_pair));
 
 
   for (uint32_t i = 0; i < obj->via.map.size; i++) {
